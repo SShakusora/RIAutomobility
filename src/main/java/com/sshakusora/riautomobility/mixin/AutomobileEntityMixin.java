@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +20,9 @@ import java.util.List;
 
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
+    @Shadow private float lockedViewOffset;
+    @Shadow private float angularSpeed;
+
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionRiderMixin(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -53,23 +57,35 @@ public class AutomobileEntityMixin {
         cir.setReturnValue(passengers.size() < seats.size());
     }
 
-    @Inject(method = "tick", at = @At("TAIL"), require = 1)
-    private void onTickRotatePassengers(CallbackInfo ci) {
+    @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;", ordinal = 0, shift = At.Shift.AFTER))
+    public void rotatePassengersHead(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if (!self.level().isClientSide()) return;
+        if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
+            for(Entity passenger : self.getPassengers()){
+                if(passenger instanceof Player){
+                    if(passenger == self.getFirstPassenger()) continue;
+                    if(AutomobileEntityAccessor.inLockedViewMode()){
+                        passenger.setYRot(Mth.wrapDegrees(self.getYRot() + lockedViewOffset));
+                        passenger.setYBodyRot(Mth.wrapDegrees(self.getYRot() + lockedViewOffset));
+                    } else {
+                        passenger.setYRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
+                        passenger.setYBodyRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
+                    }
+                }
+            }
+        }
+    }
 
-        if (!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-
-        float yawDelta = self.getYRot() - self.yRotO;
-        if (Math.abs(yawDelta) < 0.01f) return;
-
-        for (Entity passenger : self.getPassengers()) {
-            if (passenger instanceof Player player) {
-                if (passenger == self.getFirstPassenger()) continue;
-
-                float newYaw = Mth.wrapDegrees(player.getYRot() + yawDelta);
-                player.setYRot(newYaw);
-                player.setYBodyRot(newYaw);
+    @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getPassengers()Ljava/util/List;"))
+    public void rotatePassengersTail(CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
+            for(Entity passenger : self.getPassengers()){
+                if(passenger instanceof Player){
+                    if(passenger == self.getFirstPassenger()) continue;
+                    passenger.setYRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
+                    passenger.setYBodyRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
+                }
             }
         }
     }

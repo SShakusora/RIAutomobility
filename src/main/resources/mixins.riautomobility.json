@@ -9,6 +9,7 @@
   "client": [
   ],
   "mixins": [
+    "AutomobileEntityAccessor",
     "AutomobileEntityMixin"
   ]
 }
