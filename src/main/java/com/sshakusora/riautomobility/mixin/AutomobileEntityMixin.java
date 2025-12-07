@@ -58,7 +58,7 @@ public class AutomobileEntityMixin {
     }
 
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;", ordinal = 0, shift = At.Shift.AFTER))
-    public void rotatePassengersHead(CallbackInfo ci) {
+    public void rotatePassengersClient(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
             for(Entity passenger : self.getPassengers()){
@@ -77,7 +77,7 @@ public class AutomobileEntityMixin {
     }
 
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getPassengers()Ljava/util/List;"))
-    public void rotatePassengersTail(CallbackInfo ci) {
+    public void rotatePassengersServer(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
             for(Entity passenger : self.getPassengers()){
