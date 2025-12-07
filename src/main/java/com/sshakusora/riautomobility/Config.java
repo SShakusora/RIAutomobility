@@ -1,4 +1,4 @@
-package com.shakusora.riautomobility;
+package com.sshakusora.riautomobility;
 
 import net.minecraftforge.fml.common.Mod;
 

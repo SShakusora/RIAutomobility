@@ -114,8 +114,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 mixin {
     // MixinGradle Settings
-    add sourceSets.main, "mixins.${mod_id}.refmap.json"
-    config "mixins.${mod_id}.json"
+    add sourceSets.main, "mixins.riautomobility.refmap.json"
+    config "mixins.riautomobility.json"
 }
 
 repositories {

@@ -1,10 +1,14 @@
-package com.shakusora.riautomobility;
+package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
-import com.shakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
@@ -19,7 +23,6 @@ public class RIAutomobility
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         registerAll(modEventBus);
-
     }
 
     public static ResourceLocation rl(String path){
@@ -28,5 +31,13 @@ public class RIAutomobility
 
     private void registerAll(IEventBus bus){
         RIAutomobileFrame.init();
+    }
+
+    @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static class RIAutomobilityClient{
+        @SubscribeEvent
+        public static void onClientSetup(final FMLClientSetupEvent event){
+            RIAutomobileModels.init();
+        }
     }
 }
