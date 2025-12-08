@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -27,7 +26,7 @@ public class AutomobileEntityMixin {
     @Shadow private float angularSpeed;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
-    public void positionRiderMixin(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
+    public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         List<Entity> passengers = self.getPassengers();
@@ -52,7 +51,7 @@ public class AutomobileEntityMixin {
     }
 
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
-    public void hasSpaceForPassengersMixin(CallbackInfoReturnable<Boolean> cir) {
+    public void extendSpaceForPassengers(CallbackInfoReturnable<Boolean> cir) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         List<Entity> passengers = self.getPassengers();
@@ -98,7 +97,7 @@ public class AutomobileEntityMixin {
     @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
     public void disableNotDriverInput(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if (!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         LocalPlayer player = Minecraft.getInstance().player;
         if(player == null) return;
@@ -108,7 +107,7 @@ public class AutomobileEntityMixin {
     }
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
-    private BlockPos modifyStart(BlockPos original) {
+    private BlockPos driftingFix(BlockPos original) {
         return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
     }
 }

@@ -2,7 +2,6 @@ package com.sshakusora.riautomobility.frame;
 
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
-import io.github.foundationgames.automobility.Automobility;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.world.phys.Vec3;
