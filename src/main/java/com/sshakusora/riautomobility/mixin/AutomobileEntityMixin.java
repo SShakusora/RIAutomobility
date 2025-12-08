@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +14,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -102,5 +105,10 @@ public class AutomobileEntityMixin {
 
         List<Entity> passengers = self.getPassengers();
         if(passengers.isEmpty() || passengers.get(0) != player) ci.cancel();
+    }
+
+    @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
+    private BlockPos modifyStart(BlockPos original) {
+        return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
     }
 }
