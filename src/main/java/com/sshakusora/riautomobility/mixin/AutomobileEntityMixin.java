@@ -57,6 +57,7 @@ public class AutomobileEntityMixin {
         cir.setReturnValue(passengers.size() < seats.size());
     }
 
+    //bug: method:passenger.setYRot might fail when vehicle is drifting.
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;", ordinal = 0, shift = At.Shift.AFTER))
     public void rotatePassengersClient(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -76,6 +77,7 @@ public class AutomobileEntityMixin {
         }
     }
 
+    //bug: method:passenger.setYRot might fail when vehicle is drifting.
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getPassengers()Ljava/util/List;"))
     public void rotatePassengersServer(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -91,7 +93,7 @@ public class AutomobileEntityMixin {
     }
 
     @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
-    public void refuseNotDriverInput(CallbackInfo ci) {
+    public void disableNotDriverInput(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if (!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 

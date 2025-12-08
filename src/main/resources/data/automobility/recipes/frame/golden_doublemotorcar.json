@@ -1,0 +1,13 @@
+{
+    "type": "automobility:auto_mechanic_table",
+    "category": "automobility:frames",
+    "sortnum": 3,
+    "ingredients": [
+        {"item": "automobility:automobile_frame", "component": "automobility:golden_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:golden_motorcar"}
+    ],
+    "result": {
+        "item": "automobility:automobile_frame",
+        "component": "riautomobility:golden_doublemotorcar"
+    }
+}

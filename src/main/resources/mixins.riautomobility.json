@@ -9,7 +9,10 @@
   "client": [
   ],
   "mixins": [
+    "AutoMechanicTableRecipeMixin",
+    "AutoMechanicTableRecipeSerializerMixin",
     "AutomobileEntityAccessor",
-    "AutomobileEntityMixin"
+    "AutomobileEntityMixin",
+    "AutomobileHudMixin"
   ]
 }
