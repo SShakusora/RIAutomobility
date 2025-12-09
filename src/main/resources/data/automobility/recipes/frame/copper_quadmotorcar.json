@@ -1,0 +1,15 @@
+{
+    "type": "automobility:auto_mechanic_table",
+    "category": "automobility:frames",
+    "sortnum": 1,
+    "ingredients": [
+        {"item": "automobility:automobile_frame", "component": "automobility:copper_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:copper_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:copper_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:copper_motorcar"}
+    ],
+    "result": {
+        "item": "automobility:automobile_frame",
+        "component": "riautomobility:copper_quadmotorcar"
+    }
+}

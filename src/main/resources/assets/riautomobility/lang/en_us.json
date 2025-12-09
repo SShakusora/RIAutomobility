@@ -3,5 +3,11 @@
     "frame.riautomobility.copper_doublemotorcar": "Copper DoubleMotorcar",
     "frame.riautomobility.steel_doublemotorcar": "Steel DoubleMotorcar",
     "frame.riautomobility.golden_doublemotorcar": "Golden DoubleMotorcar",
-    "frame.riautomobility.bejeweled_doublemotorcar": "Bejeweled DoubleMotorcar"
+    "frame.riautomobility.bejeweled_doublemotorcar": "Bejeweled DoubleMotorcar",
+
+    "frame.riautomobility.wooden_quadmotorcar": "Wooden QuadMotorcar",
+    "frame.riautomobility.copper_quadmotorcar": "Copper QuadMotorcar",
+    "frame.riautomobility.steel_quadmotorcar": "Steel QuadMotorcar",
+    "frame.riautomobility.golden_quadmotorcar": "Golden QuadMotorcar",
+    "frame.riautomobility.bejeweled_quadmotorcar": "Bejeweled QuadMotorcar"
 }
