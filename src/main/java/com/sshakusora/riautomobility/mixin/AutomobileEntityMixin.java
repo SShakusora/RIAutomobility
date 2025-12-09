@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
+import io.github.foundationgames.automobility.automobile.AutomobileStats;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -9,7 +10,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,6 +25,10 @@ import java.util.List;
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
     @Unique private float prevYawForRotate = 0.0F;
+
+    @Shadow private float engineSpeed;
+    @Final
+    @Shadow private AutomobileStats stats;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
@@ -78,6 +85,14 @@ public class AutomobileEntityMixin {
 
         List<Entity> passengers = self.getPassengers();
         if(passengers.isEmpty() || passengers.get(0) != player) ci.cancel();
+    }
+
+    @Inject(method = "boost", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;isControlledByLocalInstance()Z"), cancellable = true)
+    public void passengerBoostFix(CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        this.engineSpeed = Math.max(this.engineSpeed, this.stats.getComfortableSpeed() * 0.5F);
+        ci.cancel();
     }
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
