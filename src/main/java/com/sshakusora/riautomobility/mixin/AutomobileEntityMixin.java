@@ -8,10 +8,9 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -22,8 +21,7 @@ import java.util.List;
 
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
-    @Shadow private float lockedViewOffset;
-    @Shadow private float angularSpeed;
+    @Unique private float prevYawForRotate = 0.0F;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
@@ -47,7 +45,18 @@ public class AutomobileEntityMixin {
         pos = pos.add(0, vert, 0);
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
+
+        if(passenger != self.getFirstPassenger()){
+            whenRotated(self.getYRot() - prevYawForRotate, passenger);
+        }
         ci.cancel();
+    }
+
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;position()Lnet/minecraft/world/phys/Vec3;", ordinal = 0))
+    public void tick(CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        prevYawForRotate = self.getYRot();
     }
 
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
@@ -57,41 +66,6 @@ public class AutomobileEntityMixin {
         List<Entity> passengers = self.getPassengers();
         List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         cir.setReturnValue(passengers.size() < seats.size());
-    }
-
-    //bug: method:passenger.setYRot might fail when vehicle is drifting. This manifests as a lack of synchronization between the server and the client.
-    @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;", ordinal = 0, shift = At.Shift.AFTER))
-    public void rotatePassengersClient(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
-            for(Entity passenger : self.getPassengers()){
-                if(passenger instanceof Player){
-                    if(passenger == self.getFirstPassenger()) continue;
-                    if(AutomobileEntityAccessor.inLockedViewMode()){
-                        passenger.setYRot(Mth.wrapDegrees(self.getYRot() + lockedViewOffset));
-                        passenger.setYBodyRot(Mth.wrapDegrees(self.getYRot() + lockedViewOffset));
-                    } else {
-                        passenger.setYRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
-                        passenger.setYBodyRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
-                    }
-                }
-            }
-        }
-    }
-
-    //bug: method:passenger.setYRot might fail when vehicle is drifting. This manifests as a lack of synchronization between the server and the client.
-    @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getPassengers()Ljava/util/List;"))
-    public void rotatePassengersServer(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())){
-            for(Entity passenger : self.getPassengers()){
-                if(passenger instanceof Player){
-                    if(passenger == self.getFirstPassenger()) continue;
-                    passenger.setYRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
-                    passenger.setYBodyRot(Mth.wrapDegrees(passenger.getYRot() + angularSpeed));
-                }
-            }
-        }
     }
 
     @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
@@ -109,5 +83,11 @@ public class AutomobileEntityMixin {
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
     private BlockPos driftingFix(BlockPos original) {
         return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
+    }
+
+    @Unique
+    public void whenRotated(float dYaw, Entity e) {
+        e.setYRot(Mth.wrapDegrees(e.getYRot() + dYaw));
+        e.setYBodyRot(Mth.wrapDegrees(e.getYRot() + dYaw));
     }
 }
