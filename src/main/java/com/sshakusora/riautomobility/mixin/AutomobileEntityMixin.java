@@ -59,7 +59,7 @@ public class AutomobileEntityMixin {
         cir.setReturnValue(passengers.size() < seats.size());
     }
 
-    //bug: method:passenger.setYRot might fail when vehicle is drifting.
+    //bug: method:passenger.setYRot might fail when vehicle is drifting. This manifests as a lack of synchronization between the server and the client.
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;", ordinal = 0, shift = At.Shift.AFTER))
     public void rotatePassengersClient(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -79,7 +79,7 @@ public class AutomobileEntityMixin {
         }
     }
 
-    //bug: method:passenger.setYRot might fail when vehicle is drifting.
+    //bug: method:passenger.setYRot might fail when vehicle is drifting. This manifests as a lack of synchronization between the server and the client.
     @Inject(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getPassengers()Ljava/util/List;"))
     public void rotatePassengersServer(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
