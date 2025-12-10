@@ -2,7 +2,7 @@ package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
-import com.sshakusora.riautomobility.entity.EntityRegistry;
+import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
@@ -41,7 +41,7 @@ public class RIAutomobility
 
     private void registerAll(IEventBus bus){
         RIAutomobileFrame.init();
-        EntityRegistry.ENTITIES.register(bus);
+        RIAutomobilityEntities.ENTITIES.register(bus);
     }
 
     @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)

@@ -2,7 +2,7 @@ package com.sshakusora.riautomobility.events;
 
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
-import com.sshakusora.riautomobility.entity.EntityRegistry;
+import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +23,7 @@ public class DriverSeatEntityAttach {
         Level world = event.getLevel();
         if(world.isClientSide()) return;
 
-        DriverSeatEntity seat = EntityRegistry.DRIVER_SEAT.get().create(world);
+        DriverSeatEntity seat = RIAutomobilityEntities.DRIVER_SEAT.get().create(world);
         if (seat != null) {
             seat.moveTo(ae.position());
             world.addFreshEntity(seat);
