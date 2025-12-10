@@ -4,6 +4,7 @@ import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -31,6 +32,12 @@ public class DriverSeatEntity extends Entity {
     @Override
     public AABB getBoundingBoxForCulling() {
         return new AABB(this.position(), this.position());
+    }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        Entity seat = this.getVehicle();
+        return seat.getDismountLocationForPassenger(passenger);
     }
 
     public void positionRider(Entity passenger, Entity.MoveFunction moveFunc){
