@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
+import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.AutomobileStats;
@@ -8,7 +9,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,6 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
+import java.util.Objects;
 
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
@@ -84,7 +89,7 @@ public class AutomobileEntityMixin {
         if(player == null) return;
 
         List<Entity> passengers = self.getPassengers();
-        if(passengers.isEmpty() || passengers.get(0) != player) ci.cancel();
+        if(passengers.isEmpty() || passengers.get(0).getFirstPassenger() != player) ci.cancel();
     }
 
     @Inject(method = "boost", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;isControlledByLocalInstance()Z"), cancellable = true)
@@ -93,6 +98,58 @@ public class AutomobileEntityMixin {
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         this.engineSpeed = Math.max(this.engineSpeed, this.stats.getComfortableSpeed() * 0.5F);
         ci.cancel();
+    }
+
+    @Inject(method = "engineRunning", at = @At("HEAD"), cancellable = true, remap = false)
+    public void RIAutomobileEngineRunning(CallbackInfoReturnable<Boolean> cir) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        if(self.isVehicle()){
+            Entity driver = self.getFirstPassenger();
+            if(!(driver instanceof DriverSeatEntity seat)) return;
+
+            Entity realDriver = seat.getFirstPassenger();
+            if(realDriver == null) cir.setReturnValue(self.getBoostTimer() > 0);
+            else cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;hasSpaceForPassengers()Z"), cancellable = true, remap = false)
+    public void RIAutomobileInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        if(!self.hasSpaceForPassengers()) {
+            if(!Objects.requireNonNull(self.getFirstPassenger()).isVehicle()){
+                if (!self.level().isClientSide()){
+                    player.startRiding(self.getFirstPassenger(), true);
+                }
+                cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
+                cir.cancel();
+            } else {
+                for(Entity e : self.getPassengers()){
+                    if(e == self.getFirstPassenger()) continue;
+                    if(!(e instanceof Player)) {
+                        if (!self.level().isClientSide()){
+                            e.stopRiding();
+                        }
+                        cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
+                        cir.cancel();
+                        return;
+                    }
+                }
+                cir.setReturnValue(InteractionResult.PASS);
+                cir.cancel();
+            }
+        } else {
+            if (!self.level().isClientSide()) {
+                if(self.getFirstPassenger() == null) return;
+                player.startRiding(self.getFirstPassenger(), true);
+            }
+
+            cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
+        }
     }
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
