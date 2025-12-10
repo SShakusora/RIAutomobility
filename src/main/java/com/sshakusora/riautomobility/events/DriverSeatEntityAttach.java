@@ -28,7 +28,6 @@ public class DriverSeatEntityAttach {
             seat.moveTo(ae.position());
             world.addFreshEntity(seat);
 
-            System.out.println("seat " + seat + " added to world to" + ae);
             seat.startRiding(ae, true);
         }
     }
