@@ -40,7 +40,7 @@ public class DriverSeatEntity extends Entity {
 
     public void tick(){
         Entity seat = this.getVehicle();
-        if(seat instanceof AutomobileEntity) return;
+        if(seat instanceof AutomobileEntity && seat.getFirstPassenger() == this) return;
 
         this.discard();
     }
