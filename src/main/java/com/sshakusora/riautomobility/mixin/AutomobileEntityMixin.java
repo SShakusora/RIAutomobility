@@ -123,7 +123,7 @@ public class AutomobileEntityMixin {
         }
     }
 
-    @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;hasSpaceForPassengers()Z"), cancellable = true, remap = false)
+    @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;hasSpaceForPassengers()Z"), cancellable = true)
     public void RIAutomobileInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
