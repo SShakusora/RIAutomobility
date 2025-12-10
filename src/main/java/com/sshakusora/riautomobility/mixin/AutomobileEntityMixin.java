@@ -128,6 +128,11 @@ public class AutomobileEntityMixin {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
+        Entity seat = self.getFirstPassenger();
+        Entity driver = null;
+        if (seat != null) {
+            driver = seat.getFirstPassenger();
+        }
         if(!self.hasSpaceForPassengers()) {
             if(!Objects.requireNonNull(self.getFirstPassenger()).isVehicle()){
                 if (!self.level().isClientSide()){
@@ -144,7 +149,6 @@ public class AutomobileEntityMixin {
                         }
                         cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
                         cir.cancel();
-                        return;
                     }
                 }
                 cir.setReturnValue(InteractionResult.PASS);
@@ -152,8 +156,11 @@ public class AutomobileEntityMixin {
             }
         } else {
             if (!self.level().isClientSide()) {
-                if(self.getFirstPassenger() == null) return;
-                player.startRiding(self.getFirstPassenger(), true);
+                if(driver == null) {
+                    player.startRiding(seat);
+                } else {
+                    player.startRiding(self);
+                }
             }
 
             cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
