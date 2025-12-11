@@ -2,7 +2,6 @@ package com.sshakusora.riautomobility.frame;
 
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
-import io.github.foundationgames.automobility.Automobility;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.world.phys.Vec3;
@@ -19,6 +18,11 @@ public class RIAutomobileFrame {
     public static final AutomobileFrame STEEL_DOUBLEMOTORCAR = registerDoubleMotorcar("steel", 0.95F);
     public static final AutomobileFrame GOLDEN_DOUBLEMOTORCAR = registerDoubleMotorcar("golden", 1.05F);
     public static final AutomobileFrame BEJEWELED_DOUBLEMOTORCAR = registerDoubleMotorcar("bejeweled", 1.11F);
+    public static final AutomobileFrame WOODEN_QUADMOTORCAR = registerQuadMotorcar("wooden", 1.2F);
+    public static final AutomobileFrame COPPER_QUADMOTORCAR = registerQuadMotorcar("copper", 1.6F);
+    public static final AutomobileFrame STEEL_QUADMOTORCAR = registerQuadMotorcar("steel", 1.9F);
+    public static final AutomobileFrame GOLDEN_QUADMOTORCAR = registerQuadMotorcar("golden", 2.1F);
+    public static final AutomobileFrame BEJEWELED_QUADMOTORCAR = registerQuadMotorcar("bejeweled", 2.22F);
 
     private static AutomobileFrame registerDoubleMotorcar(String variant, float weight) {
         return register(new AutomobileFrame(
@@ -40,6 +44,30 @@ public class RIAutomobileFrame {
                     new Vec3(6.0/16, -1.6/16, 0),
                     new Vec3(-6.0/16, -1.6/16, 0)
             ));
+    }
+
+    private static AutomobileFrame registerQuadMotorcar(String variant, float weight) {
+        return register(new AutomobileFrame(
+                        RIAutomobility.rl(variant + "_quadmotorcar"),
+                        weight,
+                        new AutomobileFrame.FrameModel(
+                                RIAutomobility.rl("textures/entity/automobile/frame/" + variant + "_doublemotorcar.png"),
+                                RIAutomobility.rl("frame_quadmotorcar"),
+                                WheelBase.basic(49.0F, 24.0F),
+                                36.0F,
+                                3.0F,
+                                26.0F,
+                                2.0F,
+                                23.0F,
+                                22.0F
+                        )
+                ),
+                List.of(
+                        new Vec3(6.0/16, -1.6/16, 8.0/16),
+                        new Vec3(-6.0/16, -1.6/16, 8.0/16),
+                        new Vec3(6.0/16, -1.6/16, -9.0/16),
+                        new Vec3(-6.0/16, -1.6/16, -9.0/16)
+                ));
     }
 
     private static AutomobileFrame register(AutomobileFrame frame, List<Vec3> seats){

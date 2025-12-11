@@ -1,0 +1,15 @@
+{
+    "type": "automobility:auto_mechanic_table",
+    "category": "automobility:frames",
+    "sortnum": 2,
+    "ingredients": [
+        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
+        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"}
+    ],
+    "result": {
+        "item": "automobility:automobile_frame",
+        "component": "riautomobility:steel_quadmotorcar"
+    }
+}

@@ -3,5 +3,13 @@
     "frame.riautomobility.copper_doublemotorcar": "铜质双座汽车",
     "frame.riautomobility.steel_doublemotorcar": "钢质双座汽车",
     "frame.riautomobility.golden_doublemotorcar": "黄金双座汽车",
-    "frame.riautomobility.bejeweled_doublemotorcar": "璀璨双座汽车"
+    "frame.riautomobility.bejeweled_doublemotorcar": "璀璨双座汽车",
+
+    "frame.riautomobility.wooden_quadmotorcar": "木质四座汽车",
+    "frame.riautomobility.copper_quadmotorcar": "铜质四座汽车",
+    "frame.riautomobility.steel_quadmotorcar": "钢质四座汽车",
+    "frame.riautomobility.golden_quadmotorcar": "黄金四座汽车",
+    "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
+
+    "entity.riautomobility.driver_seat": "司机座位"
 }
