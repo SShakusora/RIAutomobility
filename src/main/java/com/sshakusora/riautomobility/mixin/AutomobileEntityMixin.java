@@ -2,10 +2,12 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.AutomobileStats;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
+import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -13,6 +15,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.EntityTypeTest;
@@ -31,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -76,6 +80,14 @@ public class AutomobileEntityMixin {
     public void tick(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        //set custom entity collision box
+        EntityAccessor accessor = (EntityAccessor) self;
+        EntityDimensions dimensions = RIAutomobileEntityDimensionsRegistry.getEntityDimensions(self.getFrame());
+        if(dimensions != accessor.getDimensions()){
+            accessor.setDimensions(dimensions);
+        }
+
         prevYawForRotate = self.getYRot();
     }
 
@@ -86,6 +98,30 @@ public class AutomobileEntityMixin {
         List<Entity> passengers = self.getPassengers();
         List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         cir.setReturnValue(passengers.size() < seats.size());
+    }
+
+    @Inject(method = "accumulateCollisionAreas", at = @At("HEAD"), cancellable = true, remap = false)
+    public void accumulateCollisionAreasFix(Collection<CollisionArea> areas, CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        self.level().getEntitiesOfClass(
+                Entity.class,
+                self.getBoundingBox().inflate(3.0F, 3.0F, 3.0F),
+                (e) -> {
+                    if (e == self) return false;
+                    if (e.getVehicle() == self) return false;
+                    Entity firstPassenger = self.getFirstPassenger();
+                    if (firstPassenger instanceof DriverSeatEntity fp && fp.isVehicle()) {
+                        Entity nestedFirstPassenger = fp.getFirstPassenger();
+                        return nestedFirstPassenger != e;
+                    }
+
+                    return true;
+                }
+        ).forEach((e) -> areas.add(CollisionArea.entity(e)));
+
+        ci.cancel();
     }
 
     @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
