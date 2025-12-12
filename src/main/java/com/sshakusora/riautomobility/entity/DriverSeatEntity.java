@@ -42,7 +42,7 @@ public class DriverSeatEntity extends Entity {
 
     public void positionRider(Entity passenger, Entity.MoveFunction moveFunc){
         Vec3 pos = this.position();
-        moveFunc.accept(passenger, pos.x, pos.y, pos.z);
+        moveFunc.accept(passenger, pos.x, pos.y -0.35, pos.z);
     }
 
     public void tick(){

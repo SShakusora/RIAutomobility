@@ -9,6 +9,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
@@ -21,7 +22,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, value = Dist.CLIENT)
 public class ModifyCamera {
     @SubscribeEvent
-    public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
+    public static void onCameraSetup(ViewportEvent event) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null) return;
@@ -37,7 +38,7 @@ public class ModifyCamera {
             z:left and right
              */
             //TODO: fix camera position and add ground collision detect
-            accessor.invokeMove(-2.0, 0.0, 0.0);
+            accessor.invokeMove(-2.0, 0.0, -6.0/16);
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = player.getEyePosition((float) event.getPartialTick());
             Vec3 dir1 = targetPos.subtract(eyePos).normalize();

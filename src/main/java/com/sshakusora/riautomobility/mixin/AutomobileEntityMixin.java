@@ -55,24 +55,20 @@ public class AutomobileEntityMixin {
         int index = passengers.indexOf(passenger);
         if (index == -1) return;
 
-        List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
+        List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         if (index >= seats.size()) return;
-        Vec3 local = seats.get(index);
+        RIAutomobileSeatRegistry.SeatPos local = seats.get(index);
 
         float pitch = self.getDisplacement().getAngularX(1.0F);
         float roll = self.getDisplacement().getAngularZ(1.0F);
         float vert = self.getDisplacement().getVertical(1.0F);
 
-        Vec3 pos = self.position().add(local.yRot(-self.getYRot() * Mth.DEG_TO_RAD)
-                .xRot(-pitch * Mth.DEG_TO_RAD)
-                .zRot(-roll * Mth.DEG_TO_RAD));
-
-        //TODO: redesign passenger y offset
-        if(passenger instanceof Player || passenger instanceof DriverSeatEntity) {
-            pos = pos.add(0, vert, 0);
-        } else {
-            pos = pos.add(0, vert + self.getPassengersRidingOffset(), 0);
-        }
+        Vec3 pos = self.position()
+                .add(0.0F, (double)vert + passenger.getMyRidingOffset(), 0.0F)
+                .add((new Vec3(local.x, self.getPassengersRidingOffset() + local.y, local.z))
+                        .yRot(-self.getYRot() * Mth.DEG_TO_RAD)
+                        .xRot(-pitch * Mth.DEG_TO_RAD)
+                        .zRot(-roll * Mth.DEG_TO_RAD));
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
@@ -102,7 +98,7 @@ public class AutomobileEntityMixin {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         List<Entity> passengers = self.getPassengers();
-        List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
+        List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         cir.setReturnValue(passengers.size() < seats.size());
     }
 
