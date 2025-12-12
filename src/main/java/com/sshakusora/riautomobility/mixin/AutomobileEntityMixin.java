@@ -70,7 +70,7 @@ public class AutomobileEntityMixin {
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
-        if(passenger != self.getFirstPassenger()){
+        if(passenger != self.getFirstPassenger() && passenger != Objects.requireNonNull(self.getFirstPassenger()).getFirstPassenger()){
             whenRotated(self.getYRot() - prevYawForRotate, passenger);
         }
         ci.cancel();
@@ -81,7 +81,7 @@ public class AutomobileEntityMixin {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
-        //set custom entity collision box
+        //set custom entity collision box in tick. I don't think it's a good idea, and I don't have a good idea :(
         EntityAccessor accessor = (EntityAccessor) self;
         EntityDimensions dimensions = RIAutomobileEntityDimensionsRegistry.getEntityDimensions(self.getFrame());
         if(dimensions != accessor.getDimensions()){
@@ -134,14 +134,6 @@ public class AutomobileEntityMixin {
 
         List<Entity> passengers = self.getPassengers();
         if(passengers.isEmpty() || passengers.get(0).getFirstPassenger() != player) ci.cancel();
-    }
-
-    @Inject(method = "boost", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;isControlledByLocalInstance()Z"), cancellable = true)
-    public void passengerBoostFix(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-        this.engineSpeed = Math.max(this.engineSpeed, this.stats.getComfortableSpeed() * 0.5F);
-        ci.cancel();
     }
 
     @Inject(method = "engineRunning", at = @At("HEAD"), cancellable = true, remap = false)
@@ -245,7 +237,14 @@ public class AutomobileEntityMixin {
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
     private BlockPos driftingFix(BlockPos original) {
-        return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        double y = self.getY();
+
+        if(y <= 0){
+            return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
+        } else {
+            return original;
+        }
     }
 
     @Unique
