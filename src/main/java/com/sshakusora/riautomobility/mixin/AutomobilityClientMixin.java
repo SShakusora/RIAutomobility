@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AutomobilityClient.class)
 public class AutomobilityClientMixin {
-    @Unique private static double scale = 128.0F;
+    @Unique private static double scale = 256.0F;
 
     @Inject(method = "modifyBoostFov", at = @At("HEAD"), remap = false, cancellable = true)
     private static void modifyBoostFovFix(Minecraft client, double old, float tickDelta, CallbackInfoReturnable<Double> cir) {
