@@ -28,7 +28,9 @@ public class AutomobilityClientMixin {
             cir.setReturnValue(old);
         } else if (var6 instanceof DriverSeatEntity seat) {
             AutomobileEntity auto = (AutomobileEntity) seat.getVehicle();
-            cir.setReturnValue(old + Math.sqrt((double)auto.getBoostSpeed(tickDelta) * scale * (Double)client.options.fovEffectScale().get()));
+            if (auto != null) {
+                cir.setReturnValue(old + Math.sqrt((double)auto.getBoostSpeed(tickDelta) * scale * (Double)client.options.fovEffectScale().get()));
+            }
         }
     }
 }

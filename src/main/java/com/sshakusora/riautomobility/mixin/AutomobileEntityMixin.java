@@ -66,7 +66,13 @@ public class AutomobileEntityMixin {
         Vec3 pos = self.position().add(local.yRot(-self.getYRot() * Mth.DEG_TO_RAD)
                 .xRot(-pitch * Mth.DEG_TO_RAD)
                 .zRot(-roll * Mth.DEG_TO_RAD));
-        pos = pos.add(0, vert, 0);
+
+        //TODO: redesign passenger y offset
+        if(passenger instanceof Player || passenger instanceof DriverSeatEntity) {
+            pos = pos.add(0, vert, 0);
+        } else {
+            pos = pos.add(0, vert + self.getPassengersRidingOffset(), 0);
+        }
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
