@@ -4,12 +4,12 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.mixin.CameraAccessor;
+import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
@@ -32,13 +32,15 @@ public class ModifyCamera {
             if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
             Camera camera = event.getCamera();
             CameraAccessor accessor = (CameraAccessor) camera;
+            RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, player);
+
             /*
             x:forward and back
             y:up and down
             z:left and right
              */
-            //TODO: fix camera position and add ground collision detect
-            accessor.invokeMove(-2.0, 0.0, -6.0/16);
+            //TODO: add camera position feature and fix sound
+            accessor.invokeMove(0.0, 0.0, -pos.x);
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = player.getEyePosition((float) event.getPartialTick());
             Vec3 dir1 = targetPos.subtract(eyePos).normalize();

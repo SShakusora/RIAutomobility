@@ -4,7 +4,6 @@ import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
-import io.github.foundationgames.automobility.automobile.AutomobileStats;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
@@ -21,7 +20,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -42,23 +40,14 @@ import java.util.Objects;
 public class AutomobileEntityMixin {
     @Unique private float prevYawForRotate = 0.0F;
 
-    @Shadow private float engineSpeed;
-    @Final
-    @Shadow private AutomobileStats stats;
     @Shadow private float hSpeed;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-        List<Entity> passengers = self.getPassengers();
-        int index = passengers.indexOf(passenger);
-        if (index == -1) return;
 
-        List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
-        if (index >= seats.size()) return;
-        RIAutomobileSeatRegistry.SeatPos local = seats.get(index);
-
+        RIAutomobileSeatRegistry.SeatPos local = RIAutomobileSeatRegistry.getSeat(self, passenger);
         float pitch = self.getDisplacement().getAngularX(1.0F);
         float roll = self.getDisplacement().getAngularZ(1.0F);
         float vert = self.getDisplacement().getVertical(1.0F);
@@ -280,4 +269,5 @@ public class AutomobileEntityMixin {
         e.setYRot(Mth.wrapDegrees(e.getYRot() + dYaw));
         e.setYBodyRot(Mth.wrapDegrees(e.getYRot() + dYaw));
     }
+    //TODO:define culling
 }
