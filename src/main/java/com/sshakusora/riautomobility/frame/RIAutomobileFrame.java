@@ -1,10 +1,11 @@
 package com.sshakusora.riautomobility.frame;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.EntityDimensions;
 
 import java.util.HashSet;
 import java.util.List;
@@ -26,24 +27,25 @@ public class RIAutomobileFrame {
 
     private static AutomobileFrame registerDoubleMotorcar(String variant, float weight) {
         return register(new AutomobileFrame(
-                    RIAutomobility.rl(variant + "_doublemotorcar"),
+                        RIAutomobility.rl(variant + "_doublemotorcar"),
                         weight,
-                    new AutomobileFrame.FrameModel(
-                            RIAutomobility.rl("textures/entity/automobile/frame/" + variant + "_doublemotorcar.png"),
-                            RIAutomobility.rl("frame_doublemotorcar"),
-                            WheelBase.basic(32.0F, 24.0F),
-                            32.0F,
-                            3.0F,
-                            18.0F,
-                            2.0F,
-                            23.0F,
-                            22.0F
-                    )
-            ),
-            List.of(
-                    new Vec3(6.0/16, -1.6/16, 0),
-                    new Vec3(-6.0/16, -1.6/16, 0)
-            ));
+                        new AutomobileFrame.FrameModel(
+                                RIAutomobility.rl("textures/entity/automobile/frame/" + variant + "_doublemotorcar.png"),
+                                RIAutomobility.rl("frame_doublemotorcar"),
+                                WheelBase.basic(32.0F, 24.0F),
+                                32.0F,
+                                3.0F,
+                                18.0F,
+                                2.0F,
+                                23.0F,
+                                22.0F
+                        )
+                ),
+                List.of(
+                        new RIAutomobileSeatRegistry.SeatPos(6.0/16,0.0),
+                        new RIAutomobileSeatRegistry.SeatPos(-6.0/16, 0.0)
+                ),
+                EntityDimensions.scalable(1.75F, 0.66F));
     }
 
     private static AutomobileFrame registerQuadMotorcar(String variant, float weight) {
@@ -63,15 +65,17 @@ public class RIAutomobileFrame {
                         )
                 ),
                 List.of(
-                        new Vec3(6.0/16, -1.6/16, 8.0/16),
-                        new Vec3(-6.0/16, -1.6/16, 8.0/16),
-                        new Vec3(6.0/16, -1.6/16, -9.0/16),
-                        new Vec3(-6.0/16, -1.6/16, -9.0/16)
-                ));
+                        new RIAutomobileSeatRegistry.SeatPos(6.0/16,8.0/16),
+                        new RIAutomobileSeatRegistry.SeatPos(-6.0/16,8.0/16),
+                        new RIAutomobileSeatRegistry.SeatPos(6.0/16,-9.0/16),
+                        new RIAutomobileSeatRegistry.SeatPos(-6.0/16,-9.0/16)
+                ),
+                EntityDimensions.scalable(1.75F, 0.66F));
     }
 
-    private static AutomobileFrame register(AutomobileFrame frame, List<Vec3> seats){
+    private static AutomobileFrame register(AutomobileFrame frame, List<RIAutomobileSeatRegistry.SeatPos> seats, EntityDimensions dimensions) {
         RIAutomobileSeatRegistry.register(frame, seats);
+        RIAutomobileEntityDimensionsRegistry.register(frame, dimensions);
         FRAMES.add(frame);
         return AutomobileFrame.REGISTRY.register(frame);
     }

@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
@@ -22,9 +21,8 @@ public class EntityMixin {
     @Inject(method = "addPassenger", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/ImmutableList;copyOf(Ljava/util/Collection;)Lcom/google/common/collect/ImmutableList;"),cancellable = true)
     private void patchPlayerInsert(Entity passenger, CallbackInfo ci) {
         Entity e = (Entity) (Object) this;
-        if(!(e instanceof AutomobileEntity)) return;
+        if(!(e instanceof AutomobileEntity self)) return;
 
-        AutomobileEntity self = (AutomobileEntity) e;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         List<Entity> list = new ArrayList<>(this.passengers);

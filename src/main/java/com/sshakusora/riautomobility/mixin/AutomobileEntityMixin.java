@@ -2,10 +2,11 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
-import io.github.foundationgames.automobility.automobile.AutomobileStats;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
+import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -13,12 +14,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,6 +32,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -38,35 +40,28 @@ import java.util.Objects;
 public class AutomobileEntityMixin {
     @Unique private float prevYawForRotate = 0.0F;
 
-    @Shadow private float engineSpeed;
-    @Final
-    @Shadow private AutomobileStats stats;
     @Shadow private float hSpeed;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-        List<Entity> passengers = self.getPassengers();
-        int index = passengers.indexOf(passenger);
-        if (index == -1) return;
 
-        List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
-        if (index >= seats.size()) return;
-        Vec3 local = seats.get(index);
-
+        RIAutomobileSeatRegistry.SeatPos local = RIAutomobileSeatRegistry.getSeat(self, passenger);
         float pitch = self.getDisplacement().getAngularX(1.0F);
         float roll = self.getDisplacement().getAngularZ(1.0F);
         float vert = self.getDisplacement().getVertical(1.0F);
 
-        Vec3 pos = self.position().add(local.yRot(-self.getYRot() * Mth.DEG_TO_RAD)
-                .xRot(-pitch * Mth.DEG_TO_RAD)
-                .zRot(-roll * Mth.DEG_TO_RAD));
-        pos = pos.add(0, vert, 0);
+        Vec3 pos = self.position()
+                .add(0.0F, (double)vert + passenger.getMyRidingOffset(), 0.0F)
+                .add((new Vec3(local.x, self.getPassengersRidingOffset() + local.y, local.z))
+                        .yRot(-self.getYRot() * Mth.DEG_TO_RAD)
+                        .xRot(-pitch * Mth.DEG_TO_RAD)
+                        .zRot(-roll * Mth.DEG_TO_RAD));
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
-        if(passenger != self.getFirstPassenger()){
+        if(passenger != self.getFirstPassenger() && passenger != Objects.requireNonNull(self.getFirstPassenger()).getFirstPassenger()){
             whenRotated(self.getYRot() - prevYawForRotate, passenger);
         }
         ci.cancel();
@@ -76,6 +71,14 @@ public class AutomobileEntityMixin {
     public void tick(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        //set custom entity collision box in tick. I don't think it's a good idea, and I don't have a good idea :(
+        EntityAccessor accessor = (EntityAccessor) self;
+        EntityDimensions dimensions = RIAutomobileEntityDimensionsRegistry.getEntityDimensions(self.getFrame());
+        if(dimensions != accessor.getDimensions()){
+            accessor.setDimensions(dimensions);
+        }
+
         prevYawForRotate = self.getYRot();
     }
 
@@ -84,8 +87,32 @@ public class AutomobileEntityMixin {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         List<Entity> passengers = self.getPassengers();
-        List<Vec3> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
+        List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         cir.setReturnValue(passengers.size() < seats.size());
+    }
+
+    @Inject(method = "accumulateCollisionAreas", at = @At("HEAD"), cancellable = true, remap = false)
+    public void accumulateCollisionAreasFix(Collection<CollisionArea> areas, CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+
+        self.level().getEntitiesOfClass(
+                Entity.class,
+                self.getBoundingBox().inflate(3.0F, 3.0F, 3.0F),
+                (e) -> {
+                    if (e == self) return false;
+                    if (e.getVehicle() == self) return false;
+                    Entity firstPassenger = self.getFirstPassenger();
+                    if (firstPassenger instanceof DriverSeatEntity fp && fp.isVehicle()) {
+                        Entity nestedFirstPassenger = fp.getFirstPassenger();
+                        return nestedFirstPassenger != e;
+                    }
+
+                    return true;
+                }
+        ).forEach((e) -> areas.add(CollisionArea.entity(e)));
+
+        ci.cancel();
     }
 
     @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
@@ -98,14 +125,6 @@ public class AutomobileEntityMixin {
 
         List<Entity> passengers = self.getPassengers();
         if(passengers.isEmpty() || passengers.get(0).getFirstPassenger() != player) ci.cancel();
-    }
-
-    @Inject(method = "boost", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;isControlledByLocalInstance()Z"), cancellable = true)
-    public void passengerBoostFix(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
-        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-        this.engineSpeed = Math.max(this.engineSpeed, this.stats.getComfortableSpeed() * 0.5F);
-        ci.cancel();
     }
 
     @Inject(method = "engineRunning", at = @At("HEAD"), cancellable = true, remap = false)
@@ -209,7 +228,14 @@ public class AutomobileEntityMixin {
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
     private BlockPos driftingFix(BlockPos original) {
-        return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        double y = self.getY();
+
+        if(y <= 0){
+            return new BlockPos(original.getX(), original.getY() - 1, original.getZ());
+        } else {
+            return original;
+        }
     }
 
     @Unique
@@ -243,4 +269,5 @@ public class AutomobileEntityMixin {
         e.setYRot(Mth.wrapDegrees(e.getYRot() + dYaw));
         e.setYBodyRot(Mth.wrapDegrees(e.getYRot() + dYaw));
     }
+    //TODO:define culling
 }
