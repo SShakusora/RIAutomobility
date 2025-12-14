@@ -28,12 +28,10 @@ public class CameraMixin {
         Camera camera = (Camera) (Object) this;
         CameraAccessor cameraAccessor = (CameraAccessor) camera;
         Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player == null) return;
         if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
-        Entity vehicle = player.getVehicle();
+        Entity vehicle = entity.getVehicle();
         if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof DriverSeatEntity)) {
-            RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, player);
+            RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, entity);
             /*
             x:forward and back
             y:up and down
@@ -42,7 +40,7 @@ public class CameraMixin {
             //TODO: add camera position feature and fix sound
             cameraAccessor.invokeMove(0.0, 0.0, -pos.x);
             Vec3 targetPos = camera.getPosition();
-            Vec3 eyePos = player.getEyePosition(partialTick);
+            Vec3 eyePos = entity.getEyePosition(partialTick);
             Vec3 dir1 = targetPos.subtract(eyePos).normalize();
             Vec3 detectPos = targetPos.add(dir1.scale(0.3));
 
@@ -51,7 +49,7 @@ public class CameraMixin {
                     detectPos,
                     ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE,
-                    player
+                    entity
             );
             if(mc.level == null) return;
             HitResult hit = mc.level.clip(context);

@@ -39,8 +39,17 @@ import java.util.Objects;
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
     @Unique private float prevYawForRotate = 0.0F;
+    @Unique private boolean preAccelerating = false;
+    @Unique private boolean preOnGround = true;
+    @Unique private int driftedReadyBoostCounter = Integer.MAX_VALUE;
+    @Unique private int flyReadyBoostCounter = Integer.MAX_VALUE;
+    @Unique private int landingReadyBoostCounter = Integer.MAX_VALUE;
 
     @Shadow private float hSpeed;
+    @Shadow private int turboCharge;
+    @Shadow private boolean accelerating;
+    @Shadow private boolean holdingDrift;
+    @Shadow private boolean prevHoldDrift;
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
@@ -183,6 +192,63 @@ public class AutomobileEntityMixin {
             }
 
             cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
+        }
+    }
+
+    //After drifting, flying and landing, quickly press the accelerate button to boost.
+    @Inject(method = "driftingTick", at = @At("HEAD"), remap = false)
+    public void specialTurbo(CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        driftedReadyBoost(self);
+        flyReadyBoost(self);
+        landingReadyBoost(self);
+
+        this.preAccelerating = this.accelerating;
+        this.preOnGround = self.automobileOnGround();
+    }
+
+    @Unique private void driftedReadyBoost(AutomobileEntity self) {
+        if(self.isDrifting() && this.prevHoldDrift && !this.holdingDrift){
+            driftedReadyBoostCounter = 0;
+        }
+
+        if(!self.isDrifting() && !this.prevHoldDrift && !this.holdingDrift){
+            if(driftedReadyBoostCounter >= 3) return;
+            if(this.turboCharge > 35 || this.turboCharge == 0) return;
+            driftedReadyBoostCounter++;
+            if(!this.preAccelerating && this.accelerating){
+                self.boost(0.38F, 12);
+            }
+        }
+    }
+
+    @Unique private void flyReadyBoost(AutomobileEntity self) {
+        if(this.preOnGround && !self.automobileOnGround()){
+            flyReadyBoostCounter = 0;
+        }
+
+        if(!self.automobileOnGround()){
+            if(flyReadyBoostCounter >= 6) return;
+            if(this.turboCharge > 35) return;
+            flyReadyBoostCounter++;
+            if(!this.preAccelerating && this.accelerating){
+                self.boost(0.38F, 4);
+            }
+        }
+    }
+
+    @Unique private void landingReadyBoost(AutomobileEntity self) {
+        if(!this.preOnGround && self.automobileOnGround()){
+            landingReadyBoostCounter = 0;
+        }
+
+        if(self.automobileOnGround()){
+            if(landingReadyBoostCounter >= 6) return;
+            if(this.turboCharge > 35) return;
+            landingReadyBoostCounter++;
+            if(!this.preAccelerating && this.accelerating){
+                self.boost(0.38F, 9);
+            }
         }
     }
 
