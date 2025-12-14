@@ -7,10 +7,13 @@
   "server": [
   ],
   "client": [
+    "AutoMechanicTableScreenAccessor",
+    "AutoMechanicTableScreenMixin",
     "AutomobileSoundInstanceMixin",
     "CameraAccessor",
     "CameraMixin",
-    "LocalPlayerMixin"
+    "LocalPlayerMixin",
+    "ScreenAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
