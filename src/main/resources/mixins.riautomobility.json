@@ -18,6 +18,7 @@
   "mixins": [
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
+    "AutomobileAssemblerBlockEntityMixin",
     "AutomobileEntityMixin",
     "AutomobileHudMixin",
     "AutomobilityClientMixin",

@@ -10,6 +10,9 @@ import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -17,6 +20,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -38,6 +43,7 @@ import java.util.Objects;
 
 @Mixin(AutomobileEntity.class)
 public class AutomobileEntityMixin {
+    @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
     @Unique private float prevYawForRotate = 0.0F;
     @Unique private boolean preAccelerating = false;
     @Unique private boolean preOnGround = true;
@@ -273,6 +279,11 @@ public class AutomobileEntityMixin {
     @Redirect(method = "getControllingPassenger", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;"))
     private Entity redirectGetFirstPassengerD(AutomobileEntity ae){
         return redirectDriver(ae);
+    }
+
+    @Redirect(method = "interact", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"))
+    private boolean allowForgeWrench(ItemStack stack, Item item) {
+        return stack.is(item) || stack.is(FORGE_WRENCH);
     }
 
     @Inject(method = "runOverEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;add(DDD)Lnet/minecraft/world/phys/Vec3;", shift = At.Shift.AFTER), cancellable = true, locals = LocalCapture.CAPTURE_FAILHARD)
