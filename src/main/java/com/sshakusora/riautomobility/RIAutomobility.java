@@ -1,6 +1,8 @@
 package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
+import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
+import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
@@ -14,6 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -42,6 +45,7 @@ public class RIAutomobility
     private void registerAll(IEventBus bus){
         RIAutomobileFrame.init();
         RIAutomobilityEntities.ENTITIES.register(bus);
+        RIAutomobilityNetwork.register();
     }
 
     @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -64,6 +68,11 @@ public class RIAutomobility
         @SubscribeEvent
         public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event){
             RendererRegistry.init(event);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event){
+            RIAutomobilityKeyBindings.init(event);
         }
     }
 }
