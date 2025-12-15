@@ -1,8 +1,9 @@
-package com.sshakusora.riautomobility.network;
+package com.sshakusora.riautomobility.Network;
 
-import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
-import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
+import com.sshakusora.riautomobility.Network.packet.BoardingAsPassengerPacket;
+import com.sshakusora.riautomobility.Network.packet.PassengerDriverSwitchPacket;
 import com.sshakusora.riautomobility.RIAutomobility;
+import io.github.foundationgames.automobility.automobile.attachment.rear.PassengerSeatRearAttachment;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
