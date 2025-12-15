@@ -1,4 +1,7 @@
 {
+    "key.categories.riautomobility": "RIAutomobility",
+    "key.riautomobility.boarding_as_passenger": "Board / Switch Seat",
+
     "frame.riautomobility.wooden_doublemotorcar": "Wooden DoubleMotorcar",
     "frame.riautomobility.copper_doublemotorcar": "Copper DoubleMotorcar",
     "frame.riautomobility.steel_doublemotorcar": "Steel DoubleMotorcar",

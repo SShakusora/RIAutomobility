@@ -183,6 +183,7 @@ public class AutomobileEntityMixin {
                         }
                         cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
                         cir.cancel();
+                        break;
                     }
                 }
                 cir.setReturnValue(InteractionResult.PASS);
