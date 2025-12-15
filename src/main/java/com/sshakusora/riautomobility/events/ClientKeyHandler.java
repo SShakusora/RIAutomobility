@@ -1,8 +1,8 @@
 package com.sshakusora.riautomobility.events;
 
-import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
-import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
-import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
+import com.sshakusora.riautomobility.Network.RIAutomobilityNetwork;
+import com.sshakusora.riautomobility.Network.packet.BoardingAsPassengerPacket;
+import com.sshakusora.riautomobility.Network.packet.PassengerDriverSwitchPacket;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
