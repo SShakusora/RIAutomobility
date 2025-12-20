@@ -1,13 +1,13 @@
 package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
-import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
+import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
 import net.minecraft.client.Minecraft;

@@ -7,8 +7,6 @@ import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -195,8 +193,8 @@ public class AutomobileEntityMixin {
     public void specialTurbo(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         driftedReadyBoost(self);
-        flyReadyBoost(self);
-        landingReadyBoost(self);
+//        flyReadyBoost(self);
+//        landingReadyBoost(self);
 
         this.preAccelerating = this.accelerating;
         this.preOnGround = self.automobileOnGround();
