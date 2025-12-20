@@ -13,7 +13,8 @@
     "CameraAccessor",
     "CameraMixin",
     "LocalPlayerMixin",
-    "ScreenAccessor"
+    "ScreenAccessor",
+    "AutomobileEntityClientMixin"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
