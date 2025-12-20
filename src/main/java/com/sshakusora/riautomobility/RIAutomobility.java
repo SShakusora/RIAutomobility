@@ -1,7 +1,7 @@
 package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
-import com.sshakusora.riautomobility.Network.RIAutomobilityNetwork;
+import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
