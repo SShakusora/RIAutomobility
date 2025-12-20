@@ -69,7 +69,7 @@ public class AutomobileEntityMixin {
 
         Vec3 pos = self.position()
                 .add(0.0F, (double)vert + passenger.getMyRidingOffset(), 0.0F)
-                .add((new Vec3(local.x, self.getPassengersRidingOffset() + local.y, local.z))
+                .add((new Vec3(local.pos.x, self.getPassengersRidingOffset() + local.pos.y, local.pos.z))
                         .yRot(-self.getYRot() * Mth.DEG_TO_RAD)
                         .xRot(-pitch * Mth.DEG_TO_RAD)
                         .zRot(-roll * Mth.DEG_TO_RAD));

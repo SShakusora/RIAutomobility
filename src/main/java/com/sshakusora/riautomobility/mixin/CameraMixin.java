@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Camera;
@@ -18,6 +19,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
+
 @Mixin(Camera.class)
 public class CameraMixin {
     @Inject(method = "setup", at = @At("TAIL"))
@@ -32,13 +35,18 @@ public class CameraMixin {
         Entity vehicle = entity.getVehicle();
         if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof DriverSeatEntity)) {
             RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, entity);
+            Vec3 cameraPos = RIAutomobileCameraRegistry.getCameraPos(vehicle, entity);
             /*
             x:forward and back
             y:up and down
             z:left and right
              */
             //TODO: add camera position feature and fix sound
-            cameraAccessor.invokeMove(0.0, 0.0, -pos.x);
+            if(cameraPos == Vec3.ZERO){
+                cameraAccessor.invokeMove(0.0, 0.0, -pos.pos.x);
+            } else {
+                cameraAccessor.invokeMove(cameraPos.x, cameraPos.y, -pos.pos.x);
+            }
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);
             Vec3 dir1 = targetPos.subtract(eyePos).normalize();

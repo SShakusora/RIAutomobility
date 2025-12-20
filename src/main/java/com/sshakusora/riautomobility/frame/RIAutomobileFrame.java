@@ -1,11 +1,13 @@
 package com.sshakusora.riautomobility.frame;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +26,35 @@ public class RIAutomobileFrame {
     public static final AutomobileFrame STEEL_QUADMOTORCAR = registerQuadMotorcar("steel", 1.9F);
     public static final AutomobileFrame GOLDEN_QUADMOTORCAR = registerQuadMotorcar("golden", 2.1F);
     public static final AutomobileFrame BEJEWELED_QUADMOTORCAR = registerQuadMotorcar("bejeweled", 2.22F);
+    public static final AutomobileFrame TEST_GECKOFRAME = register(new AutomobileFrame(
+                    RIAutomobility.rl("test_geckoframe"),
+                    0.1F,
+                    new AutomobileFrame.FrameModel(
+                            RIAutomobility.rl("textures/entity/automobile/frame/test_geckoframe.png"),
+                            RIAutomobility.rl("test_geckoframe"),
+                            WheelBase.basic(72.0F, 32.0F),
+                            72.0F,
+                            11.3636F,
+                            18.0F,
+                            2.0F,
+                            23.0F,
+                            22.0F
+                    )),
+            List.of(
+                    new RIAutomobileSeatRegistry.SeatPos(9.7727/16,37.3091/16),
+                    new RIAutomobileSeatRegistry.SeatPos(-9.7727/16, 37.3091/16)
+            ),
+            EntityDimensions.scalable(21.7727F/8, 53.3636F/16),
+            List.of(
+                    /*
+                    x:forward and back
+                    y:up and down
+                    z:left and right
+                    */
+                    new Vec3(-5.0, 3.0, 0.0),
+                    new Vec3(-5.0, 3.0, 0.0)
+            )
+    );
 
     private static AutomobileFrame registerDoubleMotorcar(String variant, float weight) {
         return register(new AutomobileFrame(
@@ -76,6 +107,14 @@ public class RIAutomobileFrame {
     private static AutomobileFrame register(AutomobileFrame frame, List<RIAutomobileSeatRegistry.SeatPos> seats, EntityDimensions dimensions) {
         RIAutomobileSeatRegistry.register(frame, seats);
         RIAutomobileEntityDimensionsRegistry.register(frame, dimensions);
+        FRAMES.add(frame);
+        return AutomobileFrame.REGISTRY.register(frame);
+    }
+
+    private static AutomobileFrame register(AutomobileFrame frame, List<RIAutomobileSeatRegistry.SeatPos> seats, EntityDimensions dimensions, List<Vec3> cameraPoses) {
+        RIAutomobileSeatRegistry.register(frame, seats);
+        RIAutomobileEntityDimensionsRegistry.register(frame, dimensions);
+        RIAutomobileCameraRegistry.register(frame, cameraPoses);
         FRAMES.add(frame);
         return AutomobileFrame.REGISTRY.register(frame);
     }
