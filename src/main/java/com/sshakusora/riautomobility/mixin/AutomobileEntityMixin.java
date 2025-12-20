@@ -130,18 +130,6 @@ public class AutomobileEntityMixin {
         ci.cancel();
     }
 
-//    @Inject(method = "provideClientInput", at = @At("HEAD"), cancellable = true, remap = false)
-//    public void disableNotDriverInput(boolean fwd, boolean back, boolean left, boolean right, boolean space, CallbackInfo ci) {
-//        AutomobileEntity self = (AutomobileEntity) (Object) this;
-//        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-//
-//        LocalPlayer player = Minecraft.getInstance().player;
-//        if(player == null) return;
-//
-//        List<Entity> passengers = self.getPassengers();
-//        if(passengers.isEmpty() || passengers.get(0).getFirstPassenger() != player) ci.cancel();
-//    }
-
     @Inject(method = "engineRunning", at = @At("HEAD"), cancellable = true, remap = false)
     public void RIAutomobileEngineRunning(CallbackInfoReturnable<Boolean> cir) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
