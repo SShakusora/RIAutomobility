@@ -4,7 +4,6 @@ import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;

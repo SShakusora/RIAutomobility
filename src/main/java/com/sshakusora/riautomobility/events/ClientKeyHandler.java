@@ -1,11 +1,11 @@
 package com.sshakusora.riautomobility.events;
 
-import com.sshakusora.riautomobility.Network.RIAutomobilityNetwork;
-import com.sshakusora.riautomobility.Network.packet.BoardingAsPassengerPacket;
-import com.sshakusora.riautomobility.Network.packet.PassengerDriverSwitchPacket;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
+import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
+import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;

@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.Network.packet;
+package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;

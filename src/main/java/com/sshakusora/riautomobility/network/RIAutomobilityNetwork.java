@@ -1,8 +1,8 @@
-package com.sshakusora.riautomobility.Network;
+package com.sshakusora.riautomobility.network;
 
-import com.sshakusora.riautomobility.Network.packet.BoardingAsPassengerPacket;
-import com.sshakusora.riautomobility.Network.packet.PassengerDriverSwitchPacket;
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
+import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
