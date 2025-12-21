@@ -8,7 +8,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
-import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -32,27 +31,25 @@ public class HitboxEntity extends Entity {
 
     private EntityDimensions size;
 
-//    public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileFrame.Hitbox hitbox) {
-//        super(RIAutomobilityEntities.HITBOX.get(), level);
-//
-//        this.entityData.set(AUTOMOBILE, automobile.getId());
-//        this.entityData.set(ORIGIN, new Vector3f((float) hitbox.origin().x(), (float) hitbox.origin().y(), (float) hitbox.origin().z()));
-//        this.entityData.set(WIDTH, hitbox.width());
-//        this.entityData.set(HEIGHT, hitbox.height());
-//
-//        this.size = EntityDimensions.scalable(hitbox.width(), hitbox.height());
-//    }
+    public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileFrame.Hitbox hitbox) {
+        super(RIAutomobilityEntities.HITBOX.get(), level);
+
+        this.entityData.set(AUTOMOBILE, automobile.getId());
+        this.entityData.set(ORIGIN, new Vector3f((float) hitbox.origin().x(), (float) hitbox.origin().y(), (float) hitbox.origin().z()));
+        this.entityData.set(WIDTH, hitbox.width());
+        this.entityData.set(HEIGHT, hitbox.height());
+
+        this.size = EntityDimensions.scalable(hitbox.width(), hitbox.height());
+    }
 
     public HitboxEntity(EntityType<?> entityType, Level level) {
         super(entityType, level);
-        this.size = EntityDimensions.scalable(1.1f, 0.7f);
+        this.size = EntityDimensions.scalable(1.0f, 0.66f);
     }
 
-    public AutomobileEntity automobile() {
-        var entity = this.level().getEntity(this.entityData.get(AUTOMOBILE));
-        if (entity instanceof AutomobileEntity auto) {
-            return auto;
-        }
+    public AutomobileEntity getAutomobile() {
+        Entity entity = this.level().getEntity(this.entityData.get(AUTOMOBILE));
+        if (entity instanceof AutomobileEntity auto) return auto;
         return null;
     }
 
@@ -61,60 +58,41 @@ public class HitboxEntity extends Entity {
         return new Vec3(o.x(), o.y(), o.z());
     }
 
-    public float width() {
-        return this.size.width;
-    }
-
-    public float height() {
-        return this.size.height;
-    }
-
     @Override
     public void tick() {
-        var automobile = automobile();
+        var automobile = getAutomobile();
 
         if (automobile == null) {
-            if (!this.level().isClientSide()) {
-                this.remove(RemovalReason.DISCARDED);
-            }
-
+            if (!this.level().isClientSide()) this.discard();
             return;
         }
 
         if (!this.level().isClientSide()) {
             if (!automobile.isAlive()) {
-                this.remove(RemovalReason.DISCARDED);
+                this.discard();
                 return;
             }
-        } else {
-//            if (!automobile.hitboxes.contains(this)) {
-//                automobile.hitboxes.add(this);
-//            }
         }
 
         var pos = this.boxOrigin();
         pos = localPosToWorldSpace(automobile, pos);
 
-        this.setPos(pos.x(), pos.y() - this.size.height * 0.5, pos.z());
+        this.setPos(pos.x(), pos.y(), pos.z());
         super.tick();
     }
 
     @Override
-    public EntityDimensions getDimensions(Pose pose) {
-        return this.size;
-    }
-
-    @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        var automobile = automobile();
+        var automobile = getAutomobile();
         if (automobile == null) return super.interact(player, hand);
+        if(automobile.getPassengers().contains(player)) return InteractionResult.PASS;
 
         return automobile.interact(player, hand);
     }
 
     @Override
     public @Nullable ItemStack getPickResult() {
-        var automobile = automobile();
+        var automobile = getAutomobile();
         if (automobile == null) return super.getPickResult();
 
         return automobile.asPrefabItem();
@@ -122,10 +100,8 @@ public class HitboxEntity extends Entity {
 
     @Override
     public Component getName() {
-        var auto = automobile();
-        if (auto != null) {
-            return auto.getName();
-        }
+        var auto = getAutomobile();
+        if (auto != null) return auto.getName();
 
         return super.getName();
     }
@@ -133,6 +109,11 @@ public class HitboxEntity extends Entity {
     @Override
     public boolean canCollideWith(Entity other) {
         return !(other instanceof AutomobileEntity) && Boat.canVehicleCollide(this, other);
+    }
+
+    @Override
+    public EntityDimensions getDimensions(Pose pose) {
+        return this.size;
     }
 
     @Override
@@ -145,16 +126,13 @@ public class HitboxEntity extends Entity {
         return !this.isRemoved();
     }
 
-//    @Override
-//    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-//    }
-//
-//    @Override
-//    protected void lerpPositionAndRotationStep(int steps, double targetX, double targetY, double targetZ, double targetYRot, double targetXRot) {
-//    }
-//
     @Override
-    protected void defineSynchedData() {}
+    protected void defineSynchedData() {
+        this.entityData.define(AUTOMOBILE, -1);
+        this.entityData.define(ORIGIN, new Vector3f());
+        this.entityData.define(WIDTH, 1.0f);
+        this.entityData.define(HEIGHT, 0.66f);
+    }
 
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> dataAccessor) {
@@ -189,12 +167,11 @@ public class HitboxEntity extends Entity {
         float roll = auto.getDisplacement().getAngularZ(1.0F);
         float vert = auto.getDisplacement().getVertical(1.0F);
 
-        Vec3 pos = auto.position()
+        return auto.position()
                 .add(0.0F, vert, 0.0F)
                 .add((new Vec3(position.x, position.y, position.z))
                         .yRot(-auto.getYRot() * Mth.DEG_TO_RAD)
                         .xRot(-pitch * Mth.DEG_TO_RAD)
                         .zRot(-roll * Mth.DEG_TO_RAD));
-        return pos;
     }
 }

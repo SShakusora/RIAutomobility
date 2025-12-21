@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.HitboxEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
@@ -46,8 +47,6 @@ public class AutomobileEntityMixin {
     @Unique private boolean preAccelerating = false;
     @Unique private boolean preOnGround = true;
     @Unique private int driftedReadyBoostCounter = Integer.MAX_VALUE;
-    @Unique private int flyReadyBoostCounter = Integer.MAX_VALUE;
-    @Unique private int landingReadyBoostCounter = Integer.MAX_VALUE;
 
     @Shadow private float hSpeed;
     @Shadow private int turboCharge;
@@ -115,6 +114,9 @@ public class AutomobileEntityMixin {
                 (e) -> {
                     if (e == self) return false;
                     if (e.getVehicle() == self) return false;
+                    if(e instanceof HitboxEntity hb) {
+                        return hb.getAutomobile() != self;
+                    }
                     Entity firstPassenger = self.getFirstPassenger();
                     if (firstPassenger instanceof DriverSeatEntity fp && fp.isVehicle()) {
                         Entity nestedFirstPassenger = fp.getFirstPassenger();
@@ -193,8 +195,6 @@ public class AutomobileEntityMixin {
     public void specialTurbo(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         driftedReadyBoost(self);
-//        flyReadyBoost(self);
-//        landingReadyBoost(self);
 
         this.preAccelerating = this.accelerating;
         this.preOnGround = self.automobileOnGround();
@@ -211,36 +211,6 @@ public class AutomobileEntityMixin {
             driftedReadyBoostCounter++;
             if(!this.preAccelerating && this.accelerating){
                 self.boost(0.38F, 12);
-            }
-        }
-    }
-
-    @Unique private void flyReadyBoost(AutomobileEntity self) {
-        if(this.preOnGround && !self.automobileOnGround()){
-            flyReadyBoostCounter = 0;
-        }
-
-        if(!self.automobileOnGround()){
-            if(flyReadyBoostCounter >= 6) return;
-            if(this.turboCharge > 35) return;
-            flyReadyBoostCounter++;
-            if(!this.preAccelerating && this.accelerating){
-                self.boost(0.38F, 4);
-            }
-        }
-    }
-
-    @Unique private void landingReadyBoost(AutomobileEntity self) {
-        if(!this.preOnGround && self.automobileOnGround()){
-            landingReadyBoostCounter = 0;
-        }
-
-        if(self.automobileOnGround()){
-            if(landingReadyBoostCounter >= 6) return;
-            if(this.turboCharge > 35) return;
-            landingReadyBoostCounter++;
-            if(!this.preAccelerating && this.accelerating){
-                self.boost(0.38F, 9);
             }
         }
     }

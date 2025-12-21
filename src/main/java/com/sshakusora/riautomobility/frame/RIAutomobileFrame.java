@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.frame;
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
+import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
@@ -53,6 +54,10 @@ public class RIAutomobileFrame {
                     */
                     new Vec3(-7.0, 3.0, 0.0),
                     new Vec3(-7.0, 3.0, 0.0)
+            ),
+            List.of(
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, -36.0909/16), 21.7727F/8, 53.3636F/16),
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, 35.9091/16), 21.7727F/8, 53.3636F/16)
             )
     );
 
@@ -111,10 +116,11 @@ public class RIAutomobileFrame {
         return AutomobileFrame.REGISTRY.register(frame);
     }
 
-    private static AutomobileFrame register(AutomobileFrame frame, List<RIAutomobileSeatRegistry.SeatPos> seats, EntityDimensions dimensions, List<Vec3> cameraPoses) {
+    private static AutomobileFrame register(AutomobileFrame frame, List<RIAutomobileSeatRegistry.SeatPos> seats, EntityDimensions dimensions, List<Vec3> cameraPoses, List<RIAutomobileFrame.Hitbox> hitboxes) {
         RIAutomobileSeatRegistry.register(frame, seats);
         RIAutomobileEntityDimensionsRegistry.register(frame, dimensions);
         RIAutomobileCameraRegistry.register(frame, cameraPoses);
+        RIAutomobileHitboxRegistry.register(frame, hitboxes);
         FRAMES.add(frame);
         return AutomobileFrame.REGISTRY.register(frame);
     }

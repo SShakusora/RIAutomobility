@@ -15,6 +15,6 @@ public class RIAutomobileHitboxRegistry {
     }
 
     public static List<RIAutomobileFrame.Hitbox> getHitboxes(final AutomobileFrame frame) {
-        return HITBOXES.getOrDefault(frame, List.of(RIAutomobileFrame.Hitbox.DEFAULT));
+        return HITBOXES.getOrDefault(frame, List.of());
     }
 }
