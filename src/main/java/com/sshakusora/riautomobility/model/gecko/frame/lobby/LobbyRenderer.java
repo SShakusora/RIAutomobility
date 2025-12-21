@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.model.gecko.frame;
+package com.sshakusora.riautomobility.model.gecko.frame.lobby;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -9,27 +9,27 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
-public class TestGeckoFrameRenderer implements GeoRenderer<TestGeckoFrameAnimatable> {
-    private final GeoModel<TestGeckoFrameAnimatable> model;
-    private final TestGeckoFrameAnimatable animatable;
+public class LobbyRenderer implements GeoRenderer<LobbyAnimatable> {
+    private final GeoModel<LobbyAnimatable> model;
+    private final LobbyAnimatable animatable;
 
-    public TestGeckoFrameRenderer(GeoModel<TestGeckoFrameAnimatable> model, TestGeckoFrameAnimatable animatable) {
+    public LobbyRenderer(GeoModel<LobbyAnimatable> model, LobbyAnimatable animatable) {
         this.model = model;
         this.animatable = animatable;
     }
 
     @Override
-    public GeoModel<TestGeckoFrameAnimatable> getGeoModel() {
+    public GeoModel<LobbyAnimatable> getGeoModel() {
         return model;
     }
 
     @Override
-    public TestGeckoFrameAnimatable getAnimatable() {
+    public LobbyAnimatable getAnimatable() {
         return animatable;
     }
 
     @Override
-    public List<GeoRenderLayer<TestGeckoFrameAnimatable>> getRenderLayers() {
+    public List<GeoRenderLayer<LobbyAnimatable>> getRenderLayers() {
         return List.of();
     }
 
@@ -47,6 +47,6 @@ public class TestGeckoFrameRenderer implements GeoRenderer<TestGeckoFrameAnimata
     }
 
     @Override
-    public void updateAnimatedTextureFrame(TestGeckoFrameAnimatable animatable) {
+    public void updateAnimatedTextureFrame(LobbyAnimatable animatable) {
     }
 }

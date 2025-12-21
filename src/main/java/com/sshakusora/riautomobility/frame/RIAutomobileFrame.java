@@ -26,23 +26,23 @@ public class RIAutomobileFrame {
     public static final AutomobileFrame STEEL_QUADMOTORCAR = registerQuadMotorcar("steel", 1.9F);
     public static final AutomobileFrame GOLDEN_QUADMOTORCAR = registerQuadMotorcar("golden", 2.1F);
     public static final AutomobileFrame BEJEWELED_QUADMOTORCAR = registerQuadMotorcar("bejeweled", 2.22F);
-    public static final AutomobileFrame TEST_GECKOFRAME = register(new AutomobileFrame(
-                    RIAutomobility.rl("test_geckoframe"),
-                    0.1F,
+    public static final AutomobileFrame LOBBY = register(new AutomobileFrame(
+                    RIAutomobility.rl("lobby"),
+                    1.5F,
                     new AutomobileFrame.FrameModel(
-                            RIAutomobility.rl("textures/entity/automobile/frame/test_geckoframe.png"),
-                            RIAutomobility.rl("test_geckoframe"),
+                            RIAutomobility.rl("textures/entity/automobile/frame/lobby.png"),
+                            RIAutomobility.rl("frame_lobby"),
                             WheelBase.basic(72.0F, 32.0F),
-                            72.0F,
+                            76.0F,
                             11.3636F,
                             18.0F,
-                            2.0F,
+                            16.0F,
                             23.0F,
                             22.0F
                     )),
             List.of(
-                    new RIAutomobileSeatRegistry.SeatPos(9.7727/16,37.3091/16),
-                    new RIAutomobileSeatRegistry.SeatPos(-9.7727/16, 37.3091/16)
+                    new RIAutomobileSeatRegistry.SeatPos(9.7727/16,40.3091/16),
+                    new RIAutomobileSeatRegistry.SeatPos(-9.7727/16, 40.3091/16)
             ),
             EntityDimensions.scalable(21.7727F/8, 53.3636F/16),
             List.of(
@@ -51,8 +51,8 @@ public class RIAutomobileFrame {
                     y:up and down
                     z:left and right
                     */
-                    new Vec3(-5.0, 3.0, 0.0),
-                    new Vec3(-5.0, 3.0, 0.0)
+                    new Vec3(-7.0, 3.0, 0.0),
+                    new Vec3(-7.0, 3.0, 0.0)
             )
     );
 
@@ -124,4 +124,8 @@ public class RIAutomobileFrame {
     }
 
     public static void init() {}
+
+    public record Hitbox(Vec3 origin, float width, float height) {
+        public static final Hitbox DEFAULT = new Hitbox(Vec3.ZERO, 1.0f, 0.66f);
+    }
 }
