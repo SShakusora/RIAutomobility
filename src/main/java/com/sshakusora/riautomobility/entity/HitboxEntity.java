@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.entity;
 
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -26,7 +25,7 @@ import org.joml.Vector3f;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class HitboxEntity extends Entity implements Container {
+public class HitboxEntity extends Entity{
     public static final EntityDataAccessor<Integer> AUTOMOBILE = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Vector3f> ORIGIN = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.VECTOR3);
     public static final EntityDataAccessor<Float> WIDTH = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.FLOAT);
@@ -36,7 +35,6 @@ public class HitboxEntity extends Entity implements Container {
     private static final int INVENTORY_SIZE = 54;
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private EntityDimensions size;
-    private boolean changed = false;
 
     public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileFrame.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
@@ -80,10 +78,6 @@ public class HitboxEntity extends Entity implements Container {
                 this.discard();
                 return;
             }
-        } else {
-            if (!RIAutomobileHitboxRegistry.getHitboxEntities(automobile).contains(this)) {
-                RIAutomobileHitboxRegistry.addHitbox(automobile, this);
-            }
         }
 
         var pos = this.boxOrigin();
@@ -96,7 +90,7 @@ public class HitboxEntity extends Entity implements Container {
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (this.hasContainer()) {
-            if (!this.level().isClientSide()) {
+            if (!this.level().isClientSide() && this.entityData.get(HAS_CONTAINER)) {
                 this.level().playSound(
                         null,
                         this.blockPosition(),
@@ -105,7 +99,7 @@ public class HitboxEntity extends Entity implements Container {
                         1.0F
                         );
                 player.openMenu(new SimpleMenuProvider(
-                        (syncId, inv, p) -> ChestMenu.sixRows(syncId, inv, this),
+                        (syncId, inv, p) -> ChestMenu.sixRows(syncId, inv, (Container) this.getAutomobile()),
                         Component.translatable("container.riautomobility.hitbox")
                 ));
             }
@@ -118,19 +112,6 @@ public class HitboxEntity extends Entity implements Container {
         if (Objects.requireNonNull(automobile.getFirstPassenger()).isVehicle() && player == automobile.getFirstPassenger().getFirstPassenger()) return InteractionResult.PASS;
 
         return automobile.interact(player, hand);
-    }
-
-    @Override
-    public void remove(RemovalReason reason) {
-        if (!this.level().isClientSide()) {
-            if(this.getAutomobile() != null) {
-                Containers.dropContents(this.level(), this.getAutomobile().blockPosition(), this);
-            } else {
-                Containers.dropContents(this.level(), this.blockPosition(), this);
-            }
-        }
-
-        super.remove(reason);
     }
 
     @Override
@@ -151,12 +132,30 @@ public class HitboxEntity extends Entity implements Container {
 
     @Override
     public boolean canCollideWith(Entity other) {
-        if(this.getAutomobile().getFirstPassenger() instanceof DriverSeatEntity seat) {
-            Entity pa = seat.getFirstPassenger();
-            if(pa == other) return false;
+        if (other == this) return false;
+        AutomobileEntity auto = this.getAutomobile();
+        if (auto == null) return false;
+        if (other == auto) return false;
+        if (other instanceof HitboxEntity hitbox) {
+            if (hitbox.getAutomobile() == auto) {
+                return false;
+            }
         }
-        return !(other instanceof HitboxEntity) && !(other instanceof DriverSeatEntity)  && !(other instanceof AutomobileEntity) && Boat.canVehicleCollide(this, other);
+        if (auto.hasPassenger(other)) {
+            return false;
+        }
+        Entity firstPassenger = auto.getFirstPassenger();
+        if (firstPassenger instanceof DriverSeatEntity seat) {
+            if (other == seat) {
+                return false;
+            }
+            if (seat.hasPassenger(other)) {
+                return false;
+            }
+        }
+        return Boat.canVehicleCollide(this, other);
     }
+
 
     @Override
     public EntityDimensions getDimensions(Pose pose) {
@@ -195,62 +194,6 @@ public class HitboxEntity extends Entity implements Container {
 
     public boolean hasContainer() {
         return this.entityData.get(HAS_CONTAINER);
-    }
-
-    public void setHasContainer(boolean value) {
-        this.entityData.set(HAS_CONTAINER, value);
-    }
-
-    @Override
-    public int getContainerSize() {
-        return INVENTORY_SIZE;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        for (ItemStack stack : items) {
-            if (!stack.isEmpty()) return false;
-        }
-        return true;
-    }
-
-    @Override
-    public ItemStack getItem(int slot) {
-        return items.get(slot);
-    }
-
-    @Override
-    public ItemStack removeItem(int slot, int amount) {
-        return ContainerHelper.removeItem(items, slot, amount);
-    }
-
-    @Override
-    public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(items, slot);
-    }
-
-    @Override
-    public void setItem(int slot, ItemStack stack) {
-        items.set(slot, stack);
-        if (stack.getCount() > getMaxStackSize()) {
-            stack.setCount(getMaxStackSize());
-        }
-        setChanged();
-    }
-
-    @Override
-    public void setChanged() {
-        this.changed = true;
-    }
-
-    @Override
-    public boolean stillValid(Player player) {
-        return this.isAlive() && player.distanceTo(this) < 8.0;
-    }
-
-    @Override
-    public void clearContent() {
-        items.clear();
     }
 
     @Override

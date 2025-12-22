@@ -11,14 +11,14 @@ import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.sound.AutomobilitySounds;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.Containers;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.*;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -44,13 +44,18 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import java.util.*;
 
 @Mixin(AutomobileEntity.class)
-public abstract class AutomobileEntityMixin extends Entity {
+public abstract class AutomobileEntityMixin extends Entity implements Container {
     @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
     @Unique private float prevYawForRotate = 0.0F;
     @Unique private boolean preAccelerating = false;
+    @Unique private boolean hitboxesSpawned = false;
+    @Unique private boolean changed = false;
     @Unique private int driftedReadyBoostCounter = Integer.MAX_VALUE;
     @Unique private int hadVehicleCollision = 0;
     @Unique private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
+    @Unique public final List<HitboxEntity> hitboxes = new ArrayList<>();
+    @Unique private static final int INVENTORY_SIZE = 54;
+    @Unique private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
     @Shadow private float hSpeed;
     @Shadow private int turboCharge;
@@ -80,6 +85,81 @@ public abstract class AutomobileEntityMixin extends Entity {
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         return calDismountLocation(self, passenger);
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (!level().isClientSide) {
+            Containers.dropContents(level(), blockPosition(), this);
+            this.removeAll();
+        }
+        super.remove(reason);
+    }
+
+    @Override
+    public int getContainerSize() {
+        return INVENTORY_SIZE;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public ItemStack getItem(int slot) {
+        return items.get(slot);
+    }
+
+    @Override
+    public ItemStack removeItem(int slot, int amount) {
+        return ContainerHelper.removeItem(items, slot, amount);
+    }
+
+    @Override
+    public ItemStack removeItemNoUpdate(int slot) {
+        return ContainerHelper.takeItem(items, slot);
+    }
+
+    @Override
+    public void setItem(int slot, ItemStack stack) {
+        items.set(slot, stack);
+        if (stack.getCount() > getMaxStackSize()) {
+            stack.setCount(getMaxStackSize());
+        }
+        setChanged();
+    }
+
+    @Override
+    public void setChanged() {
+        this.changed = true;
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return this.isAlive() && player.distanceTo(this) < 8.0;
+    }
+
+    @Override
+    public void clearContent() {
+        items.clear();
+    }
+
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+    public void readAdditionalSaveContainerData(CompoundTag tag, CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        ContainerHelper.loadAllItems(tag, items);
+    }
+
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+    public void addAdditionalSaveContainerData(CompoundTag tag, CallbackInfo ci) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        ContainerHelper.saveAllItems(tag, items);
     }
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
@@ -123,6 +203,11 @@ public abstract class AutomobileEntityMixin extends Entity {
         prevYawForRotate = self.getYRot();
         if(self.level().isClientSide) {
             updateCullingBox();
+        } else {
+            if (!hitboxesSpawned) {
+                spawnHitboxes();
+                hitboxesSpawned = true;
+            }
         }
     }
 
@@ -344,7 +429,7 @@ public abstract class AutomobileEntityMixin extends Entity {
 
         var collisions = new HashMap<AutomobileEntity, RIAutomobileHitboxRegistry.IncomingCollision>();
 
-        for (var box : RIAutomobileHitboxRegistry.getHitboxEntities(self)) {
+        for (var box : this.hitboxes) {
             var bbox = box.getBoundingBox().inflate(0.15);
             for (var hitbox : self.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != self)) {
                 var auto = hitbox.getAutomobile();
@@ -387,9 +472,8 @@ public abstract class AutomobileEntityMixin extends Entity {
 
     @Unique
     public void updateCullingBox() {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         this.cullingBox = super.getBoundingBoxForCulling();
-        for (var hitbox : RIAutomobileHitboxRegistry.getHitboxEntities(self)) {
+        for (var hitbox : this.hitboxes) {
             this.cullingBox = this.cullingBox.minmax(hitbox.getBoundingBox());
         }
     }
@@ -425,5 +509,26 @@ public abstract class AutomobileEntityMixin extends Entity {
         }
 
         return result;
+    }
+
+    @Unique
+    private void spawnHitboxes() {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        var defs = RIAutomobileHitboxRegistry.getHitboxes(self.getFrame());
+
+        for (var def : defs) {
+            HitboxEntity hb = new HitboxEntity(level(), self, def);
+            self.level().addFreshEntity(hb);
+            hitboxes.add(hb);
+        }
+    }
+
+    @Unique
+    private void removeAll() {
+        for (HitboxEntity hb : this.hitboxes) {
+            if (!hb.isRemoved()) {
+                hb.discard();
+            }
+        }
     }
 }
