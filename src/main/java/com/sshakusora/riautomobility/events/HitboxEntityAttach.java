@@ -38,6 +38,7 @@ public class HitboxEntityAttach {
             hitbox.setPos(worldPos.x, worldPos.y, worldPos.z);
 
             automobile.level().addFreshEntity(hitbox);
+            RIAutomobileHitboxRegistry.addHitbox(automobile, hitbox);
         }
     }
 }

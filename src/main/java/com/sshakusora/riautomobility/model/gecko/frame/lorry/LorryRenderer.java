@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.model.gecko.frame.lobby;
+package com.sshakusora.riautomobility.model.gecko.frame.lorry;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -9,27 +9,27 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
-public class LobbyRenderer implements GeoRenderer<LobbyAnimatable> {
-    private final GeoModel<LobbyAnimatable> model;
-    private final LobbyAnimatable animatable;
+public class LorryRenderer implements GeoRenderer<LorryAnimatable> {
+    private final GeoModel<LorryAnimatable> model;
+    private final LorryAnimatable animatable;
 
-    public LobbyRenderer(GeoModel<LobbyAnimatable> model, LobbyAnimatable animatable) {
+    public LorryRenderer(GeoModel<LorryAnimatable> model, LorryAnimatable animatable) {
         this.model = model;
         this.animatable = animatable;
     }
 
     @Override
-    public GeoModel<LobbyAnimatable> getGeoModel() {
+    public GeoModel<LorryAnimatable> getGeoModel() {
         return model;
     }
 
     @Override
-    public LobbyAnimatable getAnimatable() {
+    public LorryAnimatable getAnimatable() {
         return animatable;
     }
 
     @Override
-    public List<GeoRenderLayer<LobbyAnimatable>> getRenderLayers() {
+    public List<GeoRenderLayer<LorryAnimatable>> getRenderLayers() {
         return List.of();
     }
 
@@ -47,6 +47,6 @@ public class LobbyRenderer implements GeoRenderer<LobbyAnimatable> {
     }
 
     @Override
-    public void updateAnimatedTextureFrame(LobbyAnimatable animatable) {
+    public void updateAnimatedTextureFrame(LorryAnimatable animatable) {
     }
 }

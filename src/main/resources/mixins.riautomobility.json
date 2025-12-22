@@ -9,12 +9,12 @@
   "client": [
     "AutoMechanicTableScreenAccessor",
     "AutoMechanicTableScreenMixin",
+    "AutomobileEntityClientMixin",
     "AutomobileSoundInstanceMixin",
     "CameraAccessor",
     "CameraMixin",
     "LocalPlayerMixin",
-    "ScreenAccessor",
-    "AutomobileEntityClientMixin"
+    "ScreenAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",

@@ -4,23 +4,29 @@ import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.HitboxEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
+import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
+import io.github.foundationgames.automobility.sound.AutomobilitySounds;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -35,24 +41,46 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Mixin(AutomobileEntity.class)
-public class AutomobileEntityMixin {
+public abstract class AutomobileEntityMixin extends Entity {
     @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
     @Unique private float prevYawForRotate = 0.0F;
     @Unique private boolean preAccelerating = false;
-    @Unique private boolean preOnGround = true;
     @Unique private int driftedReadyBoostCounter = Integer.MAX_VALUE;
+    @Unique private int hadVehicleCollision = 0;
+    @Unique private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
 
     @Shadow private float hSpeed;
     @Shadow private int turboCharge;
     @Shadow private boolean accelerating;
     @Shadow private boolean holdingDrift;
     @Shadow private boolean prevHoldDrift;
+    @Shadow private boolean decorative;
+    @Shadow private float engineSpeed;
+    @Shadow private Vec3 addedVelocity;
+    @Shadow private Vec3 lastPosForDisplacement;
+
+    public AutomobileEntityMixin(EntityType<?> p_19870_, Level p_19871_) {
+        super(p_19870_, p_19871_);
+    }
+
+    @Override
+    public AABB getBoundingBoxForCulling() {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) {
+            return this.cullingBox;
+        } else {
+            return self.getBoundingBox();
+        }
+    }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        return calDismountLocation(self, passenger);
+    }
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
@@ -83,6 +111,7 @@ public class AutomobileEntityMixin {
     public void tick(CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
+        receiveVehicleCollisions();
 
         //set custom entity collision box in tick. I don't think it's a good idea, and I don't have a good idea :(
         EntityAccessor accessor = (EntityAccessor) self;
@@ -92,6 +121,9 @@ public class AutomobileEntityMixin {
         }
 
         prevYawForRotate = self.getYRot();
+        if(self.level().isClientSide) {
+            updateCullingBox();
+        }
     }
 
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
@@ -197,7 +229,6 @@ public class AutomobileEntityMixin {
         driftedReadyBoost(self);
 
         this.preAccelerating = this.accelerating;
-        this.preOnGround = self.automobileOnGround();
     }
 
     @Unique private void driftedReadyBoost(AutomobileEntity self) {
@@ -238,11 +269,6 @@ public class AutomobileEntityMixin {
         return redirectDriver(ae);
     }
 
-    @Redirect(method = "interact", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"))
-    private boolean allowForgeWrench(ItemStack stack, Item item) {
-        return stack.is(item) || stack.is(FORGE_WRENCH);
-    }
-
     @Inject(method = "runOverEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;add(DDD)Lnet/minecraft/world/phys/Vec3;", shift = At.Shift.AFTER), cancellable = true, locals = LocalCapture.CAPTURE_FAILHARD)
     private void redirectGetFirstPassengerE(Vec3 velocity, CallbackInfo ci, AABB frontBox) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -258,6 +284,11 @@ public class AutomobileEntityMixin {
         }
 
         ci.cancel();
+    }
+
+    @Redirect(method = "interact", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"))
+    private boolean allowForgeWrench(ItemStack stack, Item item) {
+        return stack.is(item) || stack.is(FORGE_WRENCH);
     }
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
@@ -303,5 +334,96 @@ public class AutomobileEntityMixin {
         e.setYRot(Mth.wrapDegrees(e.getYRot() + dYaw));
         e.setYBodyRot(Mth.wrapDegrees(e.getYRot() + dYaw));
     }
-    //TODO:define culling
+
+    @Unique
+    public void receiveVehicleCollisions() {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        if (this.decorative) {
+            return;
+        }
+
+        var collisions = new HashMap<AutomobileEntity, RIAutomobileHitboxRegistry.IncomingCollision>();
+
+        for (var box : RIAutomobileHitboxRegistry.getHitboxEntities(self)) {
+            var bbox = box.getBoundingBox().inflate(0.15);
+            for (var hitbox : self.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != self)) {
+                var auto = hitbox.getAutomobile();
+                var intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
+
+                var collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
+                if (auto == null || collisions.containsKey(auto) && collisions.get(auto).depth().lengthSqr() > collDepth.lengthSqr()) {
+                    continue;
+                }
+
+                var momentum = this.getMeasuredMovement();
+                var origin = intersect.getCenter();
+
+                collisions.put(auto, new RIAutomobileHitboxRegistry.IncomingCollision(collDepth, momentum, origin, auto.getFrame().weight()));
+            }
+        }
+
+        hadVehicleCollision = Math.max(0, hadVehicleCollision - 1);
+        for (var col : collisions.values()) {
+            var meToCollision = col.origin().subtract(self.position()).multiply(1, 0, 1);
+            double hitScale = hadVehicleCollision <= 0 ? 0.15 : 0.07;
+            hitScale *= (1 + col.inertia() / self.getFrame().weight()) * 0.5;
+            this.addedVelocity = this.addedVelocity.add(
+                    meToCollision.reverse().normalize().scale(hitScale * (1 + 0.1 * Math.sqrt(col.velocity().length())) * col.depth().lengthSqr())
+                            .multiply(1, 0, 1));
+
+            if (hadVehicleCollision <= 0) {
+                self.level().playLocalSound(self.getX(), self.getY(), self.getZ(), AutomobilitySounds.COLLISION.require(), SoundSource.AMBIENT, 0.22f, 0.7f + (0.06f * (self.level().random.nextFloat() - 0.5f)), false);
+                this.engineSpeed *= 0.6f;
+                hadVehicleCollision = 12;
+            }
+        }
+    }
+
+    @Unique
+    public Vec3 getMeasuredMovement() {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        return self.position().subtract(this.lastPosForDisplacement);
+    }
+
+    @Unique
+    public void updateCullingBox() {
+        AutomobileEntity self = (AutomobileEntity) (Object) this;
+        this.cullingBox = super.getBoundingBoxForCulling();
+        for (var hitbox : RIAutomobileHitboxRegistry.getHitboxEntities(self)) {
+            this.cullingBox = this.cullingBox.minmax(hitbox.getBoundingBox());
+        }
+    }
+
+    @Unique
+    private Vec3 calDismountLocation(AutomobileEntity auto, Entity passenger) {
+        AABB box = auto.getBoundingBox();
+        double sideOffset = box.getXsize() / 2 + 1.0;
+
+        float yawRad = auto.getYRot() * Mth.DEG_TO_RAD;
+        Vec3 right = auto.position().add(-Math.cos(yawRad) * sideOffset, 0, -Math.sin(yawRad) * sideOffset);
+        Vec3 left = auto.position().add(Math.cos(yawRad) * sideOffset, 0, Math.sin(yawRad) * sideOffset);
+
+        Level level = auto.level();
+        boolean leftSafe = level.noCollision(passenger, passenger.getBoundingBox().move(left.subtract(passenger.position())));
+        boolean rightSafe = level.noCollision(passenger, passenger.getBoundingBox().move(right.subtract(passenger.position())));
+
+        Vec3 result;
+        if (leftSafe && rightSafe) {
+            double distLeft = passenger.position().distanceTo(left);
+            double distRight = passenger.position().distanceTo(right);
+
+            result = (distLeft <= distRight) ? left : right;
+        }
+        else if (leftSafe) {
+            result = left;
+        }
+        else if (rightSafe) {
+            result = right;
+        }
+        else {
+            result = new Vec3(auto.getX(), box.maxY, auto.getZ());
+        }
+
+        return result;
+    }
 }

@@ -6,13 +6,14 @@
     {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
     {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
     {"item": "minecraft:iron_block"},
-    {"item": "minecraft:iron_ingot"},
+    {"item": "minecraft:chest"},
     {"item": "minecraft:white_dye"},
     {"item": "minecraft:red_dye"},
+    {"item": "minecraft:chest"},
     {"item": "minecraft:iron_block"}
   ],
   "result": {
     "item": "automobility:automobile_frame",
-    "component": "riautomobility:lobby"
+    "component": "riautomobility:lorry"
   }
 }

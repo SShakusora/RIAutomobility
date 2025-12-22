@@ -27,12 +27,12 @@ public class RIAutomobileFrame {
     public static final AutomobileFrame STEEL_QUADMOTORCAR = registerQuadMotorcar("steel", 1.9F);
     public static final AutomobileFrame GOLDEN_QUADMOTORCAR = registerQuadMotorcar("golden", 2.1F);
     public static final AutomobileFrame BEJEWELED_QUADMOTORCAR = registerQuadMotorcar("bejeweled", 2.22F);
-    public static final AutomobileFrame LOBBY = register(new AutomobileFrame(
-                    RIAutomobility.rl("lobby"),
+    public static final AutomobileFrame LORRY = register(new AutomobileFrame(
+                    RIAutomobility.rl("lorry"),
                     1.5F,
                     new AutomobileFrame.FrameModel(
-                            RIAutomobility.rl("textures/entity/automobile/frame/lobby.png"),
-                            RIAutomobility.rl("frame_lobby"),
+                            RIAutomobility.rl("textures/entity/automobile/frame/lorry.png"),
+                            RIAutomobility.rl("frame_lorry"),
                             WheelBase.basic(72.0F, 32.0F),
                             76.0F,
                             11.3636F,
@@ -56,8 +56,10 @@ public class RIAutomobileFrame {
                     new Vec3(-7.0, 3.0, 0.0)
             ),
             List.of(
-                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, -36.0909/16), 21.7727F/8, 53.3636F/16),
-                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, 35.9091/16), 21.7727F/8, 53.3636F/16)
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, 35.9091/16), 21.7727F/8, 53.3636F/16, false),
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, 14.1364/16), 21.7727F/8, 53.3636F/16, false),
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -28.5455/16), 21.7727F/8, 53.3636F/16, false),
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -50.3182/16), 21.7727F/8, 53.3636F/16, true)
             )
     );
 
@@ -131,7 +133,7 @@ public class RIAutomobileFrame {
 
     public static void init() {}
 
-    public record Hitbox(Vec3 origin, float width, float height) {
-        public static final Hitbox DEFAULT = new Hitbox(Vec3.ZERO, 1.0f, 0.66f);
+    public record Hitbox(Vec3 origin, float width, float height, boolean hasContainer) {
+        public static final Hitbox DEFAULT = new Hitbox(Vec3.ZERO, 1.0f, 0.66f, false);
     }
 }
