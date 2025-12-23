@@ -16,6 +16,7 @@
     "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
 
     "entity.riautomobility.driver_seat": "司机座位",
+    "entity.riautomobility.hitbox": "机动车",
 
     "container.riautomobility.hitbox": "货车后备箱"
 }

@@ -48,7 +48,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
     @Unique private float prevYawForRotate = 0.0F;
     @Unique private boolean preAccelerating = false;
-    @Unique private boolean hitboxesSpawned = false;
     @Unique private boolean changed = false;
     @Unique private int driftedReadyBoostCounter = Integer.MAX_VALUE;
     @Unique private int hadVehicleCollision = 0;
@@ -148,6 +147,14 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         items.clear();
     }
 
+    @Override
+    public void onAddedToWorld() {
+        if (this.hitboxes.isEmpty()) {
+            spawnHitboxes();
+        }
+        super.onAddedToWorld();
+    }
+
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     public void readAdditionalSaveContainerData(CompoundTag tag, CallbackInfo ci) {
         AutomobileEntity self = (AutomobileEntity) (Object) this;
@@ -201,14 +208,7 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         }
 
         prevYawForRotate = self.getYRot();
-        if(self.level().isClientSide) {
-            updateCullingBox();
-        } else {
-            if (!hitboxesSpawned) {
-                spawnHitboxes();
-                hitboxesSpawned = true;
-            }
-        }
+        updateCullingBox();
     }
 
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
