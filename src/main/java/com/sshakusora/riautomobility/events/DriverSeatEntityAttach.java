@@ -17,7 +17,9 @@ public class DriverSeatEntityAttach {
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
         Entity e = event.getEntity();
         if(!(e instanceof AutomobileEntity ae)) return;
-        if(e.getFirstPassenger() instanceof DriverSeatEntity) return;
+        if(!e.getPassengers().isEmpty()) {
+            if(e.getPassengers().get(0) instanceof DriverSeatEntity) return;
+        }
         if(!RIAutomobileFrame.isRIAutomobileFrame(ae.getFrame())) return;
 
         Level world = event.getLevel();

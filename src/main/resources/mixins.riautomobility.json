@@ -7,13 +7,19 @@
   "server": [
   ],
   "client": [
+    "AutoMechanicTableScreenAccessor",
+    "AutoMechanicTableScreenMixin",
+    "AutomobileEntityClientMixin",
     "AutomobileSoundInstanceMixin",
     "CameraAccessor",
-    "LocalPlayerMixin"
+    "CameraMixin",
+    "LocalPlayerMixin",
+    "ScreenAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
+    "AutomobileAssemblerBlockEntityMixin",
     "AutomobileEntityMixin",
     "AutomobileHudMixin",
     "AutomobilityClientMixin",

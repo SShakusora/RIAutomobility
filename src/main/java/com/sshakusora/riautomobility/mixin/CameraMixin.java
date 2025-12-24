@@ -1,9 +1,8 @@
-package com.sshakusora.riautomobility.events;
+package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.mixin.CameraAccessor;
+import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Camera;
@@ -11,38 +10,43 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mod.EventBusSubscriber(modid = RIAutomobility.MODID, value = Dist.CLIENT)
-public class ModifyCamera {
-    @SubscribeEvent
-    public static void onCameraSetup(ViewportEvent event) {
+@Mixin(Camera.class)
+public class CameraMixin {
+    @Inject(method = "setup", at = @At("TAIL"))
+    private void RIAutomobileCameraSetup(BlockGetter level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
+        if (!detached || mirrored) return;
+        if (!(entity instanceof LocalPlayer)) return;
+
+        Camera camera = (Camera) (Object) this;
+        CameraAccessor cameraAccessor = (CameraAccessor) camera;
         Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player == null) return;
-
-        Entity vehicle = player.getVehicle();
+        if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+        Entity vehicle = entity.getVehicle();
         if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof DriverSeatEntity)) {
-            if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
-            Camera camera = event.getCamera();
-            CameraAccessor accessor = (CameraAccessor) camera;
-            RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, player);
-
+            RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, entity);
+            Vec3 cameraPos = RIAutomobileCameraRegistry.getCameraPos(vehicle, entity);
             /*
             x:forward and back
             y:up and down
             z:left and right
              */
             //TODO: add camera position feature and fix sound
-            accessor.invokeMove(0.0, 0.0, -pos.x);
+            if(cameraPos == Vec3.ZERO){
+                cameraAccessor.invokeMove(0.0, 0.0, -pos.pos.x);
+            } else {
+                cameraAccessor.invokeMove(cameraPos.x, cameraPos.y, -pos.pos.x);
+            }
             Vec3 targetPos = camera.getPosition();
-            Vec3 eyePos = player.getEyePosition((float) event.getPartialTick());
+            Vec3 eyePos = entity.getEyePosition(partialTick);
             Vec3 dir1 = targetPos.subtract(eyePos).normalize();
             Vec3 detectPos = targetPos.add(dir1.scale(0.3));
 
@@ -51,7 +55,7 @@ public class ModifyCamera {
                     detectPos,
                     ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE,
-                    player
+                    entity
             );
             if(mc.level == null) return;
             HitResult hit = mc.level.clip(context);
@@ -62,7 +66,7 @@ public class ModifyCamera {
                 targetPos = hitPos.add(dir2.scale(0.3));
             }
 
-            accessor.invokeSetPosition(targetPos);
+            cameraAccessor.invokeSetPosition(targetPos);
         }
     }
 }

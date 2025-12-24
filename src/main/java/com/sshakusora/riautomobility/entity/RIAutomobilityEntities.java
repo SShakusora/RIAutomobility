@@ -17,4 +17,12 @@ public class RIAutomobilityEntities {
                     .sized(0.0F, 0.0F)
                     .build("driver_seat")
     );
+
+    public static final RegistryObject<EntityType<HitboxEntity>> HITBOX = ENTITIES.register(
+            "hitbox",
+            () -> EntityType.Builder.<HitboxEntity>of(HitboxEntity::new, MobCategory.MISC)
+                    .clientTrackingRange(20)
+                    .sized(1.0F, 0.66F)
+                    .build("hitbox")
+    );
 }

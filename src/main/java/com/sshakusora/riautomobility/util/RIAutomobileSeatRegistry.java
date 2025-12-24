@@ -4,20 +4,21 @@ import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class RIAutomobileSeatRegistry {
-    private static final Map<AutomobileFrame, List<SeatPos>> customSeatsPosition = new HashMap<>();
+    private static final Map<AutomobileFrame, List<SeatPos>> CUSTOM_SEATS_POSITION = new HashMap<>();
 
     public static void register(AutomobileFrame frame, List<SeatPos> seats) {
-        customSeatsPosition.put(frame, seats);
+        CUSTOM_SEATS_POSITION.put(frame, seats);
     }
 
     public static List<SeatPos> getSeats(AutomobileFrame frame){
-        return customSeatsPosition.getOrDefault(frame, List.of());
+        return CUSTOM_SEATS_POSITION.getOrDefault(frame, List.of());
     }
 
     public static SeatPos getSeat(AutomobileFrame frame, int index){
@@ -51,19 +52,13 @@ public final class RIAutomobileSeatRegistry {
     }
 
     public static class SeatPos {
-        public double x;
-        public double y;
-        public double z;
+        public Vec3 pos;
 
         public SeatPos(double x, double z) {
-            this.x = x;
-            this.y = 0;
-            this.z = z;
+            this.pos = new Vec3(x, 0, z);
         }
         public SeatPos(double x, double y, double z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
+            this.pos = new Vec3(x, y, z);
         }
         public static SeatPos zero() {
             return new SeatPos(0, 0);
