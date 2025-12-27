@@ -19,10 +19,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.*;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -45,6 +42,7 @@ import java.util.*;
 
 @Mixin(AutomobileEntity.class)
 public abstract class AutomobileEntityMixin extends Entity implements Container {
+    @Unique private AutomobileEntity self = (AutomobileEntity) (Object) this;
     @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
     @Unique private float prevYawForRotate = 0.0F;
     @Unique private boolean preAccelerating = false;
@@ -72,17 +70,13 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Override
     public AABB getBoundingBoxForCulling() {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) {
             return this.cullingBox;
-        } else {
-            return self.getBoundingBox();
-        }
+        } else return super.getBoundingBoxForCulling();
     }
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         return calDismountLocation(self, passenger);
     }
 
@@ -157,21 +151,18 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     public void readAdditionalSaveContainerData(CompoundTag tag, CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         ContainerHelper.loadAllItems(tag, items);
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
     public void addAdditionalSaveContainerData(CompoundTag tag, CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         ContainerHelper.saveAllItems(tag, items);
     }
 
     @Inject(method = "positionRider", at = @At("HEAD"), cancellable = true)
     public void positionPassenger(Entity passenger, Entity.MoveFunction moveFunc, CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         RIAutomobileSeatRegistry.SeatPos local = RIAutomobileSeatRegistry.getSeat(self, passenger);
@@ -196,7 +187,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;position()Lnet/minecraft/world/phys/Vec3;", ordinal = 0))
     public void tick(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         receiveVehicleCollisions();
 
@@ -213,7 +203,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
     public void extendSpaceForPassengers(CallbackInfoReturnable<Boolean> cir) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
         List<Entity> passengers = self.getPassengers();
         List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
@@ -222,7 +211,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "accumulateCollisionAreas", at = @At("HEAD"), cancellable = true, remap = false)
     public void accumulateCollisionAreasFix(Collection<CollisionArea> areas, CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         self.level().getEntitiesOfClass(
@@ -249,7 +237,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "engineRunning", at = @At("HEAD"), cancellable = true, remap = false)
     public void RIAutomobileEngineRunning(CallbackInfoReturnable<Boolean> cir) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         if(self.isVehicle()){
@@ -264,7 +251,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;hasSpaceForPassengers()Z"), cancellable = true)
     public void RIAutomobileInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         Entity seat = self.getFirstPassenger();
@@ -310,7 +296,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     //After drifting, flying and landing, quickly press the accelerate button to boost.
     @Inject(method = "driftingTick", at = @At("HEAD"), remap = false)
     public void specialTurbo(CallbackInfo ci) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         driftedReadyBoost(self);
 
         this.preAccelerating = this.accelerating;
@@ -356,7 +341,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Inject(method = "runOverEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;add(DDD)Lnet/minecraft/world/phys/Vec3;", shift = At.Shift.AFTER), cancellable = true, locals = LocalCapture.CAPTURE_FAILHARD)
     private void redirectGetFirstPassengerE(Vec3 velocity, CallbackInfo ci, AABB frontBox) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
         for(Entity entity : self.level().getEntities(EntityTypeTest.forClass(Entity.class), frontBox, (entityx) -> entityx != self && !isOnRIAutomobile(entityx))) {
@@ -378,7 +362,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @ModifyVariable(method = "collisionStateTick", at = @At("STORE"), name = "start", remap = false)
     private BlockPos driftingFix(BlockPos original) {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         double y = self.getY();
 
         if(y <= 0){
@@ -391,7 +374,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     @Unique
     private Entity redirectDriver(AutomobileEntity ae){
         Entity first = ae.getFirstPassenger();
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return first;
 
         if(first instanceof DriverSeatEntity seat){
@@ -403,7 +385,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Unique
     private boolean isOnRIAutomobile(Entity entity){
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return false;
 
         List<Entity> passengerListPre = self.getPassengers();
@@ -422,7 +403,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Unique
     public void receiveVehicleCollisions() {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         if (this.decorative) {
             return;
         }
@@ -466,7 +446,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Unique
     public Vec3 getMeasuredMovement() {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         return self.position().subtract(this.lastPosForDisplacement);
     }
 
@@ -513,7 +492,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Unique
     private void spawnHitboxes() {
-        AutomobileEntity self = (AutomobileEntity) (Object) this;
         var defs = RIAutomobileHitboxRegistry.getHitboxes(self.getFrame());
 
         for (var def : defs) {
