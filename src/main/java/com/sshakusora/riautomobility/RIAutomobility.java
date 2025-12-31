@@ -2,8 +2,8 @@ package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
@@ -59,7 +59,7 @@ public class RIAutomobility
                 if (player != null) {
                     seat = player.getVehicle();
                 }
-                if (seat instanceof DriverSeatEntity && seat.getVehicle() instanceof AutomobileEntity auto) {
+                if (seat instanceof SeatEntity && seat.getVehicle() instanceof AutomobileEntity auto) {
                     AutomobileHud.render(evt.getGuiGraphics(), player, auto, evt.getPartialTick());
                 }
             });

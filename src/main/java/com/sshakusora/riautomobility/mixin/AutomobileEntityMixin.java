@@ -1,7 +1,7 @@
 package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.entity.HitboxEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
@@ -19,7 +19,10 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.*;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -38,7 +41,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
 @Mixin(AutomobileEntity.class)
 public abstract class AutomobileEntityMixin extends Entity implements Container {
@@ -51,7 +57,7 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     @Unique private int hadVehicleCollision = 0;
     @Unique private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
     @Unique public final List<HitboxEntity> hitboxes = new ArrayList<>();
-    @Unique private static final int INVENTORY_SIZE = 54;
+    @Unique private final int INVENTORY_SIZE = 54;
     @Unique private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
     @Shadow private float hSpeed;
@@ -143,10 +149,17 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
     @Override
     public void onAddedToWorld() {
-        if (this.hitboxes.isEmpty()) {
-            spawnHitboxes();
-        }
+        if (this.hitboxes.isEmpty()) spawnHitboxes();
+        if(this.getPassengers().isEmpty()) spawnSeats();
         super.onAddedToWorld();
+    }
+
+    @Override
+    public Entity getFirstPassenger(){
+        List<Entity> passengers = this.getPassengers();
+        if(passengers.isEmpty()) return null;
+        else if(passengers.get(0) instanceof SeatEntity seat) return seat.getPassengers().isEmpty() ? null : seat.getPassengers().get(0);
+        else return passengers.get(0);
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
@@ -179,9 +192,9 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
-        if(passenger != self.getFirstPassenger() && passenger != Objects.requireNonNull(self.getFirstPassenger()).getFirstPassenger()){
-            whenRotated(self.getYRot() - prevYawForRotate, passenger);
-        }
+//        if(passenger != self.getFirstPassenger()){
+//            whenRotated(self.getYRot() - prevYawForRotate, passenger);
+//        }
         ci.cancel();
     }
 
@@ -201,10 +214,19 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         updateCullingBox();
     }
 
+    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;startRiding(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean cancelStartRiding(Entity entity, Entity vehicle) {
+        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return entity.startRiding(vehicle);
+        return false;
+    }
+
     @Inject(method = "hasSpaceForPassengers", at = @At("HEAD"), cancellable = true, remap = false)
     public void extendSpaceForPassengers(CallbackInfoReturnable<Boolean> cir) {
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
-        List<Entity> passengers = self.getPassengers();
+        List<Entity> passengers = new ArrayList<>();
+        for(Entity e : this.getPassengers()) {
+            if(e.getFirstPassenger() != null) passengers.add(e.getFirstPassenger());
+        }
         List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(self.getFrame());
         cir.setReturnValue(passengers.size() < seats.size());
     }
@@ -219,16 +241,9 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
                 (e) -> {
                     if (e == self) return false;
                     if (e.getVehicle() == self) return false;
-                    if(e instanceof HitboxEntity hb) {
-                        return hb.getAutomobile() != self;
-                    }
-                    Entity firstPassenger = self.getFirstPassenger();
-                    if (firstPassenger instanceof DriverSeatEntity fp && fp.isVehicle()) {
-                        Entity nestedFirstPassenger = fp.getFirstPassenger();
-                        return nestedFirstPassenger != e;
-                    }
-
-                    return true;
+                    if (e instanceof SeatEntity) return false;
+                    if (e instanceof HitboxEntity hb) return hb.getAutomobile() != self;
+                    return !(e.getVehicle() instanceof SeatEntity s) || s.getVehicle() != self;
                 }
         ).forEach((e) -> areas.add(CollisionArea.entity(e)));
 
@@ -239,58 +254,24 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     public void RIAutomobileEngineRunning(CallbackInfoReturnable<Boolean> cir) {
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
-        if(self.isVehicle()){
-            Entity driver = self.getFirstPassenger();
-            if(!(driver instanceof DriverSeatEntity seat)) return;
-
-            Entity realDriver = seat.getFirstPassenger();
-            if(realDriver == null) cir.setReturnValue(self.getBoostTimer() > 0);
-            else cir.setReturnValue(true);
-        }
+        Entity driver = self.getFirstPassenger();
+        if(driver == null) cir.setReturnValue(self.getBoostTimer() > 0);
+        else cir.setReturnValue(true);
     }
 
-    @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;hasSpaceForPassengers()Z"), cancellable = true)
-    public void RIAutomobileInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+    @Inject(method = "interact", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;startRiding(Lnet/minecraft/world/entity/Entity;)Z"), cancellable = true)
+    private void RIAutomobileInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
 
-        Entity seat = self.getFirstPassenger();
-        Entity driver = null;
-        if (seat != null) {
-            driver = seat.getFirstPassenger();
+        for(Entity e : this.getPassengers()) {
+            if(!e.isVehicle()) {
+                player.startRiding(e, true);
+                break;
+            }
         }
-        if(!self.hasSpaceForPassengers()) {
-            if(!Objects.requireNonNull(self.getFirstPassenger()).isVehicle()){
-                if (!self.level().isClientSide()){
-                    player.startRiding(self.getFirstPassenger(), true);
-                }
-                cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
-                cir.cancel();
-            } else {
-                for(Entity e : self.getPassengers()){
-                    if(e == self.getFirstPassenger()) continue;
-                    if(!(e instanceof Player)) {
-                        if (!self.level().isClientSide()){
-                            e.stopRiding();
-                        }
-                        cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
-                        cir.cancel();
-                        break;
-                    }
-                }
-                cir.setReturnValue(InteractionResult.PASS);
-                cir.cancel();
-            }
-        } else {
-            if (!self.level().isClientSide()) {
-                if(driver == null) {
-                    player.startRiding(seat);
-                } else {
-                    player.startRiding(self);
-                }
-            }
 
-            cir.setReturnValue(InteractionResult.sidedSuccess(self.level().isClientSide()));
-        }
+        cir.setReturnValue(InteractionResult.sidedSuccess(this.level().isClientSide()));
+        cir.cancel();
     }
 
     //After drifting, flying and landing, quickly press the accelerate button to boost.
@@ -314,29 +295,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
                 self.boost(0.38F, 12);
             }
         }
-    }
-
-    /*
-    Redirect FirstPassenger to player sitting on DriverSeatEntity.
-     */
-    @Redirect(method = "forNearbyPlayers", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;"))
-    private Entity redirectGetFirstPassengerA(AutomobileEntity ae){
-        return redirectDriver(ae);
-    }
-
-    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;"))
-    private Entity redirectGetFirstPassengerB(AutomobileEntity ae){
-        return redirectDriver(ae);
-    }
-
-    @Redirect(method = "postMovementTick", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;"))
-    private Entity redirectGetFirstPassengerC(AutomobileEntity ae){
-        return redirectDriver(ae);
-    }
-
-    @Redirect(method = "getControllingPassenger", at = @At(value = "INVOKE", target = "Lio/github/foundationgames/automobility/entity/AutomobileEntity;getFirstPassenger()Lnet/minecraft/world/entity/Entity;"))
-    private Entity redirectGetFirstPassengerD(AutomobileEntity ae){
-        return redirectDriver(ae);
     }
 
     @Inject(method = "runOverEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;add(DDD)Lnet/minecraft/world/phys/Vec3;", shift = At.Shift.AFTER), cancellable = true, locals = LocalCapture.CAPTURE_FAILHARD)
@@ -372,25 +330,15 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     }
 
     @Unique
-    private Entity redirectDriver(AutomobileEntity ae){
-        Entity first = ae.getFirstPassenger();
-        if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return first;
-
-        if(first instanceof DriverSeatEntity seat){
-            Entity real = seat.getFirstPassenger();
-            if (real instanceof Player) return real;
-        }
-        return first;
-    }
-
-    @Unique
     private boolean isOnRIAutomobile(Entity entity){
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return false;
 
         List<Entity> passengerListPre = self.getPassengers();
-        List<Entity> passengerListPost = new ArrayList<>(passengerListPre);
+        List<Entity> passengerListPost = new ArrayList<>();
 
-        passengerListPost.set(0, passengerListPost.get(0).getFirstPassenger());
+        for (Entity e : passengerListPre) {
+            passengerListPost.add(e.getFirstPassenger());
+        }
 
         return passengerListPost.contains(entity);
     }
@@ -496,8 +444,19 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
         for (var def : defs) {
             HitboxEntity hb = new HitboxEntity(level(), self, def);
-            self.level().addFreshEntity(hb);
+            level().addFreshEntity(hb);
             hitboxes.add(hb);
+        }
+    }
+
+    @Unique
+    private void spawnSeats() {
+        List<RIAutomobileSeatRegistry.SeatPos> s = RIAutomobileSeatRegistry.getSeats(self.getFrame());
+
+        for(var ignored : s) {
+            SeatEntity e = new SeatEntity(level(), self);
+            level().addFreshEntity(e);
+            e.startRiding(self, true);
         }
     }
 

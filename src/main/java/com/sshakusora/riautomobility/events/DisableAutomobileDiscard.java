@@ -1,7 +1,7 @@
 package com.sshakusora.riautomobility.events;
 
 import com.sshakusora.riautomobility.RIAutomobility;
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -16,7 +16,7 @@ public class DisableAutomobileDiscard {
         Player player = event.getEntity();
         Entity vehicle = player.getVehicle();
         if(vehicle == null) return;
-        if(vehicle instanceof AutomobileEntity || vehicle instanceof DriverSeatEntity) {
+        if(vehicle instanceof AutomobileEntity || vehicle instanceof SeatEntity) {
             player.stopRiding();
         }
     }

@@ -1,6 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
@@ -31,7 +31,7 @@ public class CameraMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
         Entity vehicle = entity.getVehicle();
-        if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof DriverSeatEntity)) {
+        if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof SeatEntity)) {
             RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, entity);
             Vec3 cameraPos = RIAutomobileCameraRegistry.getCameraPos(vehicle, entity);
             /*

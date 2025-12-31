@@ -1,6 +1,6 @@
 package com.sshakusora.riautomobility.util;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
@@ -32,7 +32,7 @@ public class RIAutomobileCameraRegistry {
         return idx >= 0 && idx < cameraPoses.size() ? cameraPoses.get(idx) : Vec3.ZERO;
     }
 
-    public static Vec3 getCameraPos(DriverSeatEntity seat, Entity passenger) {
+    public static Vec3 getCameraPos(SeatEntity seat, Entity passenger) {
         AutomobileEntity auto = (AutomobileEntity) seat.getVehicle();
         if (auto != null) {
             return getCameraPos(auto.getFrame(), 0);
@@ -44,8 +44,8 @@ public class RIAutomobileCameraRegistry {
     public static Vec3 getCameraPos(Entity e, Entity passenger){
         if(e instanceof AutomobileEntity){
             return getCameraPos((AutomobileEntity) e, passenger);
-        } else if(e instanceof DriverSeatEntity){
-            return getCameraPos((DriverSeatEntity) e, passenger);
+        } else if(e instanceof SeatEntity){
+            return getCameraPos((SeatEntity) e, passenger);
         } else {
             return Vec3.ZERO;
         }

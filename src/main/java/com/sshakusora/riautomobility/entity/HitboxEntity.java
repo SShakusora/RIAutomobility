@@ -23,7 +23,6 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 public class HitboxEntity extends Entity{
     public static final EntityDataAccessor<Integer> AUTOMOBILE = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.INT);
@@ -66,7 +65,7 @@ public class HitboxEntity extends Entity{
 
     @Override
     public void tick() {
-        var automobile = getAutomobile();
+        AutomobileEntity automobile = getAutomobile();
 
         if (automobile == null) {
             if (!this.level().isClientSide()) this.discard();
@@ -109,7 +108,7 @@ public class HitboxEntity extends Entity{
         var automobile = getAutomobile();
         if (automobile == null) return super.interact(player, hand);
         if (automobile.getPassengers().contains(player)) return InteractionResult.PASS;
-        if (Objects.requireNonNull(automobile.getFirstPassenger()).isVehicle() && player == automobile.getFirstPassenger().getFirstPassenger()) return InteractionResult.PASS;
+//        if (Objects.requireNonNull(automobile.getFirstPassenger()).isVehicle() && player == automobile.getFirstPassenger().getFirstPassenger()) return InteractionResult.PASS;
 
         return automobile.interact(player, hand);
     }
@@ -145,7 +144,7 @@ public class HitboxEntity extends Entity{
             return false;
         }
         Entity firstPassenger = auto.getFirstPassenger();
-        if (firstPassenger instanceof DriverSeatEntity seat) {
+        if (firstPassenger instanceof SeatEntity seat) {
             if (other == seat) {
                 return false;
             }

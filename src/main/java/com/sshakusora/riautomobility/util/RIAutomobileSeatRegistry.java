@@ -1,6 +1,6 @@
 package com.sshakusora.riautomobility.util;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.world.entity.Entity;
@@ -32,7 +32,7 @@ public final class RIAutomobileSeatRegistry {
         return idx >= 0 && idx < seats.size() ? seats.get(idx) : SeatPos.zero();
     }
 
-    public static SeatPos getSeat(DriverSeatEntity seat, Entity passenger) {
+    public static SeatPos getSeat(SeatEntity seat, Entity passenger) {
         AutomobileEntity auto = (AutomobileEntity) seat.getVehicle();
         if (auto != null) {
             return getSeat(auto.getFrame(), 0);
@@ -44,8 +44,8 @@ public final class RIAutomobileSeatRegistry {
     public static SeatPos getSeat(Entity e, Entity passenger){
         if(e instanceof AutomobileEntity){
             return getSeat((AutomobileEntity) e, passenger);
-        } else if(e instanceof DriverSeatEntity){
-            return getSeat((DriverSeatEntity) e, passenger);
+        } else if(e instanceof SeatEntity){
+            return getSeat((SeatEntity) e, passenger);
         } else {
             return SeatPos.zero();
         }

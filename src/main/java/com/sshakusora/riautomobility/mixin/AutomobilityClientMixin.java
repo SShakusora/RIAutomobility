@@ -1,6 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
+import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import io.github.foundationgames.automobility.AutomobilityClient;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
@@ -26,7 +26,7 @@ public class AutomobilityClientMixin {
         }
         if (var6 instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) {
             cir.setReturnValue(old);
-        } else if (var6 instanceof DriverSeatEntity seat) {
+        } else if (var6 instanceof SeatEntity seat) {
             AutomobileEntity auto = (AutomobileEntity) seat.getVehicle();
             if (auto != null) {
                 cir.setReturnValue(old + Math.sqrt((double)auto.getBoostSpeed(tickDelta) * scale * (Double)client.options.fovEffectScale().get()));

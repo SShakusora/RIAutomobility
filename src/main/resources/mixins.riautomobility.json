@@ -9,8 +9,6 @@
   "client": [
     "AutoMechanicTableScreenAccessor",
     "AutoMechanicTableScreenMixin",
-    "AutomobileEntityClientMixin",
-    "AutomobileSoundInstanceMixin",
     "CameraAccessor",
     "CameraMixin",
     "LocalPlayerMixin",
@@ -23,7 +21,6 @@
     "AutomobileEntityMixin",
     "AutomobileHudMixin",
     "AutomobilityClientMixin",
-    "EntityAccessor",
-    "EntityMixin"
+    "EntityAccessor"
   ]
 }
