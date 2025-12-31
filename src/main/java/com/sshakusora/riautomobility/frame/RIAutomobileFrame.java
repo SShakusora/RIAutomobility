@@ -62,6 +62,34 @@ public class RIAutomobileFrame {
                     new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -50.3182/16), 21.7727F/8, 53.3636F/16, true)
             )
     );
+    public static final AutomobileFrame DMC12 = register(new AutomobileFrame(
+                    RIAutomobility.rl("dmc12"),
+                    0.98F,
+                    new AutomobileFrame.FrameModel(
+                            RIAutomobility.rl("textures/entity/automobile/frame/dmc12.png"),
+                            RIAutomobility.rl("frame_dmc12"),
+                            WheelBase.basic(64.0F, 36.0F),
+                            76.0F,
+                            0.97F,
+                            28.0F,
+                            5.0F,
+                            23.0F,
+                            22.0F
+                    )),
+            List.of(
+                    new RIAutomobileSeatRegistry.SeatPos(11.601/16,-8.322/16),
+                    new RIAutomobileSeatRegistry.SeatPos(-11.601/16, -8.322/16)
+            ),
+            EntityDimensions.scalable(24.2214F/8, 25.97F/16),
+            List.of(
+                    new Vec3(-3.0, 0.0, 0.0),
+                    new Vec3(-3.0, 0.0, 0.0)
+            ),
+            List.of(
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, 24.2214F/16), 24.2214F/8, 25.97F/16, false),
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0, -24.2214F/16), 24.2214F/8, 25.97F/16, true)
+            )
+    );
 
     private static AutomobileFrame registerDoubleMotorcar(String variant, float weight) {
         return register(new AutomobileFrame(
