@@ -8,6 +8,7 @@
     "frame.riautomobility.golden_doublemotorcar": "Golden DoubleMotorcar",
     "frame.riautomobility.bejeweled_doublemotorcar": "Bejeweled DoubleMotorcar",
     "frame.riautomobility.lorry": "Lorry",
+    "frame.riautomobility.dmc12": "DMC12",
 
     "frame.riautomobility.wooden_quadmotorcar": "Wooden QuadMotorcar",
     "frame.riautomobility.copper_quadmotorcar": "Copper QuadMotorcar",
@@ -15,7 +16,7 @@
     "frame.riautomobility.golden_quadmotorcar": "Golden QuadMotorcar",
     "frame.riautomobility.bejeweled_quadmotorcar": "Bejeweled QuadMotorcar",
 
-    "entity.riautomobility.driver_seat": "Driver Seat",
+    "entity.riautomobility.seat": "Seat",
     "entity.riautomobility.hitbox": "Automobile",
 
     "container.riautomobility.hitbox": "Box"

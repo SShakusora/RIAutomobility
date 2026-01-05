@@ -6,6 +6,7 @@ import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
+import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.sound.AutomobilitySounds;
@@ -148,13 +149,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     }
 
     @Override
-    public void onAddedToWorld() {
-        if (this.hitboxes.isEmpty()) spawnHitboxes();
-        if(this.getPassengers().isEmpty()) spawnSeats();
-        super.onAddedToWorld();
-    }
-
-    @Override
     public Entity getFirstPassenger(){
         List<Entity> passengers = this.getPassengers();
         if(passengers.isEmpty()) return null;
@@ -192,9 +186,10 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
-//        if(passenger != self.getFirstPassenger()){
-//            whenRotated(self.getYRot() - prevYawForRotate, passenger);
-//        }
+        if(passenger instanceof SeatEntity){
+            if(passenger.getFirstPassenger() != null && passenger.getFirstPassenger() != self.getFirstPassenger())
+                whenRotated(self.getYRot() - prevYawForRotate, passenger.getFirstPassenger());
+        }
         ci.cancel();
     }
 
@@ -210,6 +205,7 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
             accessor.setDimensions(dimensions);
         }
 
+        verifyHitboxesAndSeatFor(self.getFrame());
         prevYawForRotate = self.getYRot();
         updateCullingBox();
     }
@@ -282,21 +278,6 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         this.preAccelerating = this.accelerating;
     }
 
-    @Unique private void driftedReadyBoost(AutomobileEntity self) {
-        if(self.isDrifting() && this.prevHoldDrift && !this.holdingDrift){
-            driftedReadyBoostCounter = 0;
-        }
-
-        if(!self.isDrifting() && !this.prevHoldDrift && !this.holdingDrift){
-            if(driftedReadyBoostCounter >= 3) return;
-            if(this.turboCharge > 35 || this.turboCharge == 0) return;
-            driftedReadyBoostCounter++;
-            if(!this.preAccelerating && this.accelerating){
-                self.boost(0.38F, 12);
-            }
-        }
-    }
-
     @Inject(method = "runOverEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;add(DDD)Lnet/minecraft/world/phys/Vec3;", shift = At.Shift.AFTER), cancellable = true, locals = LocalCapture.CAPTURE_FAILHARD)
     private void redirectGetFirstPassengerE(Vec3 velocity, CallbackInfo ci, AABB frontBox) {
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return;
@@ -329,6 +310,21 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         }
     }
 
+    @Unique private void driftedReadyBoost(AutomobileEntity self) {
+        if(self.isDrifting() && this.prevHoldDrift && !this.holdingDrift){
+            driftedReadyBoostCounter = 0;
+        }
+
+        if(!self.isDrifting() && !this.prevHoldDrift && !this.holdingDrift){
+            if(driftedReadyBoostCounter >= 3) return;
+            if(this.turboCharge > 35 || this.turboCharge == 0) return;
+            driftedReadyBoostCounter++;
+            if(!this.preAccelerating && this.accelerating){
+                self.boost(0.38F, 12);
+            }
+        }
+    }
+
     @Unique
     private boolean isOnRIAutomobile(Entity entity){
         if(!RIAutomobileFrame.isRIAutomobileFrame(self.getFrame())) return false;
@@ -337,7 +333,7 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
         List<Entity> passengerListPost = new ArrayList<>();
 
         for (Entity e : passengerListPre) {
-            passengerListPost.add(e.getFirstPassenger());
+            if(e.getFirstPassenger() != null) passengerListPost.add(e.getFirstPassenger());
         }
 
         return passengerListPost.contains(entity);
@@ -439,32 +435,47 @@ public abstract class AutomobileEntityMixin extends Entity implements Container 
     }
 
     @Unique
-    private void spawnHitboxes() {
-        var defs = RIAutomobileHitboxRegistry.getHitboxes(self.getFrame());
-
-        for (var def : defs) {
-            HitboxEntity hb = new HitboxEntity(level(), self, def);
-            level().addFreshEntity(hb);
-            hitboxes.add(hb);
-        }
-    }
-
-    @Unique
-    private void spawnSeats() {
-        List<RIAutomobileSeatRegistry.SeatPos> s = RIAutomobileSeatRegistry.getSeats(self.getFrame());
-
-        for(var ignored : s) {
-            SeatEntity e = new SeatEntity(level(), self);
-            level().addFreshEntity(e);
-            e.startRiding(self, true);
-        }
-    }
-
-    @Unique
     private void removeAll() {
         for (HitboxEntity hb : this.hitboxes) {
             if (!hb.isRemoved()) {
                 hb.discard();
+            }
+        }
+    }
+
+    @Unique
+    public void verifyHitboxesAndSeatFor(AutomobileFrame frame) {
+        this.hitboxes.removeIf(Entity::isRemoved);
+
+        if (this.level().isClientSide()) {
+            return;
+        }
+
+        var boxes = RIAutomobileHitboxRegistry.getHitboxes(frame);
+        var seats = RIAutomobileSeatRegistry.getSeats(frame);
+
+        if (this.hitboxes.size() != boxes.size()) {
+            this.hitboxes.forEach(e -> e.remove(RemovalReason.DISCARDED));
+            this.hitboxes.clear();
+
+            for (var box : boxes) {
+                var boxEntity = new HitboxEntity(this.level(), self, box);
+                boxEntity.setPos(this.position());
+                this.hitboxes.add(boxEntity);
+
+                this.level().addFreshEntity(boxEntity);
+            }
+        }
+
+        if(self.getPassengers().size() != seats.size()) {
+            self.getPassengers().forEach(e -> e.remove(RemovalReason.DISCARDED));
+
+            for (var seat : seats) {
+                var seatEntity = new SeatEntity(this.level(), self);
+                seatEntity.setPos(this.position());
+                seatEntity.startRiding(self, true);
+
+                this.level().addFreshEntity(seatEntity);
             }
         }
     }

@@ -8,6 +8,7 @@
     "frame.riautomobility.golden_doublemotorcar": "黄金双座汽车",
     "frame.riautomobility.bejeweled_doublemotorcar": "璀璨双座汽车",
     "frame.riautomobility.lorry": "大运",
+    "frame.riautomobility.dmc12": "DMC12",
 
     "frame.riautomobility.wooden_quadmotorcar": "木质四座汽车",
     "frame.riautomobility.copper_quadmotorcar": "铜质四座汽车",
@@ -15,8 +16,8 @@
     "frame.riautomobility.golden_quadmotorcar": "黄金四座汽车",
     "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
 
-    "entity.riautomobility.driver_seat": "司机座位",
+    "entity.riautomobility.seat": "座位",
     "entity.riautomobility.hitbox": "机动车",
 
-    "container.riautomobility.hitbox": "货车后备箱"
+    "container.riautomobility.hitbox": "后备箱"
 }
