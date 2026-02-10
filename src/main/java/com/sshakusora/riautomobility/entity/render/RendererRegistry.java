@@ -5,6 +5,7 @@ import net.minecraftforge.client.event.EntityRenderersEvent;
 
 public class RendererRegistry {
     public static void init(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(RIAutomobilityEntities.RIAUTOMOBILE.get(), RIAutomobileEntityRenderer::new);
         event.registerEntityRenderer(RIAutomobilityEntities.SEAT.get(), DriverSeatEntityRenderer::new);
         event.registerEntityRenderer(RIAutomobilityEntities.HITBOX.get(), HitboxEntityRenderer::new);
     }

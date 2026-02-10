@@ -18,9 +18,8 @@
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
     "AutomobileAssemblerBlockEntityMixin",
+    "AutomobileEntityAccessor",
     "AutomobileEntityMixin",
-    "AutomobileHudMixin",
-    "AutomobilityClientMixin",
-    "EntityAccessor"
+    "AutomobileHudMixin"
   ]
 }

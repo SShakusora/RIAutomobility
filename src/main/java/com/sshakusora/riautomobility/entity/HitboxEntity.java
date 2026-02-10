@@ -108,7 +108,6 @@ public class HitboxEntity extends Entity{
         var automobile = getAutomobile();
         if (automobile == null) return super.interact(player, hand);
         if (automobile.getPassengers().contains(player)) return InteractionResult.PASS;
-//        if (Objects.requireNonNull(automobile.getFirstPassenger()).isVehicle() && player == automobile.getFirstPassenger().getFirstPassenger()) return InteractionResult.PASS;
 
         return automobile.interact(player, hand);
     }
@@ -205,6 +204,35 @@ public class HitboxEntity extends Entity{
         ContainerHelper.saveAllItems(tag, items);
     }
 
+//    @Override
+//    public Vec3 getPosition(float partialTicks) {
+//        AutomobileEntity auto = this.getAutomobile();
+//        if (auto == null) return super.getPosition(partialTicks);
+//
+//        double x = Mth.lerp(partialTicks, auto.xo, auto.getX());
+//        double y = Mth.lerp(partialTicks, auto.yo, auto.getY());
+//        double z = Mth.lerp(partialTicks, auto.zo, auto.getZ());
+//
+//        float yaw = Mth.lerp(partialTicks, auto.yRotO, auto.getYRot());
+//
+//        float vert = auto.getDisplacement().getVertical(partialTicks);
+//
+//        float pitch = auto.getDisplacement().getAngularX(partialTicks);
+//        float roll = auto.getDisplacement().getAngularZ(partialTicks);
+//
+//        Vec3 origin = this.boxOrigin();
+//        Vec3 rotatedPos = origin
+//                .yRot(-yaw * Mth.DEG_TO_RAD)
+//                .xRot(-pitch * Mth.DEG_TO_RAD)
+//                .zRot(-roll * Mth.DEG_TO_RAD);
+//
+//        return new Vec3(x, y + vert, z).add(rotatedPos);
+//    }
+
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return super.shouldRenderAtSqrDistance(distance);
+    }
 
     private Vec3 localPosToWorldSpace(AutomobileEntity auto, Vec3 position) {
         float pitch = auto.getDisplacement().getAngularX(1.0F);
