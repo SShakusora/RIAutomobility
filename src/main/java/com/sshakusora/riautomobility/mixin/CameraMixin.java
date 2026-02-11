@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.mixin.accessor.CameraAccessor;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;

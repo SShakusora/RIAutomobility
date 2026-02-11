@@ -66,24 +66,9 @@ public class HitboxEntity extends Entity{
     @Override
     public void tick() {
         AutomobileEntity automobile = getAutomobile();
-
-        if (automobile == null) {
-            if (!this.level().isClientSide()) this.discard();
-            return;
+        if (automobile == null || (!this.level().isClientSide() && !automobile.isAlive())) {
+            this.discard();
         }
-
-        if (!this.level().isClientSide()) {
-            if (!automobile.isAlive()) {
-                this.discard();
-                return;
-            }
-        }
-
-        var pos = this.boxOrigin();
-        pos = localPosToWorldSpace(automobile, pos);
-
-        this.setPos(pos.x(), pos.y(), pos.z());
-        super.tick();
     }
 
     @Override
@@ -130,30 +115,16 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canCollideWith(Entity other) {
+        //TODO 解决卡车被自己的碰撞和阻挡的问题
         if (other == this) return false;
         AutomobileEntity auto = this.getAutomobile();
         if (auto == null) return false;
         if (other == auto) return false;
-        if (other instanceof HitboxEntity hitbox) {
-            if (hitbox.getAutomobile() == auto) {
-                return false;
-            }
-        }
-        if (auto.hasPassenger(other)) {
-            return false;
-        }
-        Entity firstPassenger = auto.getFirstPassenger();
-        if (firstPassenger instanceof SeatEntity seat) {
-            if (other == seat) {
-                return false;
-            }
-            if (seat.hasPassenger(other)) {
-                return false;
-            }
+        if (auto instanceof RIAutomobileEntity ri) {
+            return !ri.isOnRIAutomobile(other) && Boat.canVehicleCollide(this, other);
         }
         return Boat.canVehicleCollide(this, other);
     }
-
 
     @Override
     public EntityDimensions getDimensions(Pose pose) {
@@ -204,31 +175,6 @@ public class HitboxEntity extends Entity{
         ContainerHelper.saveAllItems(tag, items);
     }
 
-//    @Override
-//    public Vec3 getPosition(float partialTicks) {
-//        AutomobileEntity auto = this.getAutomobile();
-//        if (auto == null) return super.getPosition(partialTicks);
-//
-//        double x = Mth.lerp(partialTicks, auto.xo, auto.getX());
-//        double y = Mth.lerp(partialTicks, auto.yo, auto.getY());
-//        double z = Mth.lerp(partialTicks, auto.zo, auto.getZ());
-//
-//        float yaw = Mth.lerp(partialTicks, auto.yRotO, auto.getYRot());
-//
-//        float vert = auto.getDisplacement().getVertical(partialTicks);
-//
-//        float pitch = auto.getDisplacement().getAngularX(partialTicks);
-//        float roll = auto.getDisplacement().getAngularZ(partialTicks);
-//
-//        Vec3 origin = this.boxOrigin();
-//        Vec3 rotatedPos = origin
-//                .yRot(-yaw * Mth.DEG_TO_RAD)
-//                .xRot(-pitch * Mth.DEG_TO_RAD)
-//                .zRot(-roll * Mth.DEG_TO_RAD);
-//
-//        return new Vec3(x, y + vert, z).add(rotatedPos);
-//    }
-
     @Override
     public boolean shouldRenderAtSqrDistance(double distance) {
         return super.shouldRenderAtSqrDistance(distance);
@@ -245,5 +191,12 @@ public class HitboxEntity extends Entity{
                         .yRot(-auto.getYRot() * Mth.DEG_TO_RAD)
                         .xRot(-pitch * Mth.DEG_TO_RAD)
                         .zRot(-roll * Mth.DEG_TO_RAD));
+    }
+
+    public void updateRelativePos(AutomobileEntity automobile) {
+        var pos = this.boxOrigin();
+        pos = localPosToWorldSpace(automobile, pos);
+
+        this.setPos(pos.x(), pos.y(), pos.z());
     }
 }

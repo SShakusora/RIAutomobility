@@ -59,7 +59,7 @@ public class RIAutomobileFrame {
                     new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, 35.9091/16), 21.7727F/8, 53.3636F/16, false),
                     new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, 14.1364/16), 21.7727F/8, 53.3636F/16, false),
                     new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -28.5455/16), 21.7727F/8, 53.3636F/16, false),
-                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -50.3182/16), 21.7727F/8, 53.3636F/16, true)
+                    new RIAutomobileFrame.Hitbox(new Vec3(0, 0.2, -50.3182/16), 21.7727F/8, 53.3636F/16, false)
             )
     );
     public static final AutomobileFrame DMC12 = register(new AutomobileFrame(

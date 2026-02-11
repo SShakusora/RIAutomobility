@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.mixin;
+package com.sshakusora.riautomobility.mixin.accessor;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;

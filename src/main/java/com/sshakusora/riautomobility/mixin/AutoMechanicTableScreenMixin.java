@@ -1,5 +1,7 @@
 package com.sshakusora.riautomobility.mixin;
 
+import com.sshakusora.riautomobility.mixin.accessor.AutoMechanicTableScreenAccessor;
+import com.sshakusora.riautomobility.mixin.accessor.ScreenAccessor;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreen;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreenHandler;
 import net.minecraft.client.gui.GuiGraphics;

@@ -1,13 +1,16 @@
 package com.sshakusora.riautomobility.entity;
 
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.mixin.AutomobileEntityAccessor;
+import com.sshakusora.riautomobility.mixin.accessor.AutomobileEntityAccessor;
 import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
+import io.github.foundationgames.automobility.sound.AutomobilitySounds;
+import io.github.foundationgames.automobility.util.duck.CollisionArea;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -20,15 +23,22 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 public class RIAutomobileEntity extends AutomobileEntity implements RenderableAutomobile{
+    private int hadVehicleCollision = 0;
     private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
     public final List<HitboxEntity> hitboxes = new ArrayList<>();
     public final List<SeatEntity> seats = new ArrayList<>();
 
     public RIAutomobileEntity(EntityType<?> type, Level world) {
         super(type, world);
+    }
+
+    public RIAutomobileEntity(Level world) {
+        this(RIAutomobilityEntities.RIAUTOMOBILE.get(), world);
     }
 
     @Override
@@ -83,14 +93,17 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
 //            return;
 //        }
 
-//        TODO: 后续再处理额外逻辑
-//        this.receiveVehicleCollisions();
-
+        this.receiveVehicleCollisions();
         this.refreshSeats();
         this.refreshHitboxes();
         EntityDimensions targetDim = RIAutomobileEntityDimensionsRegistry.getEntityDimensions(this.getFrame());
-        if (this.getDimensions(this.getPose()) != targetDim) {
+        if (!this.getDimensions(this.getPose()).equals(targetDim)) {
+            System.out.println("targetDim: " + this.getDimensions(this.getPose()));
             this.refreshDimensions();
+        }
+
+        for (HitboxEntity hitbox : this.hitboxes) {
+            hitbox.updateRelativePos(this);
         }
 
 //        this.prevYawForRotate = this.getYRot();
@@ -107,20 +120,21 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        if (!this.level().isClientSide) {
-            SeatEntity emptySeat = this.getAvailableSeat();
-            if (emptySeat != null) {
+        SeatEntity emptySeat = this.getAvailableSeat();
+
+        if (emptySeat != null) {
+            if (!this.level().isClientSide()) {
                 player.startRiding(emptySeat);
-                return InteractionResult.SUCCESS;
             }
+            return InteractionResult.sidedSuccess(this.level().isClientSide());
         }
+
         return super.interact(player, hand);
     }
 
     @Override
     public boolean hasSpaceForPassengers() {
         if (this.seats.isEmpty()) {
-            this.refreshSeats();
             return false;
         }
 
@@ -139,6 +153,15 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
 
         Entity driver = this.getFirstPassenger();
         return driver != null;
+    }
+
+    @Override
+    public void accumulateCollisionAreas(Collection<CollisionArea> areas) {
+        this.level().getEntitiesOfClass(
+                Entity.class,
+                this.getBoundingBox().inflate(3.0),
+                (e) -> e != this && !this.isOnRIAutomobile(e)
+        ).forEach((e) -> areas.add(CollisionArea.entity(e)));
     }
 
     @Override
@@ -164,18 +187,16 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
         }
     }
 
-    private boolean isOnRIAutomobile(Entity entity) {
-        if (entity == this || this.hasPassenger(entity)) {
-            return true;
+    public boolean isOnRIAutomobile(Entity entity) {
+        if (entity == this || this.hasPassenger(entity)) return true;
+
+        Entity vehicle = entity.getVehicle();
+        if (vehicle instanceof SeatEntity seat) {
+            if (seat.getVehicle() == this) return true;
         }
 
         if (entity instanceof HitboxEntity hitbox) {
             return hitbox.getAutomobile() == this;
-        }
-
-        for (SeatEntity seat : this.seats) {
-            if (entity == seat) return true;
-            if (seat.hasPassenger(entity)) return true;
         }
 
         return false;
@@ -191,39 +212,50 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
     }
 
     private void refreshSeats() {
-        if (this.level().isClientSide()) return;
-
         List<RIAutomobileSeatRegistry.SeatPos> seatPositions = RIAutomobileSeatRegistry.getSeats(this.getFrame());
 
         if (this.seats.size() != seatPositions.size()) {
-            this.seats.forEach(Entity::discard);
-            this.seats.clear();
-
-            for (int i = 0; i < seatPositions.size(); i++) {
-                SeatEntity seat = new SeatEntity(this.level(), this);
-
-                if (seat.startRiding(this, true)) {
-                    this.seats.add(seat);
-                    this.level().addFreshEntity(seat);
+            if (!this.level().isClientSide()) {
+                this.seats.forEach(Entity::discard);
+                this.seats.clear();
+                for (int i = 0; i < seatPositions.size(); i++) {
+                    SeatEntity seat = new SeatEntity(this.level(), this);
+                    if (seat.startRiding(this, true)) {
+                        this.seats.add(seat);
+                        this.level().addFreshEntity(seat);
+                    }
+                }
+            } else {
+                this.seats.clear();
+                for (Entity passenger : this.getPassengers()) {
+                    if (passenger instanceof SeatEntity seat) {
+                        this.seats.add(seat);
+                    }
                 }
             }
         }
     }
 
     private void refreshHitboxes() {
-        if (this.level().isClientSide()) return;
-
         List<RIAutomobileFrame.Hitbox> boxes = RIAutomobileHitboxRegistry.getHitboxes(this.getFrame());
 
         if (this.hitboxes.size() != boxes.size()) {
-            this.hitboxes.forEach(Entity::discard);
-            this.hitboxes.clear();
+            if (!this.level().isClientSide()) {
+                this.hitboxes.forEach(Entity::discard);
+                this.hitboxes.clear();
 
-            for (RIAutomobileFrame.Hitbox box : boxes) {
-                HitboxEntity hitbox = new HitboxEntity(this.level(), this, box);
-
-                this.hitboxes.add(hitbox);
-                this.level().addFreshEntity(hitbox);
+                for (RIAutomobileFrame.Hitbox box : boxes) {
+                    HitboxEntity hitbox = new HitboxEntity(this.level(), this, box);
+                    this.hitboxes.add(hitbox);
+                    this.level().addFreshEntity(hitbox);
+                }
+            } else {
+                this.hitboxes.clear();
+                for (Entity passenger : this.getPassengers()) {
+                    if (passenger instanceof HitboxEntity hitbox) {
+                        this.hitboxes.add(hitbox);
+                    }
+                }
             }
         }
     }
@@ -256,6 +288,55 @@ public class RIAutomobileEntity extends AutomobileEntity implements RenderableAu
             mergedBox = mergedBox.minmax(box);
         }
 
-        this.cullingBox = mergedBox;
+        this.cullingBox = mergedBox.inflate(3.0);
+    }
+
+    public Vec3 getMeasuredMovement() {
+        return this.position().subtract(((AutomobileEntityAccessor) this).getLastPosForDisplacement());
+    }
+
+    private void receiveVehicleCollisions() {
+        if (((AutomobileEntityAccessor) this).isDecorative()) {
+            return;
+        }
+
+        var collisions = new HashMap<AutomobileEntity, RIAutomobileHitboxRegistry.IncomingCollision>();
+
+        for (var box : this.hitboxes) {
+            var bbox = box.getBoundingBox().inflate(0.15);
+            for (var hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != this)) {
+                var auto = hitbox.getAutomobile();
+                var intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
+
+                var collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
+                if (auto == null || collisions.containsKey(auto) && collisions.get(auto).depth().lengthSqr() > collDepth.lengthSqr()) {
+                    continue;
+                }
+
+                var momentum = this.getMeasuredMovement();
+                var origin = intersect.getCenter();
+
+                collisions.put(auto, new RIAutomobileHitboxRegistry.IncomingCollision(collDepth, momentum, origin, auto.getFrame().weight()));
+            }
+        }
+
+        hadVehicleCollision = Math.max(0, hadVehicleCollision - 1);
+        for (var col : collisions.values()) {
+            var meToCollision = col.origin().subtract(this.position()).multiply(1, 0, 1);
+            double hitScale = hadVehicleCollision <= 0 ? 0.15 : 0.07;
+            hitScale *= (1 + col.inertia() / this.getFrame().weight()) * 0.5;
+            Vec3 newAddVelocity = ((AutomobileEntityAccessor) this).getAddedVelocity().add(
+                    meToCollision.reverse().normalize().scale(hitScale * (1 + 0.1 * Math.sqrt(col.velocity().length())) * col.depth().lengthSqr())
+                            .multiply(1, 0, 1));
+
+            ((AutomobileEntityAccessor) this).setAddedVelocity(newAddVelocity);
+
+            if (hadVehicleCollision <= 0) {
+                this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), AutomobilitySounds.COLLISION.require(), SoundSource.AMBIENT, 0.22f, 0.7f + (0.06f * (this.level().random.nextFloat() - 0.5f)), false);
+                float engineSpeed = ((AutomobileEntityAccessor) this).getEngineSpeed();
+                ((AutomobileEntityAccessor) this).setEngineSpeed(engineSpeed * 0.6f);
+                hadVehicleCollision = 12;
+            }
+        }
     }
 }

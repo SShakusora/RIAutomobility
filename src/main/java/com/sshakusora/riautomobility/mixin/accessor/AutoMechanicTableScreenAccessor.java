@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.mixin;
+package com.sshakusora.riautomobility.mixin.accessor;
 
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreen;
 import org.spongepowered.asm.mixin.Mixin;
