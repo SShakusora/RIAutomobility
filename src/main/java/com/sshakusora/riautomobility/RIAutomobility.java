@@ -2,13 +2,12 @@ package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
+import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
-import com.sshakusora.riautomobility.entity.SeatEntity;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
-import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -55,11 +54,11 @@ public class RIAutomobility
             RIAutomobileModels.init();
             MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent evt) -> {
                 LocalPlayer player = Minecraft.getInstance().player;
-                Entity seat = null;
+                Entity vehicle = null;
                 if (player != null) {
-                    seat = player.getVehicle();
+                    vehicle = player.getVehicle();
                 }
-                if (seat instanceof SeatEntity && seat.getVehicle() instanceof AutomobileEntity auto) {
+                if (vehicle instanceof RIAutomobileEntity auto) {
                     AutomobileHud.render(evt.getGuiGraphics(), player, auto, evt.getPartialTick());
                 }
             });

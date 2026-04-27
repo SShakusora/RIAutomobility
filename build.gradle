@@ -87,9 +87,20 @@ minecraft {
             property 'forge.enabledGameTestNamespaces', mod_id
         }
 
+        client2 {
+            parent runs.client
+            workingDirectory project.file('run-client-2')
+            args '--username', 'Dev2'
+        }
+
+        client3 {
+            parent runs.client
+            workingDirectory project.file('run-client-3')
+            args '--username', 'Dev3'
+        }
+
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
-            args '--nogui'
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.

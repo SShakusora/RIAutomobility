@@ -1,6 +1,6 @@
 package com.sshakusora.riautomobility.entity;
 
-import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -23,7 +23,6 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
-
 public class HitboxEntity extends Entity{
     public static final EntityDataAccessor<Integer> AUTOMOBILE = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Vector3f> ORIGIN = SynchedEntityData.defineId(HitboxEntity.class, EntityDataSerializers.VECTOR3);
@@ -35,7 +34,7 @@ public class HitboxEntity extends Entity{
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private EntityDimensions size;
 
-    public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileFrame.Hitbox hitbox) {
+    public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileDefinition.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
 
         this.entityData.set(AUTOMOBILE, automobile.getId());
@@ -65,10 +64,25 @@ public class HitboxEntity extends Entity{
 
     @Override
     public void tick() {
-        AutomobileEntity automobile = getAutomobile();
-        if (automobile == null || (!this.level().isClientSide() && !automobile.isAlive())) {
-            this.discard();
+        var automobile = getAutomobile();
+
+        if (automobile == null) {
+            if (!this.level().isClientSide()) this.discard();
+            return;
         }
+
+        if (!this.level().isClientSide()) {
+            if (!automobile.isAlive()) {
+                this.discard();
+                return;
+            }
+        }
+
+        var pos = this.boxOrigin();
+        pos = localPosToWorldSpace(automobile, pos);
+
+        this.setPos(pos.x(), pos.y(), pos.z());
+        super.tick();
     }
 
     @Override
@@ -115,16 +129,21 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canCollideWith(Entity other) {
-        //TODO 解决卡车被自己的碰撞和阻挡的问题
         if (other == this) return false;
         AutomobileEntity auto = this.getAutomobile();
         if (auto == null) return false;
         if (other == auto) return false;
-        if (auto instanceof RIAutomobileEntity ri) {
-            return !ri.isOnRIAutomobile(other) && Boat.canVehicleCollide(this, other);
+        if (other instanceof HitboxEntity hitbox) {
+            if (hitbox.getAutomobile() == auto) {
+                return false;
+            }
+        }
+        if (auto.hasPassenger(other)) {
+            return false;
         }
         return Boat.canVehicleCollide(this, other);
     }
+
 
     @Override
     public EntityDimensions getDimensions(Pose pose) {
@@ -175,10 +194,6 @@ public class HitboxEntity extends Entity{
         ContainerHelper.saveAllItems(tag, items);
     }
 
-    @Override
-    public boolean shouldRenderAtSqrDistance(double distance) {
-        return super.shouldRenderAtSqrDistance(distance);
-    }
 
     private Vec3 localPosToWorldSpace(AutomobileEntity auto, Vec3 position) {
         float pitch = auto.getDisplacement().getAngularX(1.0F);
@@ -191,12 +206,5 @@ public class HitboxEntity extends Entity{
                         .yRot(-auto.getYRot() * Mth.DEG_TO_RAD)
                         .xRot(-pitch * Mth.DEG_TO_RAD)
                         .zRot(-roll * Mth.DEG_TO_RAD));
-    }
-
-    public void updateRelativePos(AutomobileEntity automobile) {
-        var pos = this.boxOrigin();
-        pos = localPosToWorldSpace(automobile, pos);
-
-        this.setPos(pos.x(), pos.y(), pos.z());
     }
 }

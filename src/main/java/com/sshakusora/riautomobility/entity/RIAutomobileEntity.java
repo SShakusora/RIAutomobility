@@ -1,342 +1,781 @@
 package com.sshakusora.riautomobility.entity;
 
-import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
+import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
+import com.sshakusora.riautomobility.mixin.accessor.EntityAccessor;
+import com.sshakusora.riautomobility.mixin.accessor.LivingEntityAccessor;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileEntityAccessor;
-import com.sshakusora.riautomobility.util.RIAutomobileEntityDimensionsRegistry;
-import com.sshakusora.riautomobility.util.RIAutomobileHitboxRegistry;
-import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
-import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
+import io.github.foundationgames.automobility.item.AutomobileInteractable;
+import io.github.foundationgames.automobility.item.AutomobilityItems;
 import io.github.foundationgames.automobility.sound.AutomobilitySounds;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
+import net.minecraft.MethodsReturnNonnullByDefault;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
-public class RIAutomobileEntity extends AutomobileEntity implements RenderableAutomobile{
+@MethodsReturnNonnullByDefault
+@ParametersAreNonnullByDefault
+public class RIAutomobileEntity extends AutomobileEntity implements Container {
+    private static final int INVENTORY_SIZE = 54;
+    private static final int MAX_TRACKED_SEATS = 8;
+    private static final List<EntityDataAccessor<Integer>> TRACKED_SEATS = List.of(
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
+            SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT)
+    );
+
+    private final TagKey<Item> forgeWrench = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
+    private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
+    private final List<HitboxEntity> hitboxes = new ArrayList<>();
+    private final UUID[] persistedSeatPassengers = new UUID[MAX_TRACKED_SEATS];
+
+    private boolean changed = false;
+    private float prevYawForRotate = 0.0F;
+    private boolean preAccelerating = false;
+    private int driftedReadyBoostCounter = Integer.MAX_VALUE;
     private int hadVehicleCollision = 0;
     private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
-    public final List<HitboxEntity> hitboxes = new ArrayList<>();
-    public final List<SeatEntity> seats = new ArrayList<>();
 
-    public RIAutomobileEntity(EntityType<?> type, Level world) {
-        super(type, world);
+    public RIAutomobileEntity(EntityType<?> type, Level level) {
+        super(type, level);
     }
 
-    public RIAutomobileEntity(Level world) {
-        this(RIAutomobilityEntities.RIAUTOMOBILE.get(), world);
+    public RIAutomobileEntity(Level level) {
+        this(RIAutomobilityEntities.RI_AUTOMOBILE.get(), level);
+    }
+
+    private boolean usesRIASeats() {
+        return RIAutomobileRegistry.isRegistered(this.getFrame());
+    }
+
+    private RIAutomobileDefinition getDefinition() {
+        return RIAutomobileRegistry.get(this.getFrame());
+    }
+
+    private RIAutomobileDefinition.SeatPos getSeat(int seatIndex) {
+        List<RIAutomobileDefinition.SeatPos> seats = getDefinition().seats();
+        return seatIndex >= 0 && seatIndex < seats.size() ? seats.get(seatIndex) : RIAutomobileDefinition.SeatPos.zero();
     }
 
     @Override
-    public Entity getFirstPassenger() {
-        List<Entity> passengers = this.getPassengers();
-        if (passengers.isEmpty()) return null;
+    public void onAddedToWorld() {
+        if (usesRIASeats() && this.hitboxes.isEmpty()) {
+            spawnHitboxes();
+        }
+        super.onAddedToWorld();
+    }
 
-        Entity first = passengers.get(0);
+    @Override
+    public void remove(RemovalReason reason) {
+        if (!level().isClientSide && usesRIASeats()) {
+            Containers.dropContents(level(), blockPosition(), this);
+            removeHitboxes();
+        }
+        super.remove(reason);
+    }
 
-        if (first instanceof SeatEntity seat) {
-            Entity seated = seat.getFirstPassenger();
-            return (seated != seat) ? seated : null;
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (usesRIASeats()) {
+            ContainerHelper.loadAllItems(tag, items);
+            for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
+                String key = "SeatPassenger" + i;
+                persistedSeatPassengers[i] = tag.hasUUID(key) ? tag.getUUID(key) : null;
+            }
+        }
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (usesRIASeats()) {
+            ContainerHelper.saveAllItems(tag, items);
+            for (int i = 0; i < getSeatCount(); i++) {
+                Entity passenger = getSeatPassenger(i);
+                if (passenger != null) {
+                    tag.putUUID("SeatPassenger" + i, passenger.getUUID());
+                }
+            }
+        }
+    }
+
+    @Override
+    public void tick() {
+        if (!usesRIASeats()) {
+            super.tick();
+            return;
         }
 
-        return super.getFirstPassenger();
+        receiveVehicleCollisions();
+        updateDimensionsForFrame();
+        prevYawForRotate = this.getYRot();
+        updateCullingBox();
+        driftedReadyBoost();
+        preAccelerating = isAccelerating();
+        if (!level().isClientSide()) {
+            reconcileSeatAssignments();
+        }
+
+        super.tick();
     }
 
     @Override
-    public AABB getBoundingBoxForCulling() {
-        return this.cullingBox;
+    public void forNearbyPlayers(int radius, boolean ignoreDriver, java.util.function.Consumer<ServerPlayer> action) {
+        if (!usesRIASeats()) {
+            super.forNearbyPlayers(radius, ignoreDriver, action);
+            return;
+        }
+
+        Entity driver = getControllingPassenger();
+        for (Player p : level().players()) {
+            if (ignoreDriver && p == driver) {
+                continue;
+            }
+            if (p.position().distanceTo(position()) < radius && p instanceof ServerPlayer player) {
+                action.accept(player);
+            }
+        }
     }
 
     @Override
-    public void positionRider(Entity passenger, Entity.MoveFunction moveFunc) {
-        if(!RIAutomobileFrame.isRIAutomobileFrame(this.getFrame())) {
+    public boolean hasSpaceForPassengers() {
+        if (!usesRIASeats()) {
+            return super.hasSpaceForPassengers();
+        }
+        return this.getPassengers().size() < getDefinition().seats().size();
+    }
+
+    @Override
+    public boolean engineRunning() {
+        if (!usesRIASeats()) {
+            return super.engineRunning();
+        }
+        return this.getBoostTimer() > 0 || this.getControllingPassenger() != null;
+    }
+
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        if (!usesRIASeats()) {
+            return super.canAddPassenger(passenger);
+        }
+        return hasSpaceForPassengers();
+    }
+
+    @Override
+    public void provideClientInput(boolean fwd, boolean back, boolean left, boolean right, boolean space) {
+        if (!usesRIASeats()) {
+            super.provideClientInput(fwd, back, left, right, space);
+            return;
+        }
+
+        if (!(getControllingPassenger() instanceof Player driver) || !driver.isLocalPlayer() || getSeatIndex(driver) != 0) {
+            return;
+        }
+
+        super.provideClientInput(fwd, back, left, right, space);
+    }
+
+    @Override
+    public void accumulateCollisionAreas(Collection<CollisionArea> areas) {
+        if (!usesRIASeats()) {
+            super.accumulateCollisionAreas(areas);
+            return;
+        }
+
+        this.level().getEntitiesOfClass(
+                Entity.class,
+                this.getBoundingBox().inflate(3.0F, 3.0F, 3.0F),
+                entity -> {
+                    if (entity == this) {
+                        return false;
+                    }
+                    if (entity.getVehicle() == this) {
+                        return false;
+                    }
+                    if (entity instanceof HitboxEntity hb) {
+                        return hb.getAutomobile() != this;
+                    }
+                    return !this.hasPassenger(entity);
+                }
+        ).forEach(entity -> areas.add(CollisionArea.entity(entity)));
+    }
+
+    @Override
+    public void runOverEntities(Vec3 velocity) {
+        if (!usesRIASeats()) {
+            super.runOverEntities(velocity);
+            return;
+        }
+
+        AABB frontBox = getBoundingBox().move(velocity.scale(0.5));
+        Vec3 velAdd = velocity.add(0, 0.1, 0).scale(3);
+
+        for (Entity entity : level().getEntities(EntityTypeTest.forClass(Entity.class), frontBox, entity -> entity != this && !isOnRIAutomobile(entity))) {
+            if (!entity.isInvulnerable() && entity instanceof LivingEntity living && entity.getVehicle() != this) {
+                AutomobilityEntities.automobileDamageSource(level()).ifPresent(dmg -> living.hurt(dmg, getHorizontalSpeed() * 10.0F));
+                entity.push(velAdd.x, velAdd.y, velAdd.z);
+            }
+        }
+    }
+
+    @Override
+    public InteractionResult interact(Player player, InteractionHand hand) {
+        if (!usesRIASeats()) {
+            return super.interact(player, hand);
+        }
+
+        if (player.isShiftKeyDown() && this.hasInventory()) {
+            if (!level().isClientSide()) {
+                openInventory(player);
+                return InteractionResult.PASS;
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        ItemStack stack = player.getItemInHand(hand);
+        if ((!isDecorative() || player.isCreative()) && (stack.is(AutomobilityItems.CROWBAR.require()) || stack.is(forgeWrench))) {
+            double playerAngle = Math.toDegrees(Math.atan2(player.getZ() - this.getZ(), player.getX() - this.getX()));
+            double angleDiff = Mth.wrapDegrees(this.getYRot() - playerAngle);
+
+            if (angleDiff < 0 && !this.getFrontAttachmentType().isEmpty()) {
+                this.destroyFrontAttachment(!player.isCreative());
+                this.playHitSound(this.getHeadPos());
+                return InteractionResult.sidedSuccess(level().isClientSide);
+            }
+            if (!this.getRearAttachmentType().isEmpty()) {
+                this.destroyRearAttachment(!player.isCreative());
+                this.playHitSound(this.getRearAttachment().pos());
+                return InteractionResult.sidedSuccess(level().isClientSide);
+            }
+
+            this.destroyAutomobile(!player.isCreative(), RemovalReason.KILLED);
+            this.playHitSound(this.position());
+            return InteractionResult.sidedSuccess(level().isClientSide);
+        }
+
+        if (isDecorative()) {
+            return InteractionResult.PASS;
+        }
+
+        if (stack.getItem() instanceof AutomobileInteractable interactable) {
+            return interactable.interactAutomobile(stack, player, hand, this);
+        }
+
+        if (this.hasPassenger(player)) {
+            return InteractionResult.PASS;
+        }
+
+        if (!this.hasSpaceForPassengers()) {
+            Entity removable = this.getPassengers().stream()
+                    .filter(entity -> !(entity instanceof Player))
+                    .findFirst()
+                    .orElse(null);
+            if (removable != null) {
+                if (!level().isClientSide()) {
+                    removable.stopRiding();
+                    player.startRiding(this, true);
+                }
+                return InteractionResult.sidedSuccess(level().isClientSide());
+            }
+            return InteractionResult.PASS;
+        }
+
+        if (!level().isClientSide()) {
+            player.startRiding(this, true);
+        }
+        return InteractionResult.sidedSuccess(level().isClientSide());
+    }
+
+    @Override
+    public void positionRider(Entity passenger, MoveFunction moveFunc) {
+        if (!usesRIASeats()) {
             super.positionRider(passenger, moveFunc);
             return;
         }
 
-        RIAutomobileSeatRegistry.SeatPos local = RIAutomobileSeatRegistry.getSeat(this, passenger);
-        if (local == null) return;
-
+        int seatIndex = getSeatIndex(passenger);
+        RIAutomobileDefinition.SeatPos local = getSeat(seatIndex);
         float pitch = this.getDisplacement().getAngularX(1.0F);
         float roll = this.getDisplacement().getAngularZ(1.0F);
         float vert = this.getDisplacement().getVertical(1.0F);
 
+        Vec3 seatPos = local.pos();
         Vec3 pos = this.position()
-                .add(0.0F, (double)vert + passenger.getMyRidingOffset(), 0.0F)
-                .add((new Vec3(local.pos.x, this.getPassengersRidingOffset() + local.pos.y, local.pos.z))
+                .add(0.0F, vert + passenger.getMyRidingOffset(), 0.0F)
+                .add(new Vec3(seatPos.x, this.getPassengersRidingOffset() + seatPos.y, seatPos.z)
                         .yRot(-this.getYRot() * Mth.DEG_TO_RAD)
                         .xRot(-pitch * Mth.DEG_TO_RAD)
                         .zRot(-roll * Mth.DEG_TO_RAD));
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
+
+        if (seatIndex != 0) {
+            rotatePassenger(Mth.wrapDegrees(this.getYRot() - prevYawForRotate), passenger);
+        }
     }
 
     @Override
-    public void tick() {
-        super.tick();
-
-//        if(!RIAutomobileFrame.isRIAutomobileFrame(this.getFrame())) {
-//            return;
-//        }
-
-        this.receiveVehicleCollisions();
-        this.refreshSeats();
-        this.refreshHitboxes();
-        EntityDimensions targetDim = RIAutomobileEntityDimensionsRegistry.getEntityDimensions(this.getFrame());
-        if (!this.getDimensions(this.getPose()).equals(targetDim)) {
-            System.out.println("targetDim: " + this.getDimensions(this.getPose()));
-            this.refreshDimensions();
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        if (!usesRIASeats()) {
+            return super.getDismountLocationForPassenger(passenger);
         }
-
-        for (HitboxEntity hitbox : this.hitboxes) {
-            hitbox.updateRelativePos(this);
-        }
-
-//        this.prevYawForRotate = this.getYRot();
-        this.updateCullingBox();
+        return calculateDismountLocation(passenger);
     }
 
     @Override
-    public EntityDimensions getDimensions(Pose pose) {
-        if (RIAutomobileFrame.isRIAutomobileFrame(this.getFrame())) {
-            return RIAutomobileEntityDimensionsRegistry.getEntityDimensions(this.getFrame());
+    public AABB getBoundingBoxForCulling() {
+        if (!usesRIASeats()) {
+            return super.getBoundingBoxForCulling();
         }
-        return super.getDimensions(pose);
+        return this.cullingBox;
     }
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
-        SeatEntity emptySeat = this.getAvailableSeat();
-
-        if (emptySeat != null) {
-            if (!this.level().isClientSide()) {
-                player.startRiding(emptySeat);
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+    @Nullable
+    public Entity getFirstPassenger() {
+        if (!usesRIASeats()) {
+            return super.getFirstPassenger();
         }
-
-        return super.interact(player, hand);
+        return getSeatPassenger(0);
     }
 
     @Override
-    public boolean hasSpaceForPassengers() {
-        if (this.seats.isEmpty()) {
+    public LivingEntity getControllingPassenger() {
+        Entity driver = getFirstPassenger();
+        return driver instanceof LivingEntity living ? living : null;
+    }
+
+    @Override
+    public boolean isControlledByLocalInstance() {
+        if (!usesRIASeats()) {
+            return super.isControlledByLocalInstance();
+        }
+
+        return getControllingPassenger() instanceof Player driver
+                && driver.isLocalPlayer()
+                && getSeatIndex(driver) == 0;
+    }
+
+    public boolean cycleSeat(Player player) {
+        if (!usesRIASeats()) {
             return false;
         }
-
-        for (SeatEntity seat : this.seats) {
-            if (!seat.isVehicle()) {
+        int currentSeat = getSeatIndex(player);
+        if (currentSeat < 0) {
+            return false;
+        }
+        int seatCount = getSeatCount();
+        for (int offset = 1; offset < seatCount; offset++) {
+            int targetSeat = (currentSeat + offset) % seatCount;
+            if (getSeatPassenger(targetSeat) == null) {
+                setSeatPassenger(currentSeat, null);
+                setSeatPassenger(targetSeat, player);
                 return true;
             }
         }
-
         return false;
     }
 
-    @Override
-    public boolean engineRunning() {
-        if(!RIAutomobileFrame.isRIAutomobileFrame(this.getFrame())) return super.engineRunning();
-
-        Entity driver = this.getFirstPassenger();
-        return driver != null;
-    }
-
-    @Override
-    public void accumulateCollisionAreas(Collection<CollisionArea> areas) {
-        this.level().getEntitiesOfClass(
-                Entity.class,
-                this.getBoundingBox().inflate(3.0),
-                (e) -> e != this && !this.isOnRIAutomobile(e)
-        ).forEach((e) -> areas.add(CollisionArea.entity(e)));
-    }
-
-    @Override
-    public void runOverEntities(Vec3 velocity) {
-        AABB frontBox = this.getBoundingBox().move(velocity.scale(0.5D));
-        Vec3 pushVel = velocity.add(0.0D, 0.1D, 0.0D).scale(3.0D);
-
-        List<Entity> targets = this.level().getEntities(
-                EntityTypeTest.forClass(Entity.class),
-                frontBox,
-                (entityx) -> entityx != this && !this.isOnRIAutomobile(entityx)
-        );
-
-        for (Entity entity : targets) {
-            if (!entity.isInvulnerable() && entity instanceof LivingEntity living) {
-                if (entity.getVehicle() != this) {
-                    AutomobilityEntities.automobileDamageSource(this.level())
-                            .ifPresent((dmg) -> living.hurt(dmg, ((AutomobileEntityAccessor) this).getHSpeed() * 10.0F));
-
-                    entity.push(pushVel.x, pushVel.y, pushVel.z);
-                }
-            }
-        }
-    }
-
-    public boolean isOnRIAutomobile(Entity entity) {
-        if (entity == this || this.hasPassenger(entity)) return true;
-
-        Entity vehicle = entity.getVehicle();
-        if (vehicle instanceof SeatEntity seat) {
-            if (seat.getVehicle() == this) return true;
-        }
-
-        if (entity instanceof HitboxEntity hitbox) {
-            return hitbox.getAutomobile() == this;
-        }
-
-        return false;
-    }
-
-    private @Nullable SeatEntity getAvailableSeat() {
-        for (SeatEntity seat : this.seats) {
-            if (!seat.isVehicle()) {
-                return seat;
-            }
-        }
-        return null;
-    }
-
-    private void refreshSeats() {
-        List<RIAutomobileSeatRegistry.SeatPos> seatPositions = RIAutomobileSeatRegistry.getSeats(this.getFrame());
-
-        if (this.seats.size() != seatPositions.size()) {
-            if (!this.level().isClientSide()) {
-                this.seats.forEach(Entity::discard);
-                this.seats.clear();
-                for (int i = 0; i < seatPositions.size(); i++) {
-                    SeatEntity seat = new SeatEntity(this.level(), this);
-                    if (seat.startRiding(this, true)) {
-                        this.seats.add(seat);
-                        this.level().addFreshEntity(seat);
-                    }
-                }
-            } else {
-                this.seats.clear();
-                for (Entity passenger : this.getPassengers()) {
-                    if (passenger instanceof SeatEntity seat) {
-                        this.seats.add(seat);
-                    }
-                }
-            }
-        }
-    }
-
-    private void refreshHitboxes() {
-        List<RIAutomobileFrame.Hitbox> boxes = RIAutomobileHitboxRegistry.getHitboxes(this.getFrame());
-
-        if (this.hitboxes.size() != boxes.size()) {
-            if (!this.level().isClientSide()) {
-                this.hitboxes.forEach(Entity::discard);
-                this.hitboxes.clear();
-
-                for (RIAutomobileFrame.Hitbox box : boxes) {
-                    HitboxEntity hitbox = new HitboxEntity(this.level(), this, box);
-                    this.hitboxes.add(hitbox);
-                    this.level().addFreshEntity(hitbox);
-                }
-            } else {
-                this.hitboxes.clear();
-                for (Entity passenger : this.getPassengers()) {
-                    if (passenger instanceof HitboxEntity hitbox) {
-                        this.hitboxes.add(hitbox);
-                    }
-                }
-            }
-        }
-    }
-
-    private void updateCullingBox() {
-        List<RIAutomobileFrame.Hitbox> hitboxDefs = RIAutomobileHitboxRegistry.getHitboxes(this.getFrame());
-
-        if (hitboxDefs == null || hitboxDefs.isEmpty()) {
-            this.cullingBox = this.getBoundingBox();
+    public void assignSeatForPassenger(Entity passenger) {
+        if (!usesRIASeats() || passenger == null || getSeatIndex(passenger) >= 0) {
             return;
         }
 
-        double x = this.getX();
-        double y = this.getY();
-        double z = this.getZ();
-
-        AABB mergedBox = this.getBoundingBox();
-
-        for (RIAutomobileFrame.Hitbox def : hitboxDefs) {
-            float halfWidth = def.width() / 2.0F;
-            double minX = x + def.origin().x - halfWidth;
-            double minY = y + def.origin().y;
-            double minZ = z + def.origin().z - halfWidth;
-
-            double maxX = x + def.origin().x + halfWidth;
-            double maxY = y + def.origin().y + def.height();
-            double maxZ = z + def.origin().z + halfWidth;
-
-            AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
-            mergedBox = mergedBox.minmax(box);
+        int seatCount = getSeatCount();
+        int restoredSeat = getPersistedSeatIndex(passenger.getUUID(), seatCount);
+        if (restoredSeat >= 0 && getSeatPassenger(restoredSeat) == null) {
+            setSeatPassenger(restoredSeat, passenger);
+            return;
         }
 
-        this.cullingBox = mergedBox.inflate(3.0);
+        int freeSeat = findFirstEmptySeat(0);
+        if (freeSeat >= 0) {
+            setSeatPassenger(freeSeat, passenger);
+        }
     }
 
-    public Vec3 getMeasuredMovement() {
-        return this.position().subtract(((AutomobileEntityAccessor) this).getLastPosForDisplacement());
+    public void snapPassengerToSeat(Entity passenger) {
+        if (!usesRIASeats() || passenger == null || passenger.getVehicle() != this) {
+            return;
+        }
+        positionRider(passenger, Entity::setPos);
+    }
+
+    @Override
+    public int getContainerSize() {
+        return INVENTORY_SIZE;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public ItemStack getItem(int slot) {
+        return items.get(slot);
+    }
+
+    @Override
+    public ItemStack removeItem(int slot, int amount) {
+        return ContainerHelper.removeItem(items, slot, amount);
+    }
+
+    @Override
+    public ItemStack removeItemNoUpdate(int slot) {
+        return ContainerHelper.takeItem(items, slot);
+    }
+
+    @Override
+    public void setItem(int slot, ItemStack stack) {
+        items.set(slot, stack);
+        if (stack.getCount() > getMaxStackSize()) {
+            stack.setCount(getMaxStackSize());
+        }
+        setChanged();
+    }
+
+    @Override
+    public void setChanged() {
+        this.changed = true;
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return this.isAlive() && player.distanceTo(this) < 8.0;
+    }
+
+    @Override
+    public void clearContent() {
+        items.clear();
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        for (EntityDataAccessor<Integer> trackedSeat : TRACKED_SEATS) {
+            this.entityData.define(trackedSeat, -1);
+        }
+    }
+
+    private void driftedReadyBoost() {
+        if (this.isDrifting() && wasHoldingDrift() && !isHoldingDrift()) {
+            driftedReadyBoostCounter = 0;
+        }
+
+        if (!this.isDrifting() && !wasHoldingDrift() && !isHoldingDrift()) {
+            if (driftedReadyBoostCounter >= 3) {
+                return;
+            }
+            if (getTurboCharge() > 35 || getTurboCharge() == 0) {
+                return;
+            }
+            driftedReadyBoostCounter++;
+            if (!this.preAccelerating && isAccelerating()) {
+                this.boost(0.38F, 12);
+            }
+        }
+    }
+
+    private void updateDimensionsForFrame() {
+        EntityAccessor accessor = (EntityAccessor) this;
+        EntityDimensions dimensions = getDefinition().dimensions();
+        if (dimensions != accessor.getDimensions()) {
+            accessor.setDimensions(dimensions);
+            this.refreshDimensions();
+        }
     }
 
     private void receiveVehicleCollisions() {
-        if (((AutomobileEntityAccessor) this).isDecorative()) {
+        if (isDecorative()) {
             return;
         }
 
-        var collisions = new HashMap<AutomobileEntity, RIAutomobileHitboxRegistry.IncomingCollision>();
+        var collisions = new HashMap<AutomobileEntity, IncomingCollision>();
 
-        for (var box : this.hitboxes) {
-            var bbox = box.getBoundingBox().inflate(0.15);
-            for (var hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != this)) {
-                var auto = hitbox.getAutomobile();
-                var intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
+        for (HitboxEntity box : this.hitboxes) {
+            AABB bbox = box.getBoundingBox().inflate(0.15);
+            for (HitboxEntity hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != this)) {
+                AutomobileEntity auto = hitbox.getAutomobile();
+                AABB intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
+                Vec3 collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
 
-                var collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
                 if (auto == null || collisions.containsKey(auto) && collisions.get(auto).depth().lengthSqr() > collDepth.lengthSqr()) {
                     continue;
                 }
 
-                var momentum = this.getMeasuredMovement();
-                var origin = intersect.getCenter();
-
-                collisions.put(auto, new RIAutomobileHitboxRegistry.IncomingCollision(collDepth, momentum, origin, auto.getFrame().weight()));
+                collisions.put(auto, new IncomingCollision(
+                        collDepth,
+                        getMeasuredMovement(),
+                        intersect.getCenter(),
+                        auto.getFrame().weight()
+                ));
             }
         }
 
         hadVehicleCollision = Math.max(0, hadVehicleCollision - 1);
-        for (var col : collisions.values()) {
-            var meToCollision = col.origin().subtract(this.position()).multiply(1, 0, 1);
+        for (IncomingCollision col : collisions.values()) {
+            Vec3 meToCollision = col.origin().subtract(this.position()).multiply(1, 0, 1);
             double hitScale = hadVehicleCollision <= 0 ? 0.15 : 0.07;
             hitScale *= (1 + col.inertia() / this.getFrame().weight()) * 0.5;
-            Vec3 newAddVelocity = ((AutomobileEntityAccessor) this).getAddedVelocity().add(
-                    meToCollision.reverse().normalize().scale(hitScale * (1 + 0.1 * Math.sqrt(col.velocity().length())) * col.depth().lengthSqr())
-                            .multiply(1, 0, 1));
 
-            ((AutomobileEntityAccessor) this).setAddedVelocity(newAddVelocity);
+            setAddedVelocity(getAddedVelocity().add(
+                    meToCollision.reverse().normalize().scale(hitScale * (1 + 0.1 * Math.sqrt(col.velocity().length())) * col.depth().lengthSqr())
+                            .multiply(1, 0, 1)
+            ));
 
             if (hadVehicleCollision <= 0) {
                 this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), AutomobilitySounds.COLLISION.require(), SoundSource.AMBIENT, 0.22f, 0.7f + (0.06f * (this.level().random.nextFloat() - 0.5f)), false);
-                float engineSpeed = ((AutomobileEntityAccessor) this).getEngineSpeed();
-                ((AutomobileEntityAccessor) this).setEngineSpeed(engineSpeed * 0.6f);
+                setEngineSpeed(getEngineSpeed() * 0.6f);
                 hadVehicleCollision = 12;
             }
         }
+    }
+
+    private Vec3 getMeasuredMovement() {
+        return this.position().subtract(getLastPosForDisplacement());
+    }
+
+    private void updateCullingBox() {
+        this.cullingBox = super.getBoundingBoxForCulling();
+        for (HitboxEntity hitbox : this.hitboxes) {
+            this.cullingBox = this.cullingBox.minmax(hitbox.getBoundingBox());
+        }
+    }
+
+    public int getSeatIndex(Entity passenger) {
+        if (passenger == null) {
+            return -1;
+        }
+        int seatCount = getSeatCount();
+        for (int i = 0; i < seatCount; i++) {
+            if (getTrackedSeatPassengerId(i) == passenger.getId()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int getSeatCount() {
+        return Math.min(MAX_TRACKED_SEATS, getDefinition().seats().size());
+    }
+
+    @Nullable
+    public Entity getSeatPassenger(int seatIndex) {
+        if (seatIndex < 0 || seatIndex >= getSeatCount()) {
+            return null;
+        }
+        int passengerId = getTrackedSeatPassengerId(seatIndex);
+        if (passengerId < 0) {
+            return null;
+        }
+        Entity passenger = level().getEntity(passengerId);
+        return passenger != null && passenger.getVehicle() == this ? passenger : null;
+    }
+
+    private void reconcileSeatAssignments() {
+        int seatCount = getSeatCount();
+        Set<Integer> assignedPassengers = new HashSet<>();
+
+        for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
+            if (i >= seatCount) {
+                setTrackedSeatPassengerId(i, -1);
+                continue;
+            }
+
+            Entity passenger = getSeatPassenger(i);
+            if (passenger == null || !assignedPassengers.add(passenger.getId())) {
+                setTrackedSeatPassengerId(i, -1);
+            }
+        }
+
+        for (Entity passenger : this.getPassengers()) {
+            assignSeatForPassenger(passenger);
+        }
+    }
+
+    private int getPersistedSeatIndex(UUID uuid, int seatCount) {
+        for (int i = 0; i < seatCount; i++) {
+            if (uuid.equals(persistedSeatPassengers[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int findFirstEmptySeat(int start) {
+        int seatCount = getSeatCount();
+        for (int i = start; i < seatCount; i++) {
+            if (getSeatPassenger(i) == null) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void setSeatPassenger(int seatIndex, @Nullable Entity passenger) {
+        if (seatIndex < 0 || seatIndex >= getSeatCount()) {
+            return;
+        }
+        setTrackedSeatPassengerId(seatIndex, passenger == null ? -1 : passenger.getId());
+    }
+
+    private int getTrackedSeatPassengerId(int seatIndex) {
+        return this.entityData.get(TRACKED_SEATS.get(seatIndex));
+    }
+
+    private void setTrackedSeatPassengerId(int seatIndex, int passengerId) {
+        this.entityData.set(TRACKED_SEATS.get(seatIndex), passengerId);
+    }
+
+    private Vec3 calculateDismountLocation(Entity passenger) {
+        AABB box = this.getBoundingBox();
+        double sideOffset = box.getXsize() / 2 + 1.0;
+        float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+
+        Vec3 right = this.position().add(-Math.cos(yawRad) * sideOffset, 0, -Math.sin(yawRad) * sideOffset);
+        Vec3 left = this.position().add(Math.cos(yawRad) * sideOffset, 0, Math.sin(yawRad) * sideOffset);
+
+        boolean leftSafe = level().noCollision(passenger, passenger.getBoundingBox().move(left.subtract(passenger.position())));
+        boolean rightSafe = level().noCollision(passenger, passenger.getBoundingBox().move(right.subtract(passenger.position())));
+
+        if (leftSafe && rightSafe) {
+            return passenger.position().distanceTo(left) <= passenger.position().distanceTo(right) ? left : right;
+        }
+        if (leftSafe) {
+            return left;
+        }
+        if (rightSafe) {
+            return right;
+        }
+        return new Vec3(this.getX(), box.maxY, this.getZ());
+    }
+
+    private void spawnHitboxes() {
+        for (RIAutomobileDefinition.Hitbox def : getDefinition().hitboxes()) {
+            HitboxEntity hitbox = new HitboxEntity(level(), this, def);
+            this.level().addFreshEntity(hitbox);
+            this.hitboxes.add(hitbox);
+        }
+    }
+
+    private void removeHitboxes() {
+        for (HitboxEntity hitbox : this.hitboxes) {
+            if (!hitbox.isRemoved()) {
+                hitbox.discard();
+            }
+        }
+    }
+
+    private boolean isOnRIAutomobile(Entity entity) {
+        return this == entity.getVehicle() || this.hasPassenger(entity);
+    }
+
+    private void rotatePassenger(float dYaw, Entity passenger) {
+        if (dYaw == 0.0F) {
+            return;
+        }
+
+        float prevYaw = passenger.getYRot();
+        float newYaw = Mth.wrapDegrees(passenger.getYRot() + dYaw);
+        passenger.yRotO = prevYaw;
+        passenger.setYRot(newYaw);
+        passenger.setYBodyRot(newYaw);
+        if (passenger instanceof LivingEntity living) {
+            ((LivingEntityAccessor) living).setYBodyRotOld(prevYaw);
+            ((LivingEntityAccessor) living).setYHeadRotOld(prevYaw);
+            living.setYHeadRot(newYaw);
+        }
+    }
+
+    private boolean isDecorative() {
+        return ((AutomobileEntityAccessor) this).isDecorative();
+    }
+
+    private float getHorizontalSpeed() {
+        return ((AutomobileEntityAccessor) this).getHSpeed();
+    }
+
+    private Vec3 getLastPosForDisplacement() {
+        return ((AutomobileEntityAccessor) this).getLastPosForDisplacement();
+    }
+
+    private Vec3 getAddedVelocity() {
+        return ((AutomobileEntityAccessor) this).getAddedVelocity();
+    }
+
+    private void setAddedVelocity(Vec3 velocity) {
+        ((AutomobileEntityAccessor) this).setAddedVelocity(velocity);
+    }
+
+    private float getEngineSpeed() {
+        return ((AutomobileEntityAccessor) this).getEngineSpeed();
+    }
+
+    private void setEngineSpeed(float engineSpeed) {
+        ((AutomobileEntityAccessor) this).setEngineSpeed(engineSpeed);
+    }
+
+    private boolean isAccelerating() {
+        return ((AutomobileEntityAccessor) this).isAccelerating();
+    }
+
+    private boolean isHoldingDrift() {
+        return ((AutomobileEntityAccessor) this).isHoldingDrift();
+    }
+
+    private boolean wasHoldingDrift() {
+        return ((AutomobileEntityAccessor) this).wasHoldingDrift();
+    }
+
+    private record IncomingCollision(Vec3 depth, Vec3 velocity, Vec3 origin, float inertia) {
     }
 }

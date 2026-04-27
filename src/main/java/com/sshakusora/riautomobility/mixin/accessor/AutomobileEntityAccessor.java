@@ -27,4 +27,28 @@ public interface AutomobileEntityAccessor {
 
     @Accessor("engineSpeed")
     void setEngineSpeed(float engineSpeed);
+
+    @Accessor("steering")
+    float getSteeringRaw();
+
+    @Accessor("steering")
+    void setSteeringRaw(float steering);
+
+    @Accessor("wheelAngle")
+    float getWheelAngleRaw();
+
+    @Accessor("wheelAngle")
+    void setWheelAngleRaw(float wheelAngle);
+
+    @Accessor("lastWheelAngle")
+    void setLastWheelAngleRaw(float lastWheelAngle);
+
+    @Accessor("accelerating")
+    boolean isAccelerating();
+
+    @Accessor("holdingDrift")
+    boolean isHoldingDrift();
+
+    @Accessor("prevHoldDrift")
+    boolean wasHoldingDrift();
 }
