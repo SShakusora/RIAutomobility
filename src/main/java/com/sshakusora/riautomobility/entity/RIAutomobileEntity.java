@@ -402,8 +402,13 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     @Override
+    @Nullable
     public LivingEntity getControllingPassenger() {
-        Entity driver = getFirstPassenger();
+        if (!usesRIASeats()) {
+            return super.getControllingPassenger();
+        }
+
+        Entity driver = getSeatPassenger(0);
         return driver instanceof LivingEntity living ? living : null;
     }
 
