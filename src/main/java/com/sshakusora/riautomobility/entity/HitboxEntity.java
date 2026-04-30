@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.entity;
 
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
+import com.sshakusora.riautomobility.util.RIAutomobileTransformUtil;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -8,7 +9,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.util.Mth;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -210,15 +210,6 @@ public class HitboxEntity extends Entity{
 
 
     private Vec3 localPosToWorldSpace(AutomobileEntity auto, Vec3 position) {
-        float pitch = auto.getDisplacement().getAngularX(1.0F);
-        float roll = auto.getDisplacement().getAngularZ(1.0F);
-        float vert = auto.getDisplacement().getVertical(1.0F);
-
-        return auto.position()
-                .add(0.0F, vert, 0.0F)
-                .add((new Vec3(position.x, position.y, position.z))
-                        .yRot(-auto.getYRot() * Mth.DEG_TO_RAD)
-                        .xRot(-pitch * Mth.DEG_TO_RAD)
-                        .zRot(-roll * Mth.DEG_TO_RAD));
+        return RIAutomobileTransformUtil.localPosToWorldSpace(auto, position);
     }
 }

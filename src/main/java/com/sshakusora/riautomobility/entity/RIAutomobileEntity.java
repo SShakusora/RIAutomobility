@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.entity;
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
 import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileEntityAccessor;
+import com.sshakusora.riautomobility.util.RIAutomobileTransformUtil;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
@@ -397,8 +398,8 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         if (!usesRIASeats()) {
             return super.getFirstPassenger();
         }
-        Entity driver = getSeatPassenger(0);
-        return driver != null ? driver : super.getFirstPassenger();
+
+        return getSeatPassenger(0);
     }
 
     @Override
@@ -416,6 +417,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     public boolean isControlledByLocalInstance() {
         if (!usesRIASeats()) {
             return super.isControlledByLocalInstance();
+        }
+
+        if (!level().isClientSide()) {
+            return true;
         }
 
         return getControllingPassenger() instanceof Player driver
@@ -609,9 +614,23 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
     private void updateCullingBox() {
         this.cullingBox = super.getBoundingBoxForCulling();
-        for (HitboxEntity hitbox : this.hitboxes) {
-            this.cullingBox = this.cullingBox.minmax(hitbox.getBoundingBox());
+        for (RIAutomobileDefinition.Hitbox hitbox : getDefinition().hitboxes()) {
+            this.cullingBox = this.cullingBox.minmax(getHitboxBoundingBox(hitbox));
         }
+    }
+
+    private AABB getHitboxBoundingBox(RIAutomobileDefinition.Hitbox hitbox) {
+        Vec3 center = RIAutomobileTransformUtil.localPosToWorldSpace(this, hitbox.origin());
+        double halfWidth = hitbox.width() * 0.5D;
+
+        return new AABB(
+                center.x - halfWidth,
+                center.y,
+                center.z - halfWidth,
+                center.x + halfWidth,
+                center.y + hitbox.height(),
+                center.z + halfWidth
+        );
     }
 
     public int getSeatIndex(Entity passenger) {
