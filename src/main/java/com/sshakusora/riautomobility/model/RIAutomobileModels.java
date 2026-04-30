@@ -10,6 +10,9 @@ import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcRenderer;
 import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryAnimatable;
 import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryModel;
 import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryRenderer;
+import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaAnimatable;
+import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaModel;
+import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaRenderer;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
 import io.github.foundationgames.automobility.forge.vendored.jsonem.JsonEM;
 
@@ -33,6 +36,14 @@ public class RIAutomobileModels {
             DmcAnimatable anim = new DmcAnimatable();
             DmcModel model = new DmcModel();
             DmcRenderer renderer = new DmcRenderer(model, anim);
+
+            return new GeckoFrameModel<>(model, renderer, anim);
+        });
+
+        AutomobileModels.register(RIAutomobility.rl("frame_standard_formula"), context -> {
+            StandardFormulaAnimatable anim = new StandardFormulaAnimatable();
+            StandardFormulaModel model = new StandardFormulaModel();
+            StandardFormulaRenderer renderer = new StandardFormulaRenderer(model, anim);
 
             return new GeckoFrameModel<>(model, renderer, anim);
         });

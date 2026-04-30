@@ -36,6 +36,7 @@ public class HitboxEntity extends Entity{
 
     public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileDefinition.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
+        this.noPhysics = true;
 
         this.entityData.set(AUTOMOBILE, automobile.getId());
         this.entityData.set(ORIGIN, new Vector3f((float) hitbox.origin().x(), (float) hitbox.origin().y(), (float) hitbox.origin().z()));
@@ -48,6 +49,7 @@ public class HitboxEntity extends Entity{
 
     public HitboxEntity(EntityType<?> entityType, Level level) {
         super(entityType, level);
+        this.noPhysics = true;
         this.size = EntityDimensions.scalable(1.0f, 0.66f);
     }
 
@@ -143,19 +145,7 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canCollideWith(Entity other) {
-        if (other == this) return false;
-        AutomobileEntity auto = this.getAutomobile();
-        if (auto == null) return false;
-        if (other == auto) return false;
-        if (other instanceof HitboxEntity hitbox) {
-            if (hitbox.getAutomobile() == auto) {
-                return false;
-            }
-        }
-        if (auto.hasPassenger(other)) {
-            return false;
-        }
-        return Boat.canVehicleCollide(this, other);
+        return false;
     }
 
 
@@ -166,7 +156,12 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canBeCollidedWith() {
-        return this.level().isClientSide();
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
     }
 
     @Override

@@ -89,6 +89,39 @@ public final class RIAutomobileFrame {
                     .frontAttachmentEnabled(false)
                     .rearAttachmentEnabled(false)
     );
+    public static final AutomobileFrame STANDARD_FORMULA = register(
+            new AutomobileFrame(
+                    RIAutomobility.rl("standard_formula"),
+                    0.98F,
+                    new AutomobileFrame.FrameModel(
+                            RIAutomobility.rl("textures/entity/automobile/frame/standard_formula.png"),
+                            RIAutomobility.rl("frame_standard_formula"),
+                            WheelBase.basic(84F, 32F),
+                            76F,
+                            -0.36F,
+                            32.5F,
+                            3.5F,
+                            23F,
+                            22F
+                    )
+            ),
+            definition -> definition
+                    .dimensions(EntityDimensions.scalable(2.8F, 1.61F))
+                    .seats(
+                            new RIAutomobileDefinition.SeatPos(0, 1.6 / 16)
+                    )
+                    .cameraPositions(
+                            new Vec3(-3, 0, 0)
+                    )
+                    .hitboxes(
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 44.8 / 16), 2.5F, 1.5F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 22.4 / 16), 2.8F, 1.61F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -22.4 / 16), 2.8F, 1.4F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -44.8 / 16), 2.8F, 1F, false)
+                    )
+                    .frontAttachmentEnabled(false)
+                    .rearAttachmentEnabled(false)
+    );
 
     private RIAutomobileFrame() {}
 

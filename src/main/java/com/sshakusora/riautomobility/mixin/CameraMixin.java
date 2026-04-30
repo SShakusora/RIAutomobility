@@ -38,11 +38,7 @@ public class CameraMixin {
             z:left and right
              */
             //TODO: add camera position feature and fix sound
-            if(cameraPos == Vec3.ZERO){
-                camera.move(0.0, 0.0, -pos.pos.x);
-            } else {
-                camera.move(cameraPos.x, cameraPos.y, -pos.pos.x);
-            }
+            camera.move(cameraPos.x, cameraPos.y, cameraPos.z - pos.pos.x);
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);
             Vec3 offset = targetPos.subtract(eyePos);
