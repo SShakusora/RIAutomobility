@@ -57,24 +57,32 @@ public final class RIAutomobileFrame {
     public static final AutomobileFrame DMC12 = register(
             new AutomobileFrame(
                     RIAutomobility.rl("dmc12"),
-                    1.5F,
+                    0.98F,
                     new AutomobileFrame.FrameModel(
                             RIAutomobility.rl("textures/entity/automobile/frame/dmc12.png"),
                             RIAutomobility.rl("frame_dmc12"),
-                            WheelBase.basic(63.00F, 40.00F),
-                            115.00F,
-                            2.66F,
+                            WheelBase.basic(64.00F, 36.00F),
+                            76.0F,
+                            0.97F,
                             32.50F,
                             3.10F,
-                            25.78F,
-                            24.31F
+                            23.00F,
+                            22.00F
                     )
             ),
             definition -> definition
-                    .dimensions(EntityDimensions.scalable(3.54F, 2.06F))
+                    .dimensions(EntityDimensions.scalable(24.2214F/8, 25.97F/16F))
                     .seats(
-                            new RIAutomobileDefinition.SeatPos(11.90 / 16, -2.50 / 16, -9.6 / 16),
-                            new RIAutomobileDefinition.SeatPos(-11.90 / 16, -2.50 / 16, -9.6 / 16)
+                            new RIAutomobileDefinition.SeatPos(11.601/16, -8.322/16),
+                            new RIAutomobileDefinition.SeatPos(-11.601/16, -8.322/16)
+                    )
+                    .cameraPositions(
+                            new Vec3(-3.0, 0.0, 0.0),
+                            new Vec3(-3.0, 0.0, 0.0)
+                    )
+                    .hitboxes(
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 24.2214F/16), 24.2214F/8, 25.97F/16, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -24.2214F/16), 24.2214F/8, 25.97F/16, true)
                     )
     );
 

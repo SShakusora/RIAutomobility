@@ -45,13 +45,16 @@ public class CameraMixin {
             }
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);
-            Vec3 dir1 = targetPos.subtract(eyePos).normalize();
-            Vec3 detectPos = targetPos.add(dir1.scale(0.3));
+            Vec3 offset = targetPos.subtract(eyePos);
+
+            if (offset.lengthSqr() <= 1.0E-6) {
+                return;
+            }
 
             ClipContext context = new ClipContext(
                     eyePos,
-                    detectPos,
-                    ClipContext.Block.COLLIDER,
+                    targetPos,
+                    ClipContext.Block.VISUAL,
                     ClipContext.Fluid.NONE,
                     entity
             );
@@ -60,8 +63,8 @@ public class CameraMixin {
 
             if (hit.getType() == HitResult.Type.BLOCK) {
                 Vec3 hitPos = hit.getLocation();
-                Vec3 dir2 = eyePos.subtract(hitPos).normalize();
-                targetPos = hitPos.add(dir2.scale(0.3));
+                Vec3 pullBack = offset.normalize().scale(0.2);
+                targetPos = hitPos.subtract(pullBack);
             }
 
             camera.setPosition(targetPos);
