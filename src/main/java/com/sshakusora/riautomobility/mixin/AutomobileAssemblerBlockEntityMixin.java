@@ -1,11 +1,10 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
-import io.github.foundationgames.automobility.block.entity.AutomobileAssemblerBlockEntity;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
-import net.minecraft.core.BlockPos;
+import io.github.foundationgames.automobility.block.entity.AutomobileAssemblerBlockEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;

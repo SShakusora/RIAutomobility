@@ -1,7 +1,8 @@
 package com.sshakusora.riautomobility.network;
 
 import com.sshakusora.riautomobility.RIAutomobility;
-import com.sshakusora.riautomobility.network.packet.PassengerSwitchPacket;
+import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
+import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
@@ -19,10 +20,17 @@ public class RIAutomobilityNetwork {
         int id = 0;
         CHANNEL.registerMessage(
                 id++,
-                PassengerSwitchPacket.class,
-                PassengerSwitchPacket::encode,
-                PassengerSwitchPacket::decode,
-                PassengerSwitchPacket::handle
+                PassengerDriverSwitchPacket.class,
+                PassengerDriverSwitchPacket::encode,
+                PassengerDriverSwitchPacket::decode,
+                PassengerDriverSwitchPacket::handle
+        );
+        CHANNEL.registerMessage(
+                id++,
+                BoardingAsPassengerPacket.class,
+                BoardingAsPassengerPacket::encode,
+                BoardingAsPassengerPacket::decode,
+                BoardingAsPassengerPacket::handle
         );
     }
 }

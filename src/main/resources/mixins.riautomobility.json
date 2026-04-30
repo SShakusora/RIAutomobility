@@ -9,19 +9,19 @@
   "client": [
     "AutoMechanicTableScreenMixin",
     "AutomobileHudMixin",
+    "AutomobilityClientMixin",
     "CameraMixin",
-    "accessor.AutoMechanicTableScreenAccessor",
-    "accessor.CameraAccessor",
-    "accessor.ScreenAccessor"
+    "ForgeGeometryBuilderMixin",
+    "LocalPlayerMixin",
+    "accessor.AutoMechanicTableScreenAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
     "AutomobileAssemblerBlockEntityMixin",
+    "AutomobileEntityCollisionMixin",
     "AutomobileItemMixin",
     "EntityMixin",
-    "accessor.AutomobileEntityAccessor",
-    "accessor.EntityAccessor",
-    "accessor.LivingEntityAccessor"
+    "accessor.AutomobileEntityAccessor"
   ]
 }

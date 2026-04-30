@@ -24,7 +24,7 @@ public final class RIAutomobileSeatRegistry {
 
     public static SeatPos getSeat(AutomobileEntity auto, Entity passenger){
         if (auto instanceof RIAutomobileEntity riautomobile) {
-            return getSeat(auto.getFrame(), riautomobile.getSeatIndex(passenger));
+            return getSeat(auto.getFrame(), riautomobile.getVisualSeatIndex(passenger));
         }
         List<SeatPos> seats = getSeats(auto.getFrame());
         int idx = auto.getPassengers().indexOf(passenger);

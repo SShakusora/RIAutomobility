@@ -9,7 +9,6 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.function.Consumer;
-import java.util.List;
 
 public final class RIAutomobileFrame {
     public static final AutomobileFrame WOODEN_DOUBLEMOTORCAR = registerDoubleMotorcar("wooden", 0.6F);
@@ -53,6 +52,29 @@ public final class RIAutomobileFrame {
                             new RIAutomobileDefinition.Hitbox(new Vec3(0, 0.2, 14.1364 / 16), 21.7727F / 8, 53.3636F / 16, false),
                             new RIAutomobileDefinition.Hitbox(new Vec3(0, 0.2, -28.5455 / 16), 21.7727F / 8, 53.3636F / 16, false),
                             new RIAutomobileDefinition.Hitbox(new Vec3(0, 0.2, -50.3182 / 16), 21.7727F / 8, 53.3636F / 16, true)
+                    )
+    );
+    public static final AutomobileFrame DMC12 = register(
+            new AutomobileFrame(
+                    RIAutomobility.rl("dmc12"),
+                    1.5F,
+                    new AutomobileFrame.FrameModel(
+                            RIAutomobility.rl("textures/entity/automobile/frame/dmc12.png"),
+                            RIAutomobility.rl("frame_dmc12"),
+                            WheelBase.basic(63.00F, 40.00F),
+                            115.00F,
+                            2.66F,
+                            32.50F,
+                            3.10F,
+                            25.78F,
+                            24.31F
+                    )
+            ),
+            definition -> definition
+                    .dimensions(EntityDimensions.scalable(3.54F, 2.06F))
+                    .seats(
+                            new RIAutomobileDefinition.SeatPos(11.90 / 16, -2.50 / 16, -9.6 / 16),
+                            new RIAutomobileDefinition.SeatPos(-11.90 / 16, -2.50 / 16, -9.6 / 16)
                     )
     );
 

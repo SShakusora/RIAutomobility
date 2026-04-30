@@ -2,9 +2,10 @@ package com.sshakusora.riautomobility.entity;
 
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
 import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
-import com.sshakusora.riautomobility.mixin.accessor.EntityAccessor;
-import com.sshakusora.riautomobility.mixin.accessor.LivingEntityAccessor;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileEntityAccessor;
+import io.github.foundationgames.automobility.automobile.AutomobileEngine;
+import io.github.foundationgames.automobility.automobile.AutomobileFrame;
+import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.item.AutomobileInteractable;
@@ -15,23 +16,16 @@ import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.Container;
-import net.minecraft.world.ContainerHelper;
-import net.minecraft.world.Containers;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.*;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -42,13 +36,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
@@ -73,9 +61,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
     private boolean changed = false;
     private float prevYawForRotate = 0.0F;
+    private float clientPassengerYawDelta = 0.0F;
     private boolean preAccelerating = false;
     private int driftedReadyBoostCounter = Integer.MAX_VALUE;
     private int hadVehicleCollision = 0;
+    private boolean dimensionsNeedRefresh = false;
     private AABB cullingBox = new AABB(0, 0, 0, 0, 0, 0);
 
     public RIAutomobileEntity(EntityType<?> type, Level level) {
@@ -83,7 +73,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     public RIAutomobileEntity(Level level) {
-        this(RIAutomobilityEntities.RI_AUTOMOBILE.get(), level);
+        this(RIAutomobilityEntities.RIAUTOMOBILE.get(), level);
     }
 
     private boolean usesRIASeats() {
@@ -143,6 +133,23 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     @Override
+    public EntityDimensions getDimensions(Pose pose) {
+        return this.dimensions;
+    }
+
+    @Override
+    public void setComponents(AutomobileFrame frame, AutomobileWheel wheel, AutomobileEngine engine) {
+        super.setComponents(frame, wheel, engine);
+        if (usesRIASeats()) {
+            EntityDimensions dimensions = getDefinition().dimensions();
+            if (dimensions.width != this.dimensions.width || dimensions.height != this.dimensions.height) {
+                this.dimensions = dimensions;
+                dimensionsNeedRefresh = true;
+            }
+        }
+    }
+
+    @Override
     public void tick() {
         if (!usesRIASeats()) {
             super.tick();
@@ -151,15 +158,29 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         receiveVehicleCollisions();
         updateDimensionsForFrame();
-        prevYawForRotate = this.getYRot();
         updateCullingBox();
         driftedReadyBoost();
         preAccelerating = isAccelerating();
+        prevYawForRotate = this.getYRot();
         if (!level().isClientSide()) {
             reconcileSeatAssignments();
         }
 
         super.tick();
+        if (level().isClientSide()) {
+            clientPassengerYawDelta = Mth.wrapDegrees(this.getYRot() - prevYawForRotate);
+            this.yRotO = prevYawForRotate;
+        }
+        if (dimensionsNeedRefresh) {
+            this.refreshDimensions();
+            dimensionsNeedRefresh = false;
+        }
+
+        for (HitboxEntity hitbox : this.hitboxes) {
+            if (hitbox.isAlive()) {
+                hitbox.syncPosition(this);
+            }
+        }
     }
 
     @Override
@@ -211,7 +232,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             return;
         }
 
-        if (!(getControllingPassenger() instanceof Player driver) || !driver.isLocalPlayer() || getSeatIndex(driver) != 0) {
+        if (!(getControllingPassenger() instanceof Player driver) || !driver.isLocalPlayer() || getVisualSeatIndex(driver) != 0) {
             return;
         }
 
@@ -336,7 +357,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             return;
         }
 
-        int seatIndex = getSeatIndex(passenger);
+        int seatIndex = getVisualSeatIndex(passenger);
         RIAutomobileDefinition.SeatPos local = getSeat(seatIndex);
         float pitch = this.getDisplacement().getAngularX(1.0F);
         float roll = this.getDisplacement().getAngularZ(1.0F);
@@ -352,9 +373,6 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 
-        if (seatIndex != 0) {
-            rotatePassenger(Mth.wrapDegrees(this.getYRot() - prevYawForRotate), passenger);
-        }
     }
 
     @Override
@@ -379,7 +397,8 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         if (!usesRIASeats()) {
             return super.getFirstPassenger();
         }
-        return getSeatPassenger(0);
+        Entity driver = getSeatPassenger(0);
+        return driver != null ? driver : super.getFirstPassenger();
     }
 
     @Override
@@ -396,7 +415,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         return getControllingPassenger() instanceof Player driver
                 && driver.isLocalPlayer()
-                && getSeatIndex(driver) == 0;
+                && getVisualSeatIndex(driver) == 0;
     }
 
     public boolean cycleSeat(Player player) {
@@ -526,10 +545,9 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private void updateDimensionsForFrame() {
-        EntityAccessor accessor = (EntityAccessor) this;
         EntityDimensions dimensions = getDefinition().dimensions();
-        if (dimensions != accessor.getDimensions()) {
-            accessor.setDimensions(dimensions);
+        if (dimensions.width != this.dimensions.width || dimensions.height != this.dimensions.height) {
+            this.dimensions = dimensions;
             this.refreshDimensions();
         }
     }
@@ -602,6 +620,19 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             }
         }
         return -1;
+    }
+
+    public int getVisualSeatIndex(@Nullable Entity passenger) {
+        int trackedSeatIndex = getSeatIndex(passenger);
+        if (trackedSeatIndex >= 0) {
+            return trackedSeatIndex;
+        }
+        if (!this.level().isClientSide() || passenger == null || passenger.getVehicle() != this) {
+            return -1;
+        }
+
+        int passengerIndex = this.getPassengers().indexOf(passenger);
+        return passengerIndex >= 0 && passengerIndex < getSeatCount() ? passengerIndex : -1;
     }
 
     public int getSeatCount() {
@@ -730,10 +761,25 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         passenger.setYRot(newYaw);
         passenger.setYBodyRot(newYaw);
         if (passenger instanceof LivingEntity living) {
-            ((LivingEntityAccessor) living).setYBodyRotOld(prevYaw);
-            ((LivingEntityAccessor) living).setYHeadRotOld(prevYaw);
+            living.yBodyRotO = prevYaw;
+            living.yHeadRotO = prevYaw;
             living.setYHeadRot(newYaw);
         }
+    }
+
+    public float getClientPassengerYawDelta() {
+        return clientPassengerYawDelta;
+    }
+
+    public void rotateLocalPassengerWithVehicle(Entity passenger) {
+        if (!(passenger instanceof Player player) || !player.isLocalPlayer()) {
+            return;
+        }
+        if (player.getVehicle() != this || getVisualSeatIndex(player) == 0) {
+            return;
+        }
+
+        rotatePassenger(clientPassengerYawDelta, player);
     }
 
     private boolean isDecorative() {

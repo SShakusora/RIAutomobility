@@ -21,7 +21,7 @@ public class RIAutomobileCameraRegistry {
 
     public static Vec3 getCameraPos(AutomobileEntity auto, Entity passenger){
         List<Vec3> cameraPoses = getCameraPoses(auto.getFrame());
-        int idx = auto instanceof RIAutomobileEntity riautomobile ? riautomobile.getSeatIndex(passenger) : auto.getPassengers().indexOf(passenger);
+        int idx = auto instanceof RIAutomobileEntity riautomobile ? riautomobile.getVisualSeatIndex(passenger) : auto.getPassengers().indexOf(passenger);
         return idx >= 0 && idx < cameraPoses.size() ? cameraPoses.get(idx) : Vec3.ZERO;
     }
 

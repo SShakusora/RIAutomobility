@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.mixin.accessor.CameraAccessor;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
@@ -27,7 +26,6 @@ public class CameraMixin {
         if (!(entity instanceof LocalPlayer)) return;
 
         Camera camera = (Camera) (Object) this;
-        CameraAccessor cameraAccessor = (CameraAccessor) camera;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
         Entity vehicle = entity.getVehicle();
@@ -41,9 +39,9 @@ public class CameraMixin {
              */
             //TODO: add camera position feature and fix sound
             if(cameraPos == Vec3.ZERO){
-                cameraAccessor.invokeMove(0.0, 0.0, -pos.pos.x);
+                camera.move(0.0, 0.0, -pos.pos.x);
             } else {
-                cameraAccessor.invokeMove(cameraPos.x, cameraPos.y, -pos.pos.x);
+                camera.move(cameraPos.x, cameraPos.y, -pos.pos.x);
             }
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);
@@ -66,7 +64,7 @@ public class CameraMixin {
                 targetPos = hitPos.add(dir2.scale(0.3));
             }
 
-            cameraAccessor.invokeSetPosition(targetPos);
+            camera.setPosition(targetPos);
         }
     }
 }

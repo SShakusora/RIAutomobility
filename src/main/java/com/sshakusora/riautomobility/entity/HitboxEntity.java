@@ -63,6 +63,24 @@ public class HitboxEntity extends Entity{
     }
 
     @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) { }
+
+    public void syncPosition(AutomobileEntity auto) {
+        Vec3 pos = this.boxOrigin();
+        pos = localPosToWorldSpace(auto, pos);
+
+        double nx = pos.x();
+        double ny = pos.y();
+        double nz = pos.z();
+        if (nx != this.getX() || ny != this.getY() || nz != this.getZ()) {
+            this.xOld = this.getX();
+            this.yOld = this.getY();
+            this.zOld = this.getZ();
+            this.setPos(nx, ny, nz);
+        }
+    }
+
+    @Override
     public void tick() {
         var automobile = getAutomobile();
 
@@ -78,11 +96,7 @@ public class HitboxEntity extends Entity{
             }
         }
 
-        var pos = this.boxOrigin();
-        pos = localPosToWorldSpace(automobile, pos);
-
-        this.setPos(pos.x(), pos.y(), pos.z());
-        super.tick();
+        syncPosition(automobile);
     }
 
     @Override
