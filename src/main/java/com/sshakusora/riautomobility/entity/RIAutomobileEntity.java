@@ -11,6 +11,8 @@ import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.item.AutomobileInteractable;
 import io.github.foundationgames.automobility.item.AutomobilityItems;
+import io.github.foundationgames.automobility.item.FrontAttachmentItem;
+import io.github.foundationgames.automobility.item.RearAttachmentItem;
 import io.github.foundationgames.automobility.sound.AutomobilitySounds;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.MethodsReturnNonnullByDefault;
@@ -319,6 +321,16 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         }
 
         if (isDecorative()) {
+            return InteractionResult.PASS;
+        }
+
+        if (stack.getItem() instanceof FrontAttachmentItem frontAttachmentItem
+                && !getDefinition().allowsFrontAttachment(frontAttachmentItem.getComponent(stack))) {
+            return InteractionResult.PASS;
+        }
+
+        if (stack.getItem() instanceof RearAttachmentItem rearAttachmentItem
+                && !getDefinition().allowsRearAttachment(rearAttachmentItem.getComponent(stack))) {
             return InteractionResult.PASS;
         }
 
