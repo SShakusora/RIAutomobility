@@ -757,14 +757,18 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         float prevYaw = passenger.getYRot();
         float newYaw = Mth.wrapDegrees(passenger.getYRot() + dYaw);
-        passenger.yRotO = prevYaw;
+        passenger.yRotO = unwrapInterpolationYaw(prevYaw, newYaw);
         passenger.setYRot(newYaw);
         passenger.setYBodyRot(newYaw);
         if (passenger instanceof LivingEntity living) {
-            living.yBodyRotO = prevYaw;
-            living.yHeadRotO = prevYaw;
+            living.yBodyRotO = unwrapInterpolationYaw(prevYaw, newYaw);
+            living.yHeadRotO = unwrapInterpolationYaw(prevYaw, newYaw);
             living.setYHeadRot(newYaw);
         }
+    }
+
+    private float unwrapInterpolationYaw(float previousYaw, float currentYaw) {
+        return currentYaw - Mth.wrapDegrees(currentYaw - previousYaw);
     }
 
     public float getClientPassengerYawDelta() {

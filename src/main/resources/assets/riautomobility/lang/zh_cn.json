@@ -1,5 +1,5 @@
 {
-    "key.categories.riautomobility": "RIAutomobility",
+    "key.categories.riautomobility": "飞天奇匠",
     "key.riautomobility.boarding_as_passenger": "作为乘客上车 / 切换座位",
 
     "frame.riautomobility.wooden_doublemotorcar": "木质双座汽车",
@@ -15,6 +15,7 @@
     "frame.riautomobility.golden_quadmotorcar": "黄金四座汽车",
     "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
 
+    "entity.riautomobility.riautomobile": "机动车",
     "entity.riautomobility.hitbox": "机动车",
 
     "container.riautomobility.hitbox": "货车后备箱"

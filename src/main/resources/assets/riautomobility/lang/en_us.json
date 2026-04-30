@@ -15,7 +15,8 @@
     "frame.riautomobility.golden_quadmotorcar": "Golden QuadMotorcar",
     "frame.riautomobility.bejeweled_quadmotorcar": "Bejeweled QuadMotorcar",
 
-    "entity.riautomobility.hitbox": "Automobile",
+    "entity.riautomobility.riautomobile": "RIAutomobile",
+    "entity.riautomobility.hitbox": "RIAutomobile",
 
     "container.riautomobility.hitbox": "Box"
 }
