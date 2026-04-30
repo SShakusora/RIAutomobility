@@ -1,0 +1,15 @@
+{
+  "type": "automobility:auto_mechanic_table",
+  "category": "automobility:wheels",
+  "sortnum": 1,
+  "ingredients": [
+    {"item": "minecraft:black_wool"},
+    {"item": "minecraft:slime_ball"},
+    {"item": "minecraft:black_wool"},
+    {"item": "minecraft:iron_ingot"}
+  ],
+  "result": {
+    "item": "automobility:automobile_wheel",
+    "component": "riautomobility:standard_formula"
+  }
+}

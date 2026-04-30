@@ -96,7 +96,7 @@ public final class RIAutomobileFrame {
                     new AutomobileFrame.FrameModel(
                             RIAutomobility.rl("textures/entity/automobile/frame/standard_formula.png"),
                             RIAutomobility.rl("frame_standard_formula"),
-                            WheelBase.basic(84F, 32F),
+                            WheelBase.basic(84F, 31.5F),
                             76F,
                             -0.36F,
                             32.5F,
@@ -114,10 +114,10 @@ public final class RIAutomobileFrame {
                             new Vec3(-3, 0, 0)
                     )
                     .hitboxes(
-                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 44.8 / 16), 2.5F, 1.5F, false),
-                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 22.4 / 16), 2.8F, 1.61F, false),
-                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -22.4 / 16), 2.8F, 1.4F, false),
-                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -44.8 / 16), 2.8F, 1F, false)
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -44.8 / 16), 2.5F, 1.5F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -22.4 / 16), 2.8F, 1.61F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 22.4 / 16), 2.8F, 1.4F, false),
+                            new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 44.8 / 16), 2.8F, 1F, false)
                     )
                     .frontAttachmentEnabled(false)
                     .rearAttachmentEnabled(false)

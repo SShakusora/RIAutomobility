@@ -13,6 +13,12 @@ import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryRenderer;
 import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaAnimatable;
 import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaModel;
 import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaRenderer;
+import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelAnimatable;
+import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelModel;
+import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelRenderer;
+import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelAnimatable;
+import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelModel;
+import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelRenderer;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
 import io.github.foundationgames.automobility.forge.vendored.jsonem.JsonEM;
 
@@ -44,6 +50,22 @@ public class RIAutomobileModels {
             StandardFormulaAnimatable anim = new StandardFormulaAnimatable();
             StandardFormulaModel model = new StandardFormulaModel();
             StandardFormulaRenderer renderer = new StandardFormulaRenderer(model, anim);
+
+            return new GeckoFrameModel<>(model, renderer, anim);
+        });
+
+        AutomobileModels.register(RIAutomobility.rl("wheel_dmc12"), context -> {
+            DmcWheelAnimatable anim = new DmcWheelAnimatable();
+            DmcWheelModel model = new DmcWheelModel();
+            DmcWheelRenderer renderer = new DmcWheelRenderer(model, anim);
+
+            return new GeckoFrameModel<>(model, renderer, anim);
+        });
+
+        AutomobileModels.register(RIAutomobility.rl("wheel_standard_formula"), context -> {
+            StandardFormulaWheelAnimatable anim = new StandardFormulaWheelAnimatable();
+            StandardFormulaWheelModel model = new StandardFormulaWheelModel();
+            StandardFormulaWheelRenderer renderer = new StandardFormulaWheelRenderer(model, anim);
 
             return new GeckoFrameModel<>(model, renderer, anim);
         });

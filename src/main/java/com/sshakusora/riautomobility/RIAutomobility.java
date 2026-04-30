@@ -8,6 +8,7 @@ import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
+import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -43,6 +44,7 @@ public class RIAutomobility
 
     private void registerAll(IEventBus bus){
         RIAutomobileFrame.init();
+        RIAutomobileWheel.init();
         RIAutomobilityEntities.ENTITIES.register(bus);
         RIAutomobilityNetwork.register();
     }

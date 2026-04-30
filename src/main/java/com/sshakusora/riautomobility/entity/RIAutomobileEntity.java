@@ -63,6 +63,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private final UUID[] persistedSeatPassengers = new UUID[MAX_TRACKED_SEATS];
 
     private boolean changed = false;
+    private int collisionWarmupTicks = 0;
     private float prevYawForRotate = 0.0F;
     private float clientPassengerYawDelta = 0.0F;
     private boolean preAccelerating = false;
@@ -97,6 +98,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         if (usesRIASeats() && this.hitboxes.isEmpty()) {
             spawnHitboxes();
         }
+        collisionWarmupTicks = 15;
         super.onAddedToWorld();
     }
 
@@ -157,6 +159,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         if (!usesRIASeats()) {
             super.tick();
             return;
+        }
+
+        if (collisionWarmupTicks > 0) {
+            collisionWarmupTicks--;
         }
 
         receiveVehicleCollisions();
@@ -405,6 +411,19 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     @Override
+    public boolean canCollideWith(Entity other) {
+        if (!usesRIASeats()) {
+            return super.canCollideWith(other);
+        }
+
+        if (other instanceof HitboxEntity hitbox && hitbox.getAutomobile() == this) {
+            return false;
+        }
+
+        return super.canCollideWith(other);
+    }
+
+    @Override
     @Nullable
     public Entity getFirstPassenger() {
         if (!usesRIASeats()) {
@@ -575,7 +594,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private void receiveVehicleCollisions() {
-        if (isDecorative()) {
+        if (isDecorative() || collisionWarmupTicks > 0) {
             return;
         }
 
@@ -592,9 +611,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
                     continue;
                 }
 
+                Vec3 relativeMovement = getMeasuredMovement().subtract(getVehicleMeasuredMovement(auto)).multiply(1, 0, 1);
+
                 collisions.put(auto, new IncomingCollision(
                         collDepth,
-                        getMeasuredMovement(),
+                        relativeMovement,
                         intersect.getCenter(),
                         auto.getFrame().weight()
                 ));
@@ -604,6 +625,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         hadVehicleCollision = Math.max(0, hadVehicleCollision - 1);
         for (IncomingCollision col : collisions.values()) {
             Vec3 meToCollision = col.origin().subtract(this.position()).multiply(1, 0, 1);
+            if (col.velocity().lengthSqr() < 0.0004 || meToCollision.lengthSqr() < 1.0E-6) {
+                continue;
+            }
+
             double hitScale = hadVehicleCollision <= 0 ? 0.15 : 0.07;
             hitScale *= (1 + col.inertia() / this.getFrame().weight()) * 0.5;
 
@@ -629,6 +654,14 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         for (RIAutomobileDefinition.Hitbox hitbox : getDefinition().hitboxes()) {
             this.cullingBox = this.cullingBox.minmax(getHitboxBoundingBox(hitbox));
         }
+    }
+
+    private Vec3 getVehicleMeasuredMovement(AutomobileEntity auto) {
+        if (auto instanceof RIAutomobileEntity riautomobile) {
+            return riautomobile.getMeasuredMovement();
+        }
+
+        return auto.getDeltaMovement();
     }
 
     private AABB getHitboxBoundingBox(RIAutomobileDefinition.Hitbox hitbox) {

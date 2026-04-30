@@ -1,6 +1,6 @@
 {
     "key.categories.riautomobility": "飞天奇匠",
-    "key.riautomobility.boarding_as_passenger": "作为乘客上车 / 切换座位",
+    "key.riautomobility.boarding_as_passenger": "上车 / 切换座位",
 
     "frame.riautomobility.wooden_doublemotorcar": "木质双座汽车",
     "frame.riautomobility.copper_doublemotorcar": "铜质双座汽车",
@@ -16,6 +16,9 @@
     "frame.riautomobility.steel_quadmotorcar": "钢质四座汽车",
     "frame.riautomobility.golden_quadmotorcar": "黄金四座汽车",
     "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
+
+    "wheel.riautomobility.dmc12": "DMC12",
+    "wheel.riautomobility.standard_formula": "标准方程式",
 
     "entity.riautomobility.riautomobile": "机动车",
     "entity.riautomobility.hitbox": "机动车",

@@ -15,10 +15,10 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
@@ -36,7 +36,6 @@ public class HitboxEntity extends Entity{
 
     public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileDefinition.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
-        this.noPhysics = true;
 
         this.entityData.set(AUTOMOBILE, automobile.getId());
         this.entityData.set(ORIGIN, new Vector3f((float) hitbox.origin().x(), (float) hitbox.origin().y(), (float) hitbox.origin().z()));
@@ -49,7 +48,6 @@ public class HitboxEntity extends Entity{
 
     public HitboxEntity(EntityType<?> entityType, Level level) {
         super(entityType, level);
-        this.noPhysics = true;
         this.size = EntityDimensions.scalable(1.0f, 0.66f);
     }
 
@@ -145,7 +143,24 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canCollideWith(Entity other) {
-        return false;
+        if (other == this) {
+            return false;
+        }
+
+        AutomobileEntity auto = this.getAutomobile();
+        if (auto == null) {
+            return false;
+        }
+
+        if (other == auto || auto.hasPassenger(other)) {
+            return false;
+        }
+
+        if (other instanceof HitboxEntity hitbox && hitbox.getAutomobile() == auto) {
+            return false;
+        }
+
+        return true;
     }
 
 
@@ -155,8 +170,29 @@ public class HitboxEntity extends Entity{
     }
 
     @Override
+    protected AABB makeBoundingBox() {
+        EntityDimensions dimensions = this.size != null ? this.size : EntityDimensions.scalable(1.0f, 0.66f);
+        AABB box = dimensions.makeBoundingBox(this.getX(), this.getY(), this.getZ());
+        double maxInset = Math.min(box.getXsize(), box.getZsize()) * 0.35D - 1.0E-4D;
+        double inset = Math.min(0.125D, maxInset);
+
+        if (inset <= 0.0D) {
+            return box;
+        }
+
+        return new AABB(
+                box.minX + inset,
+                box.minY,
+                box.minZ + inset,
+                box.maxX - inset,
+                box.maxY,
+                box.maxZ - inset
+        );
+    }
+
+    @Override
     public boolean canBeCollidedWith() {
-        return false;
+        return !this.isRemoved() && this.getAutomobile() != null;
     }
 
     @Override

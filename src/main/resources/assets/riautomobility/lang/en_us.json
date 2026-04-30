@@ -17,6 +17,9 @@
     "frame.riautomobility.golden_quadmotorcar": "Golden QuadMotorcar",
     "frame.riautomobility.bejeweled_quadmotorcar": "Bejeweled QuadMotorcar",
 
+    "wheel.riautomobility.dmc12": "DMC12",
+    "wheel.riautomobility.standard_formula": "Standard Formula",
+
     "entity.riautomobility.riautomobile": "RIAutomobile",
     "entity.riautomobility.hitbox": "RIAutomobile",
 
