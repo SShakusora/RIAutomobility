@@ -7,6 +7,7 @@ import com.sshakusora.riautomobility.util.RIAutomobileTransformUtil;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
+import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobilityEntities;
 import io.github.foundationgames.automobility.item.AutomobileInteractable;
@@ -151,6 +152,23 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
                 this.dimensions = dimensions;
                 dimensionsNeedRefresh = true;
             }
+        }
+    }
+
+    public void reloadRIAutomobilityComponents() {
+        AutomobileFrame frame = AutomobileFrame.REGISTRY.getOrDefault(this.getFrame().getId());
+        AutomobileWheel wheel = AutomobileWheel.REGISTRY.getOrDefault(this.getWheels().getId());
+        AutomobileEngine engine = AutomobileEngine.REGISTRY.getOrDefault(this.getEngine().getId());
+        super.setComponents(frame, wheel, engine);
+
+        if (usesRIASeats()) {
+            removeHitboxes();
+            this.hitboxes.clear();
+            spawnHitboxes();
+            EntityDimensions dimensions = getDefinition().dimensions();
+            this.dimensions = dimensions;
+            this.dimensionsNeedRefresh = true;
+            updateCullingBox();
         }
     }
 

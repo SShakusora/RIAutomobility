@@ -23,6 +23,7 @@
     "AutomobileEntityCollisionMixin",
     "AutomobileItemMixin",
     "EntityMixin",
-    "accessor.AutomobileEntityAccessor"
+    "accessor.AutomobileEntityAccessor",
+    "accessor.SimpleMapContentRegistryAccessor"
   ]
 }

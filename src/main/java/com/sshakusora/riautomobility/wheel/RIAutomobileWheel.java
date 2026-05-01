@@ -11,27 +11,8 @@ import java.util.function.Consumer;
 public final class RIAutomobileWheel {
     private RIAutomobileWheel() {}
 
-    public static final AutomobileWheel DMC12 = RIAutomobileWheel.register("dmc12", wheel -> wheel
-            .size(1.1F)
-            .grip(0.8F)
-            .wheelModel(
-                    8.12F,
-                    8.05F,
-                    RIAutomobility.rl("textures/entity/automobile/wheel/dmc12.png"),
-                    RIAutomobility.rl("wheel_dmc12")
-            )
-    );
-
-    public static final AutomobileWheel STANDARD_FORMULA = RIAutomobileWheel.register("standard_formula", wheel -> wheel
-            .size(1.1F)
-            .grip(0.8F)
-            .wheelModel(
-                    10.9F,
-                    12.2F,
-                    RIAutomobility.rl("textures/entity/automobile/wheel/standard_formula.png"),
-                    RIAutomobility.rl("wheel_standard_formula")
-            )
-    );
+    public static AutomobileWheel DMC12;
+    public static AutomobileWheel STANDARD_FORMULA;
 
     public static Builder builder(String path) {
         return builder(RIAutomobility.rl(path));
@@ -52,10 +33,36 @@ public final class RIAutomobileWheel {
     }
 
     public static AutomobileWheel register(AutomobileWheel wheel) {
-        return AutomobileWheel.REGISTRY.register(wheel);
+        return com.sshakusora.riautomobility.util.RIAutomobilityRegistryUtil.registerOrReplace(AutomobileWheel.REGISTRY, wheel);
     }
 
-    public static void init() {}
+    public static void init() {
+        reload();
+    }
+
+    public static void reload() {
+        DMC12 = RIAutomobileWheel.register("dmc12", wheel -> wheel
+                .size(1.1F)
+                .grip(0.8F)
+                .wheelModel(
+                        8.12F,
+                        8.05F,
+                        RIAutomobility.rl("textures/entity/automobile/wheel/dmc12.png"),
+                        RIAutomobility.rl("wheel_dmc12")
+                )
+        );
+
+        STANDARD_FORMULA = RIAutomobileWheel.register("standard_formula", wheel -> wheel
+                .size(1.1F)
+                .grip(0.8F)
+                .wheelModel(
+                        10.9F,
+                        12.2F,
+                        RIAutomobility.rl("textures/entity/automobile/wheel/standard_formula.png"),
+                        RIAutomobility.rl("wheel_standard_formula")
+                )
+        );
+    }
 
     public static final class Builder {
         private final ResourceLocation id;
