@@ -8,12 +8,16 @@
   ],
   "client": [
     "AutoMechanicTableScreenMixin",
+    "AutomobileComponentItemTooltipMixin",
     "AutomobileHudMixin",
     "AutomobilityClientMixin",
     "CameraMixin",
+    "EntityModelSetMixin",
     "ForgeGeometryBuilderMixin",
     "LocalPlayerMixin",
-    "accessor.AutoMechanicTableScreenAccessor"
+    "accessor.AutoMechanicTableScreenAccessor",
+    "accessor.AutomobileModelsAccessor",
+    "accessor.EntityModelSetAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",

@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.network;
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
 import com.sshakusora.riautomobility.network.packet.PassengerDriverSwitchPacket;
+import com.sshakusora.riautomobility.network.packet.SyncCustomComponentsPacket;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
@@ -31,6 +32,13 @@ public class RIAutomobilityNetwork {
                 BoardingAsPassengerPacket::encode,
                 BoardingAsPassengerPacket::decode,
                 BoardingAsPassengerPacket::handle
+        );
+        CHANNEL.registerMessage(
+                id++,
+                SyncCustomComponentsPacket.class,
+                SyncCustomComponentsPacket::encode,
+                SyncCustomComponentsPacket::decode,
+                SyncCustomComponentsPacket::handle
         );
     }
 }

@@ -17,8 +17,6 @@ import java.util.List;
 
 @Mixin(Entity.class)
 public class EntityMixin {
-    @Shadow private ImmutableList<Entity> passengers;
-
     @Inject(method = "addPassenger", at = @At("HEAD"), cancellable = true)
     private void patchPlayerInsert(Entity passenger, CallbackInfo ci) {
         Entity e = (Entity) (Object) this;
@@ -29,16 +27,16 @@ public class EntityMixin {
             throw new IllegalStateException("Use x.startRiding(y), not y.addPassenger(x)");
         }
 
-        if (this.passengers.isEmpty()) {
-            this.passengers = ImmutableList.of(passenger);
+        if (e.passengers.isEmpty()) {
+            e.passengers = ImmutableList.of(passenger);
         } else {
-            List<Entity> list = new ArrayList<>(this.passengers);
+            List<Entity> list = new ArrayList<>(e.passengers);
             if (!e.level().isClientSide && passenger instanceof Player && !(self.getFirstPassenger() instanceof Player)) {
                 list.add(0, passenger);
             } else {
                 list.add(passenger);
             }
-            this.passengers = ImmutableList.copyOf(list);
+            e.passengers = ImmutableList.copyOf(list);
         }
 
         self.assignSeatForPassenger(passenger);

@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.creative;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileComponent;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
@@ -22,12 +23,12 @@ public final class RIAutomobilityCreativeTabs {
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .displayItems((params, output) -> {
                 AutomobileFrame.REGISTRY.forEach(frame -> {
-                    if (isRIAutomobilityComponent(frame) && !frame.isEmpty()) {
+                    if (isRIAutomobilityComponent(frame) && !frame.isEmpty() && isVisible(frame)) {
                         output.accept(AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(frame));
                     }
                 });
                 AutomobileWheel.REGISTRY.forEach(wheel -> {
-                    if (isRIAutomobilityComponent(wheel) && !wheel.isEmpty()) {
+                    if (isRIAutomobilityComponent(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
                         output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
                     }
                 });
@@ -37,6 +38,22 @@ public final class RIAutomobilityCreativeTabs {
     private RIAutomobilityCreativeTabs() {}
 
     public static boolean isRIAutomobilityComponent(AutomobileComponent<?> component) {
+        if (component instanceof AutomobileFrame frame) {
+            return frame.getId().getNamespace().equals(RIAutomobility.MODID) || RIAutomobilityComponentManager.isManagedFrame(frame);
+        }
+        if (component instanceof AutomobileWheel wheel) {
+            return wheel.getId().getNamespace().equals(RIAutomobility.MODID) || RIAutomobilityComponentManager.isManagedWheel(wheel);
+        }
         return component.getId().getNamespace().equals(RIAutomobility.MODID);
+    }
+
+    private static boolean isVisible(AutomobileFrame frame) {
+        var spec = RIAutomobilityComponentManager.getCustomFrames().get(frame.getId());
+        return spec == null || spec.showInCreativeTab();
+    }
+
+    private static boolean isVisible(AutomobileWheel wheel) {
+        var spec = RIAutomobilityComponentManager.getCustomWheels().get(wheel.getId());
+        return spec == null || spec.showInCreativeTab();
     }
 }

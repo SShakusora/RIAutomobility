@@ -1,6 +1,8 @@
 package com.sshakusora.riautomobility.reload;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
+import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -26,7 +28,10 @@ public final class RIAutomobilityClientReloadManager {
         @Override
         public CompletableFuture<Void> reload(PreparationBarrier stage, ResourceManager resourceManager, ProfilerFiller preparationsProfiler, ProfilerFiller reloadProfiler, Executor backgroundExecutor, Executor gameExecutor) {
             return stage.wait(CompletableFuture.completedFuture(null)).thenRunAsync(() -> {
-                RIAutomobilityReloadManager.reloadDefinitions();
+                RIAutomobileModels.applyDynamicModels(
+                        RIAutomobilityComponentManager.getCustomFrameSpecs(),
+                        RIAutomobilityComponentManager.getCustomWheelSpecs()
+                );
 
                 if (Minecraft.getInstance().level != null) {
                     RIAutomobilityReloadManager.refreshLevel(Minecraft.getInstance().level);
