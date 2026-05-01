@@ -1,6 +1,9 @@
 {
-    "key.categories.riautomobility": "RIAutomobility",
-    "key.riautomobility.boarding_as_passenger": "作为乘客上车 / 切换座位",
+    "key.categories.riautomobility": "飞天奇匠",
+    "key.riautomobility.boarding_as_passenger": "上车 / 切换座位",
+    "itemGroup.riautomobility.components": "飞天奇匠",
+    "itemGroup.riautomobility.custom_components": "飞天奇匠：自定义",
+    "tooltip.riautomobility.missing_resource_pack": "该组件缺少对应资源包",
 
     "frame.riautomobility.wooden_doublemotorcar": "木质双座汽车",
     "frame.riautomobility.copper_doublemotorcar": "铜质双座汽车",
@@ -8,6 +11,8 @@
     "frame.riautomobility.golden_doublemotorcar": "黄金双座汽车",
     "frame.riautomobility.bejeweled_doublemotorcar": "璀璨双座汽车",
     "frame.riautomobility.lorry": "大运",
+    "frame.riautomobility.dmc12": "DMC12",
+    "frame.riautomobility.standard_formula": "标准方程式",
 
     "frame.riautomobility.wooden_quadmotorcar": "木质四座汽车",
     "frame.riautomobility.copper_quadmotorcar": "铜质四座汽车",
@@ -15,7 +20,10 @@
     "frame.riautomobility.golden_quadmotorcar": "黄金四座汽车",
     "frame.riautomobility.bejeweled_quadmotorcar": "璀璨四座汽车",
 
-    "entity.riautomobility.driver_seat": "司机座位",
+    "wheel.riautomobility.dmc12": "DMC12",
+    "wheel.riautomobility.standard_formula": "标准方程式",
+
+    "entity.riautomobility.riautomobile": "机动车",
     "entity.riautomobility.hitbox": "机动车",
 
     "container.riautomobility.hitbox": "货车后备箱"

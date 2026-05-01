@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.events;
 
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.BoardingAsPassengerPacket;
@@ -22,17 +21,23 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
 public class ClientKeyHandler {
+    private static boolean boardingKeyWasDown = false;
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
+        boolean boardingKeyDown = RIAutomobilityKeyBindings.BOARDING_AS_PASSENGER.isDown();
+        boolean boardingKeyPressed = boardingKeyDown && !boardingKeyWasDown;
+        boardingKeyWasDown = boardingKeyDown;
+
         if (player == null || mc.level == null) return;
 
-        if (RIAutomobilityKeyBindings.BOARDING_AS_PASSENGER.consumeClick()) {
+        if (boardingKeyPressed) {
             Entity vehicle = player.getVehicle();
-            if(vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame()) || vehicle instanceof DriverSeatEntity) {
+            if(vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) {
                 RIAutomobilityNetwork.CHANNEL.sendToServer(new PassengerDriverSwitchPacket());
                 return;
             }

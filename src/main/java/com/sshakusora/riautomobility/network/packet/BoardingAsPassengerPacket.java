@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.network.packet;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
-import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
+import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,7 +8,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 public class BoardingAsPassengerPacket {
@@ -36,12 +34,11 @@ public class BoardingAsPassengerPacket {
             if (entity == null) return;
             if (entity == player) return;
             if (player.getVehicle() == entity) return;
-            List<RIAutomobileSeatRegistry.SeatPos> seats = RIAutomobileSeatRegistry.getSeats(((AutomobileEntity) entity).getFrame());
-            if(entity.getPassengers().size() < seats.size()) {
+            int seatCount = RIAutomobileRegistry.get(((AutomobileEntity) entity).getFrame()).seats().size();
+            if(entity.getPassengers().size() < seatCount) {
                 player.startRiding(entity, true);
             } else {
                 for(Entity e : entity.getPassengers()){
-                    if(e instanceof DriverSeatEntity) continue;
                     if(e instanceof Player) continue;
 
                     e.stopRiding();

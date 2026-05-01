@@ -1,6 +1,5 @@
 package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.entity.DriverSeatEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
@@ -27,11 +26,10 @@ public class CameraMixin {
         if (!(entity instanceof LocalPlayer)) return;
 
         Camera camera = (Camera) (Object) this;
-        CameraAccessor cameraAccessor = (CameraAccessor) camera;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
         Entity vehicle = entity.getVehicle();
-        if ((vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) || (vehicle instanceof DriverSeatEntity)) {
+        if (vehicle instanceof AutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) {
             RIAutomobileSeatRegistry.SeatPos pos = RIAutomobileSeatRegistry.getSeat(vehicle, entity);
             Vec3 cameraPos = RIAutomobileCameraRegistry.getCameraPos(vehicle, entity);
             /*
@@ -40,20 +38,19 @@ public class CameraMixin {
             z:left and right
              */
             //TODO: add camera position feature and fix sound
-            if(cameraPos == Vec3.ZERO){
-                cameraAccessor.invokeMove(0.0, 0.0, -pos.pos.x);
-            } else {
-                cameraAccessor.invokeMove(cameraPos.x, cameraPos.y, -pos.pos.x);
-            }
+            camera.move(cameraPos.x, cameraPos.y, cameraPos.z - pos.pos.x);
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);
-            Vec3 dir1 = targetPos.subtract(eyePos).normalize();
-            Vec3 detectPos = targetPos.add(dir1.scale(0.3));
+            Vec3 offset = targetPos.subtract(eyePos);
+
+            if (offset.lengthSqr() <= 1.0E-6) {
+                return;
+            }
 
             ClipContext context = new ClipContext(
                     eyePos,
-                    detectPos,
-                    ClipContext.Block.COLLIDER,
+                    targetPos,
+                    ClipContext.Block.VISUAL,
                     ClipContext.Fluid.NONE,
                     entity
             );
@@ -62,11 +59,11 @@ public class CameraMixin {
 
             if (hit.getType() == HitResult.Type.BLOCK) {
                 Vec3 hitPos = hit.getLocation();
-                Vec3 dir2 = eyePos.subtract(hitPos).normalize();
-                targetPos = hitPos.add(dir2.scale(0.3));
+                Vec3 pullBack = offset.normalize().scale(0.2);
+                targetPos = hitPos.subtract(pullBack);
             }
 
-            cameraAccessor.invokeSetPosition(targetPos);
+            camera.setPosition(targetPos);
         }
     }
 }

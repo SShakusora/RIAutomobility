@@ -10,18 +10,19 @@ import net.minecraftforge.registries.RegistryObject;
 public class RIAutomobilityEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, RIAutomobility.MODID);
 
-    public static final RegistryObject<EntityType<DriverSeatEntity>> DRIVER_SEAT = ENTITIES.register(
-            "driver_seat",
-            () -> EntityType.Builder.<DriverSeatEntity>of(DriverSeatEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<RIAutomobileEntity>> RIAUTOMOBILE = ENTITIES.register(
+            "riautomobile",
+            () -> EntityType.Builder.<RIAutomobileEntity>of(RIAutomobileEntity::new, MobCategory.MISC)
                     .clientTrackingRange(20)
-                    .sized(0.0F, 0.0F)
-                    .build("driver_seat")
+                    .sized(1.0F, 0.66F)
+                    .build("riautomobile")
     );
 
     public static final RegistryObject<EntityType<HitboxEntity>> HITBOX = ENTITIES.register(
             "hitbox",
             () -> EntityType.Builder.<HitboxEntity>of(HitboxEntity::new, MobCategory.MISC)
                     .clientTrackingRange(20)
+                    .updateInterval(Integer.MAX_VALUE)
                     .sized(1.0F, 0.66F)
                     .build("hitbox")
     );

@@ -1,0 +1,18 @@
+{
+  "type": "automobility:auto_mechanic_table",
+  "category": "automobility:frames",
+  "sortnum": 5,
+  "ingredients": [
+    {"item": "automobility:automobile_frame", "component": "automobility:standard_white"},
+    {"item": "minecraft:iron_block"},
+    {"item": "minecraft:iron_block"},
+    {"item": "minecraft:iron_block"},
+    {"item": "minecraft:repeater"},
+    {"item": "minecraft:deepslate"},
+    {"item": "minecraft:repeater"}
+  ],
+  "result": {
+    "item": "automobility:automobile_frame",
+    "component": "riautomobility:standard_formula"
+  }
+}

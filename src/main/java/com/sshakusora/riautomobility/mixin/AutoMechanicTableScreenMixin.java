@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.mixin;
 
+import com.sshakusora.riautomobility.mixin.accessor.AutoMechanicTableScreenAccessor;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreen;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreenHandler;
 import net.minecraft.client.gui.GuiGraphics;
@@ -56,9 +57,7 @@ public class AutoMechanicTableScreenMixin {
         AutoMechanicTableScreenAccessor accessor = (AutoMechanicTableScreenAccessor)screen;
         long time = accessor.getTime();
         ItemStack stack = stacks[(int)((time / 30) % stacks.length)];
-        ScreenAccessor screenAccessor = (ScreenAccessor)screen;
-
-        graphics.renderTooltip(screenAccessor.getFont(), stack, mouseX, mouseY);
+        graphics.renderTooltip(screen.font, stack, mouseX, mouseY);
     }
 
     @Unique

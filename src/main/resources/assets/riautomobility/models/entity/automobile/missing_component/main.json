@@ -1,0 +1,17 @@
+{
+  "texture": {
+    "width": 16,
+    "height": 16
+  },
+  "bones": {
+    "main": {
+      "cuboids": [
+        {
+          "offset": [-7, -7, -0.5],
+          "dimensions": [14, 14, 1],
+          "uv": [0, 0]
+        }
+      ]
+    }
+  }
+}

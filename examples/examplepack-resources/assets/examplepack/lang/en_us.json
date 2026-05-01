@@ -1,0 +1,6 @@
+{
+  "frame.examplepack.example_buggy": "Example Buggy Frame",
+  "wheel.examplepack.example_buggy": "Example Buggy Wheel",
+  "frame.examplepack.example_buggy_gecko": "Example Buggy Frame (GeckoLib)",
+  "wheel.examplepack.example_buggy_gecko": "Example Buggy Wheel (GeckoLib)"
+}

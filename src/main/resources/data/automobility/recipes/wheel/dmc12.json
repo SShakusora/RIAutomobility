@@ -1,0 +1,15 @@
+{
+  "type": "automobility:auto_mechanic_table",
+  "category": "automobility:wheels",
+  "sortnum": 1,
+  "ingredients": [
+    {"item": "minecraft:coal_block"},
+    {"item": "minecraft:iron_block"},
+    {"item": "minecraft:coal_block"},
+    {"item": "minecraft:slime_ball"}
+  ],
+  "result": {
+    "item": "automobility:automobile_wheel",
+    "component": "riautomobility:dmc12"
+  }
+}

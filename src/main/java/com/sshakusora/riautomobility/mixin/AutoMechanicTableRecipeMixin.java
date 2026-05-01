@@ -20,10 +20,8 @@ import java.util.function.Consumer;
 
 @Mixin(AutoMechanicTableRecipe.class)
 public class AutoMechanicTableRecipeMixin {
-    @Final
-    @Shadow protected Set<Ingredient> ingredients;
-    @Final
-    @Shadow protected ItemStack result;
+    @Final @Shadow protected Set<Ingredient> ingredients;
+    @Final @Shadow protected ItemStack result;
 
     @Inject(method = "assemble(Lnet/minecraft/world/SimpleContainer;)Lnet/minecraft/world/item/ItemStack;", at = @At("HEAD"), remap = false, cancellable = true)
     private void assembleFix(SimpleContainer inv, CallbackInfoReturnable<ItemStack> cir) {

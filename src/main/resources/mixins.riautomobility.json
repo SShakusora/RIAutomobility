@@ -7,23 +7,27 @@
   "server": [
   ],
   "client": [
-    "AutoMechanicTableScreenAccessor",
     "AutoMechanicTableScreenMixin",
-    "AutomobileEntityClientMixin",
-    "AutomobileSoundInstanceMixin",
-    "CameraAccessor",
+    "AutomobileComponentItemTooltipMixin",
+    "AutomobileHudMixin",
+    "AutomobilityClientMixin",
     "CameraMixin",
+    "EntityModelSetMixin",
+    "ForgeGeometryBuilderMixin",
     "LocalPlayerMixin",
-    "ScreenAccessor"
+    "accessor.AutoMechanicTableScreenAccessor",
+    "accessor.AutomobileModelsAccessor",
+    "accessor.EntityModelSetAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
+    "AutomobileComponentItemMixin",
     "AutomobileAssemblerBlockEntityMixin",
-    "AutomobileEntityMixin",
-    "AutomobileHudMixin",
-    "AutomobilityClientMixin",
-    "EntityAccessor",
-    "EntityMixin"
+    "AutomobileEntityCollisionMixin",
+    "AutomobileItemMixin",
+    "EntityMixin",
+    "accessor.AutomobileEntityAccessor",
+    "accessor.SimpleMapContentRegistryAccessor"
   ]
 }
