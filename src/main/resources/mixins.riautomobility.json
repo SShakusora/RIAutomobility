@@ -15,6 +15,7 @@
     "EntityModelSetMixin",
     "ForgeGeometryBuilderMixin",
     "LocalPlayerMixin",
+    "accessor.AutoMechanicTableRecipeAccessor",
     "accessor.AutoMechanicTableScreenAccessor",
     "accessor.AutomobileModelsAccessor",
     "accessor.EntityModelSetAccessor"
