@@ -118,13 +118,8 @@ public class RIAutomobilityJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
         registration.addRecipeTransferHandler(
-                AutoMechanicTableScreenHandler.class,
-                io.github.foundationgames.automobility.Automobility.AUTO_MECHANIC_SCREEN.require(),
-                AutoMechanicTableRecipeCategory.RECIPE_TYPE,
-                0,   // recipeSlotStart (input slots 0-8)
-                9,   // recipeSlotCount
-                10,  // inventorySlotStart
-                36   // inventorySlotCount
+                new AutoMechanicTableRecipeTransferHandler(registration.getTransferHelper()),
+                AutoMechanicTableRecipeCategory.RECIPE_TYPE
         );
     }
 
