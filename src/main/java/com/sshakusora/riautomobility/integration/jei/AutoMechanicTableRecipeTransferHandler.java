@@ -4,6 +4,7 @@ import com.sshakusora.riautomobility.mixin.accessor.AutoMechanicTableRecipeAcces
 import io.github.foundationgames.automobility.Automobility;
 import io.github.foundationgames.automobility.recipe.AutoMechanicTableRecipe;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreenHandler;
+import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,10 +71,13 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
         AutoMechanicTableRecipeAccessor accessor = (AutoMechanicTableRecipeAccessor) recipe;
         List<Ingredient> ingredients = new ArrayList<>(accessor.getIngredients());
 
+        List<IRecipeSlotView> missingSlots = getMissingSlots(container, ingredients, recipeSlotsView);
+
         if (!doTransfer) {
-            if (!canTransfer(container, ingredients)) {
-                return helper.createUserErrorWithTooltip(
-                        Component.translatable("jei.tooltip.error.recipe.transfer.missing")
+            if (!missingSlots.isEmpty()) {
+                return helper.createUserErrorForMissingSlots(
+                        Component.translatable("jei.tooltip.error.recipe.transfer.missing"),
+                        missingSlots
                 );
             }
             return null;
@@ -106,7 +111,7 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
         return ingredient.test(stack);
     }
 
-    private static boolean canTransfer(AutoMechanicTableScreenHandler container, List<Ingredient> ingredients) {
+    private static List<IRecipeSlotView> getMissingSlots(AutoMechanicTableScreenHandler container, List<Ingredient> ingredients, IRecipeSlotsView recipeSlotsView) {
         List<ItemStack> available = new ArrayList<>();
 
         // Input slots (0-8)
@@ -118,7 +123,11 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
             available.add(container.getSlot(i).getItem().copy());
         }
 
-        for (Ingredient ingredient : ingredients) {
+        List<IRecipeSlotView> missing = new ArrayList<>();
+        List<IRecipeSlotView> inputSlots = recipeSlotsView.getSlotViews(mezz.jei.api.recipe.RecipeIngredientRole.INPUT);
+
+        for (int i = 0; i < ingredients.size(); i++) {
+            Ingredient ingredient = ingredients.get(i);
             boolean found = false;
             for (ItemStack stack : available) {
                 if (matchesIngredient(stack, ingredient)) {
@@ -127,11 +136,11 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
                     break;
                 }
             }
-            if (!found) {
-                return false;
+            if (!found && i < inputSlots.size()) {
+                missing.add(inputSlots.get(i));
             }
         }
-        return true;
+        return missing;
     }
 
     /**
@@ -184,14 +193,12 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
     }
 
     private static int findSlotForIngredient(AutoMechanicTableScreenHandler container, Ingredient ingredient) {
-        // 优先：已有匹配物品且未满
         for (int i = 0; i < 9; i++) {
             ItemStack stack = container.getSlot(i).getItem();
             if (matchesIngredient(stack, ingredient) && stack.getCount() < stack.getMaxStackSize()) {
                 return i;
             }
         }
-        // 其次：空槽
         for (int i = 0; i < 9; i++) {
             if (container.getSlot(i).getItem().isEmpty()) {
                 return i;
