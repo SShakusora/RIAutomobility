@@ -90,6 +90,8 @@ The mod ships with a variety of pre-made vehicles and components:
 
 ### Data-Driven Guide
 
+> **Tip:** Datapack changes can be hot-reloaded using `/reload` — no need to restart the game. Resource pack changes may require rejoining the world or pressing `F3 + T`.
+
 Custom components are split into two parts:
 
 | Part | Purpose |
@@ -409,6 +411,8 @@ It contains:
 4. 进入存档，如需可执行 `/reload`
 
 ### 数据驱动教程
+
+> **提示：** 数据包改动可以使用 `/reload` 进行热重载，无需重启游戏。资源包改动可能需要重新进入世界或按 `F3 + T` 刷新。
 
 自定义车辆组件分为两部分：
 
