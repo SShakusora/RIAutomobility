@@ -88,7 +88,7 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
         mc.gameMode.handleInventoryButtonClick(container.containerId, recipeId);
 
         // 2. Transfer items
-        transferItems(container, ingredients, mc, player);
+        transferItems(container, ingredients, mc, player, maxTransfer);
 
         return null;
     }
@@ -166,48 +166,80 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
         return missing;
     }
 
-    private static void transferItems(AutoMechanicTableScreenHandler container, List<Ingredient> ingredients, Minecraft mc, Player player) {
+    private static void transferItems(AutoMechanicTableScreenHandler container, List<Ingredient> ingredients, Minecraft mc, Player player, boolean maxTransfer) {
         List<Ingredient> missing = getMissingIngredients(container, ingredients);
 
         for (Ingredient ingredient : missing) {
-            // Find matching item in player inventory
+            int targetSlot = findSlotForIngredient(container, ingredient);
+            if (targetSlot == -1) continue;
+
+            if (!transferOneToSlot(container, ingredient, targetSlot, mc, player)) {
+                continue;
+            }
+
+            if (maxTransfer) {
+                fillSlot(container, ingredient, targetSlot, mc, player);
+            }
+        }
+    }
+
+    private static int findSlotForIngredient(AutoMechanicTableScreenHandler container, Ingredient ingredient) {
+        // 优先：已有匹配物品且未满
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = container.getSlot(i).getItem();
+            if (matchesIngredient(stack, ingredient) && stack.getCount() < stack.getMaxStackSize()) {
+                return i;
+            }
+        }
+        // 其次：空槽
+        for (int i = 0; i < 9; i++) {
+            if (container.getSlot(i).getItem().isEmpty()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean transferOneToSlot(AutoMechanicTableScreenHandler container, Ingredient ingredient, int targetSlot, Minecraft mc, Player player) {
+        for (int j = 10; j < 46; j++) {
+            ItemStack stack = container.getSlot(j).getItem();
+            if (!matchesIngredient(stack, ingredient)) continue;
+
+            if (stack.getCount() == 1) {
+                mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
+                mc.gameMode.handleInventoryMouseClick(container.containerId, targetSlot, 0, ClickType.PICKUP, player);
+            } else {
+                mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
+                mc.gameMode.handleInventoryMouseClick(container.containerId, targetSlot, 1, ClickType.PICKUP, player);
+                mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private static void fillSlot(AutoMechanicTableScreenHandler container, Ingredient ingredient, int targetSlot, Minecraft mc, Player player) {
+        ItemStack target = container.getSlot(targetSlot).getItem();
+        while (!target.isEmpty() && target.getCount() < target.getMaxStackSize()) {
+            boolean transferred = false;
             for (int j = 10; j < 46; j++) {
                 ItemStack stack = container.getSlot(j).getItem();
+                if (!matchesIngredient(stack, ingredient)) continue;
 
-                if (!matchesIngredient(stack, ingredient)) {
-                    continue;
-                }
-
-                // Find an empty input slot
-                int targetSlot = -1;
-                for (int k = 0; k < 9; k++) {
-                    if (container.getSlot(k).getItem().isEmpty()) {
-                        targetSlot = k;
-                        break;
-                    }
-                }
-
-                if (targetSlot == -1) {
-                    return; // No empty input slots left
-                }
-
-                // Transfer using synced mouse clicks
                 if (stack.getCount() == 1) {
-                    // Simple case: pickup and place
                     mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
                     mc.gameMode.handleInventoryMouseClick(container.containerId, targetSlot, 0, ClickType.PICKUP, player);
                 } else {
-                    // Transfer exactly 1 item from a stack
-                    // 1. Pick up entire stack
                     mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
-                    // 2. Right-click to place 1 item into target slot
                     mc.gameMode.handleInventoryMouseClick(container.containerId, targetSlot, 1, ClickType.PICKUP, player);
-                    // 3. Return remainder to original inventory slot
                     mc.gameMode.handleInventoryMouseClick(container.containerId, j, 0, ClickType.PICKUP, player);
                 }
-
-                break; // This ingredient has been handled
+                transferred = true;
+                break;
             }
+
+            if (!transferred) break;
+            target = container.getSlot(targetSlot).getItem();
         }
     }
 }

@@ -25,12 +25,10 @@ public class AutoMechanicTableRecipeMixin {
 
     @Inject(method = "assemble(Lnet/minecraft/world/SimpleContainer;)Lnet/minecraft/world/item/ItemStack;", at = @At("HEAD"), remap = false, cancellable = true)
     private void assembleFix(SimpleContainer inv, CallbackInfoReturnable<ItemStack> cir) {
-        if(!ingredientHasTag()) return;
-
         for(Ingredient ingredient : this.ingredients) {
             for(int i = 0; i < inv.getContainerSize(); ++i) {
                 ItemStack stack = inv.getItem(i);
-                if (ItemStack.isSameItemSameTags(stack, ingredient.getItems()[0])) {
+                if (ingredient.test(stack)) {
                     stack.shrink(1);
                     break;
                 }
@@ -41,41 +39,28 @@ public class AutoMechanicTableRecipeMixin {
 
     @Inject(method = "forMissingIngredients", at = @At("HEAD"), remap = false, cancellable = true)
     private void forMissingIngredientsHead(Container inv, Consumer<Ingredient> action, CallbackInfo ci) {
-        if(!ingredientHasTag()) return;
-
         ArrayList<ItemStack> invCopy = new ArrayList<>();
         for(int i = 0; i < inv.getContainerSize(); ++i) {
-            invCopy.add(inv.getItem(i));
+            invCopy.add(inv.getItem(i).copy());
         }
 
         for(Ingredient ingredient : this.ingredients) {
-            boolean flag = false;
-            int removeIdx = 0;
+            boolean found = false;
             for(int i = 0; i < invCopy.size(); i++) {
-                if(ItemStack.isSameItemSameTags(ingredient.getItems()[0], invCopy.get(i))){
-                    removeIdx = i;
-                    flag = true;
+                ItemStack stack = invCopy.get(i);
+                if(ingredient.test(stack)){
+                    stack.shrink(1);
+                    if(stack.isEmpty()){
+                        invCopy.remove(i);
+                    }
+                    found = true;
                     break;
                 }
             }
-            if(!flag){
+            if(!found){
                 action.accept(ingredient);
-            } else {
-                invCopy.remove(removeIdx);
             }
         }
         ci.cancel();
-    }
-
-    @Unique
-    private boolean ingredientHasTag(){
-        for(Ingredient ingredient : this.ingredients) {
-            for(ItemStack is : ingredient.getItems()) {
-                if(is.hasTag()){
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }
