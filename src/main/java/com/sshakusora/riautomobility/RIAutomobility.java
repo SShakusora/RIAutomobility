@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility;
 
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
+import com.sshakusora.riautomobility.creative.RIAutomobilityCreativeTabs;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
@@ -35,6 +36,7 @@ public class RIAutomobility
     public RIAutomobility()
     {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        RIAutomobilityCreativeTabs.TABS.register(modEventBus);
         registerAll(modEventBus);
     }
 
