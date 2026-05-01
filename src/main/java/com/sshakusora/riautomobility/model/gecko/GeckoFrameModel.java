@@ -53,7 +53,7 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
     @Override
     public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         if (this.broken) {
-            renderFallback(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+            renderFallback(poseStack, packedLight, packedOverlay, red, green, blue, alpha);
             return;
         }
 
@@ -81,17 +81,24 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
                 this.loggedBroken = true;
                 LOGGER.error("Failed to render GeckoLib automobile model {}; falling back to placeholder", geoModel.getClass().getName(), exception);
             }
-            renderFallback(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+            renderFallback(poseStack, packedLight, packedOverlay, red, green, blue, alpha);
         }
 
         fakeBufferSource.endBatch();
         poseStack.popPose();
     }
 
-    private void renderFallback(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+    private void renderFallback(PoseStack poseStack, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         if (this.fallbackModel == null) {
             return;
         }
-        this.fallbackModel.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+
+        poseStack.pushPose();
+        poseStack.scale(-1, -1, 1);
+        MultiBufferSource.BufferSource fallbackBuffers = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+        VertexConsumer fallbackConsumer = fallbackBuffers.getBuffer(this.fallbackModel.renderType(com.sshakusora.riautomobility.model.PlaceholderAutomobileModel.TEXTURE));
+        this.fallbackModel.renderToBuffer(poseStack, fallbackConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+        fallbackBuffers.endBatch();
+        poseStack.popPose();
     }
 }

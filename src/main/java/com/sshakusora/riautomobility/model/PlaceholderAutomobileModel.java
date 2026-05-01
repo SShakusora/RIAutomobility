@@ -10,6 +10,6 @@ public class PlaceholderAutomobileModel extends BaseModel {
     public static final ResourceLocation TEXTURE = new ResourceLocation("minecraft", "textures/item/barrier.png");
 
     public PlaceholderAutomobileModel(EntityRendererProvider.Context ctx, ModelLayerLocation layer) {
-        super(texture -> RenderType.entityCutout(TEXTURE), ctx, layer);
+        super(texture -> RenderType.entityCutoutNoCull(TEXTURE), ctx, layer);
     }
 }

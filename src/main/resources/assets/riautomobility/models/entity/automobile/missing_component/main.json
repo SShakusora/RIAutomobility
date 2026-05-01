@@ -7,13 +7,8 @@
     "main": {
       "cuboids": [
         {
-          "offset": [-6, -6, -2],
-          "dimensions": [12, 12, 4],
-          "uv": [0, 0]
-        },
-        {
-          "offset": [-2, -2, -3],
-          "dimensions": [4, 4, 6],
+          "offset": [-7, -7, -0.5],
+          "dimensions": [14, 14, 1],
           "uv": [0, 0]
         }
       ]

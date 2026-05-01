@@ -23,12 +23,30 @@ public final class RIAutomobilityCreativeTabs {
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .displayItems((params, output) -> {
                 AutomobileFrame.REGISTRY.forEach(frame -> {
-                    if (isRIAutomobilityComponent(frame) && !frame.isEmpty() && isVisible(frame)) {
+                    if (isBuiltInRIAComponent(frame) && !frame.isEmpty() && isVisible(frame)) {
                         output.accept(AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(frame));
                     }
                 });
                 AutomobileWheel.REGISTRY.forEach(wheel -> {
-                    if (isRIAutomobilityComponent(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
+                    if (isBuiltInRIAComponent(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
+                        output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
+                    }
+                });
+            })
+            .build());
+
+    public static final RegistryObject<CreativeModeTab> CUSTOM_COMPONENTS = TABS.register("custom_components", () -> CreativeModeTab.builder()
+            .title(Component.translatable("itemGroup.riautomobility.custom_components"))
+            .icon(() -> AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(RIAutomobileFrame.DMC12))
+            .withTabsBefore(COMPONENTS.getKey())
+            .displayItems((params, output) -> {
+                AutomobileFrame.REGISTRY.forEach(frame -> {
+                    if (RIAutomobilityComponentManager.isManagedFrame(frame) && !frame.isEmpty() && isVisible(frame)) {
+                        output.accept(AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(frame));
+                    }
+                });
+                AutomobileWheel.REGISTRY.forEach(wheel -> {
+                    if (RIAutomobilityComponentManager.isManagedWheel(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
                         output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
                     }
                 });
@@ -44,6 +62,10 @@ public final class RIAutomobilityCreativeTabs {
         if (component instanceof AutomobileWheel wheel) {
             return wheel.getId().getNamespace().equals(RIAutomobility.MODID) || RIAutomobilityComponentManager.isManagedWheel(wheel);
         }
+        return component.getId().getNamespace().equals(RIAutomobility.MODID);
+    }
+
+    private static boolean isBuiltInRIAComponent(AutomobileComponent<?> component) {
         return component.getId().getNamespace().equals(RIAutomobility.MODID);
     }
 

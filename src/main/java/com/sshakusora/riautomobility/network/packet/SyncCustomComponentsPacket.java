@@ -3,14 +3,11 @@ package com.sshakusora.riautomobility.network.packet;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
-import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
-import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.model.RIAutomobileModels;
-import com.sshakusora.riautomobility.reload.RIAutomobilityReloadManager;
-import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
-import net.minecraft.client.Minecraft;
+import com.sshakusora.riautomobility.network.packet.client.SyncCustomComponentsClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.LinkedHashMap;
@@ -62,22 +59,7 @@ public class SyncCustomComponentsPacket {
     }
 
     public static void handle(SyncCustomComponentsPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            RIAutomobileFrame.reload();
-            RIAutomobileWheel.reload();
-            RIAutomobilityComponentManager.applyCustomComponents(msg.frames, msg.wheels);
-            RIAutomobileModels.registerDynamicModels(msg.frames.values(), msg.wheels.values());
-
-            if (Minecraft.getInstance().getEntityModels() != null) {
-                DynamicJsonModelLoader.loadIntoEntityModelSet(Minecraft.getInstance().getEntityModels(), Minecraft.getInstance().getResourceManager());
-            }
-
-            RIAutomobileModels.rebuildDynamicModelsNow();
-
-            if (Minecraft.getInstance().level != null) {
-                RIAutomobilityReloadManager.refreshLevel(Minecraft.getInstance().level);
-            }
-        });
+        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> SyncCustomComponentsClientHandler.handle(msg.frames, msg.wheels)));
         ctx.get().setPacketHandled(true);
     }
 }

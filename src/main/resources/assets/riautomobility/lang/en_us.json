@@ -2,6 +2,7 @@
     "key.categories.riautomobility": "RIAutomobility",
     "key.riautomobility.boarding_as_passenger": "Board / Switch Seat",
     "itemGroup.riautomobility.components": "RIAutomobility",
+    "itemGroup.riautomobility.custom_components": "RIAutomobility: Custom",
     "tooltip.riautomobility.missing_resource_pack": "Missing resource pack for this component",
 
     "frame.riautomobility.wooden_doublemotorcar": "Wooden DoubleMotorcar",
