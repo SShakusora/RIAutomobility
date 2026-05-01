@@ -1,128 +1,139 @@
 # RIAutomobility
 
-English | [中文](#中文)
+<div align="center">
+
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-62b47a)](https://www.minecraft.net/)
+[![Forge](https://img.shields.io/badge/Forge-47.1.x-e04e14)](https://files.minecraftforge.net/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+
+**A Forge addon for Automobility — expanding vehicles with custom frames, wheels, multi-seat support, and datapack-driven content.**
+
+[English](#english) | [中文](#中文)
+
+</div>
+
+---
 
 ## English
 
+### Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Dependencies](#dependencies)
+- [Built-in Content](#built-in-content)
+- [Installation](#installation)
+- [Data-Driven Guide](#data-driven-guide)
+- [Example Pack](#example-pack)
+- [Notes for Pack Authors](#notes-for-pack-authors)
+
 ### Overview
 
-`RIAutomobility` is a Forge add-on for `Automobility` on Minecraft `1.20.1`.
+`RIAutomobility` is a Forge addon for `Automobility` on Minecraft `1.20.1`. It extends the base mod with new vehicle components and powerful customization tools for both players and content creators.
 
-It extends Automobility with:
+Whether you want to drive new vehicles out of the box or design your own through datapacks and resource packs, RIAutomobility has you covered.
 
-- new custom frames and wheels
-- custom multi-seat vehicle behavior
-- custom hitbox and camera definitions
-- separate creative tabs for built-in and datapack custom components
-- data-driven custom `Frame` and `Wheel` support
-- support for both `JsonEM` and `GeckoLib` driven custom models
+### Features
 
-The mod is designed both for normal gameplay and for content authors who want to add their own vehicles through datapacks and resource packs.
-
-### Main Features
-
-- Adds multiple custom frames and wheels on top of Automobility
-- Adds custom seat layouts for larger or special vehicles
-- Adds custom hitbox and culling definitions for RIA vehicles
-- Adds a separate creative tab for built-in RIA `Frame` and `Wheel` components
-- Adds a second creative tab named `RIAutomobility: Custom` for datapack-defined components
-- Supports datapack-defined custom `Frame` and `Wheel` components
-- Supports resource-pack-defined rendering for those custom components
-- Supports two rendering pipelines for custom components:
-  - `JsonEM`
-  - `GeckoLib`
-- Handles missing custom resources safely with a placeholder model and tooltip warning
+- **New Vehicle Components** — Multiple custom frames and wheels built on top of Automobility
+- **Multi-Seat Vehicles** — Custom seat layouts for larger or special vehicles
+- **Custom Hitboxes & Camera** — Fine-tuned collision and camera definitions for RIA vehicles
+- **Organized Creative Tabs** — Built-in and datapack components are neatly separated:
+  - `RIAutomobility` — built-in frames and wheels
+  - `RIAutomobility: Custom` — datapack-defined components
+- **Datapack Support** — Define custom `Frame` and `Wheel` components via JSON
+- **Dual Rendering Pipelines** — Supports both `JsonEM` baked models and `GeckoLib` animated models
+- **Safe Fallbacks** — Missing resources render as a placeholder with tooltip warnings instead of crashing
 
 ### Dependencies
 
-- Minecraft `1.20.1`
-- Forge `47.1.x`
-- `Automobility 0.4.2+1.20.1-forge`
-- `GeckoLib 4`
+| Mod | Version |
+|-----|---------|
+| Minecraft | `1.20.1` |
+| Forge | `47.1.x` |
+| [Automobility](https://www.curseforge.com/minecraft/mc-mods/automobility) | `0.4.2+1.20.1-forge` |
+| [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) | `4.x` |
 
 ### Built-in Content
 
-This mod includes several built-in RIA vehicles and components, such as:
+The mod ships with a variety of pre-made vehicles and components:
 
-- double motorcar variants
-- quad motorcar variants
-- lorry
+**Double Motorcars**
+- Wooden, Copper, Steel, Golden, Bejeweled
+
+**Quad Motorcars**
+- Wooden, Copper, Steel, Golden, Bejeweled
+
+**Special Vehicles**
+- Lorry (with container support)
 - DMC12
-- standard formula
-- matching custom wheels for selected vehicles
+- Standard Formula
 
-### Creative Tab
+**Wheels**
+- Matching custom wheels for DMC12 and Standard Formula
 
-RIA components are separated from the default Automobility tab.
+### Installation
 
-There are two RIA tabs:
+#### For Players
 
-- `RIAutomobility`: built-in RIA frames and wheels
-- `RIAutomobility: Custom`: datapack-defined custom frames and wheels
+1. Install [Forge](https://files.minecraftforge.net/) for Minecraft 1.20.1
+2. Download and install **Automobility** and **GeckoLib**
+3. Place `RIAutomobility.jar` in your `mods/` folder
+4. Launch the game
 
-If a custom component is defined through datapacks and marked visible, it will appear in `RIAutomobility: Custom`.
+#### For Custom Content (Datapacks)
 
-### Missing Resource Behavior
+1. Place your datapack in the world's `datapacks/` folder
+2. Place your resource pack in Minecraft's `resourcepacks/` folder
+3. Enable the resource pack in-game
+4. Enter the world and run `/reload` if needed
 
-If a datapack component exists but its model resources are missing:
+### Data-Driven Guide
 
-- the game will not crash
-- the component will render using a barrier-texture placeholder
-- the tooltip will show `Missing resource pack for this component`
+Custom components are split into two parts:
 
-This applies to both `JsonEM` and `GeckoLib` custom components.
+| Part | Purpose |
+|------|---------|
+| **Datapack** | Gameplay definition (stats, dimensions, seats, hitboxes, model references) |
+| **Resource Pack** | Model, texture, and animation assets |
 
-When the required resource pack is available, custom `JsonEM` and `GeckoLib` models are applied automatically after joining the world. Manual `F3 + T` is not required for normal startup.
+#### Datapack Paths
 
-## Data-Driven Guide
-
-### Concept
-
-Custom vehicle components are split into two parts:
-
-1. Datapack: gameplay definition
-2. Resource pack: model, texture, animation resources
-
-The datapack defines stats, dimensions, seats, hitboxes, wheelbase, and model references.
-
-The resource pack provides the assets referenced by the datapack.
-
-### Datapack Paths
-
-Custom frame definitions:
-
-- `data/<namespace>/riautomobility/frames/<id>.json`
-
-Custom wheel definitions:
-
-- `data/<namespace>/riautomobility/wheels/<id>.json`
+```
+data/<namespace>/riautomobility/frames/<id>.json
+data/<namespace>/riautomobility/wheels/<id>.json
+```
 
 Optional Automobility recipes:
+```
+data/automobility/recipes/frame/<recipe>.json
+data/automobility/recipes/wheel/<recipe>.json
+```
 
-- `data/automobility/recipes/frame/<recipe>.json`
-- `data/automobility/recipes/wheel/<recipe>.json`
+#### Resource Pack Paths
 
-### Resource Pack Paths
+**JsonEM models:**
+```
+assets/<namespace>/models/entity/automobile/frame/<name>/main.json
+assets/<namespace>/models/entity/automobile/wheel/<name>/main.json
+```
 
-For `JsonEM` models:
+**GeckoLib models:**
+```
+assets/<namespace>/geo/...
+assets/<namespace>/animations/...
+assets/<namespace>/textures/...
+```
 
-- `assets/<namespace>/models/entity/automobile/frame/<name>/main.json`
-- `assets/<namespace>/models/entity/automobile/wheel/<name>/main.json`
+**Translations:**
+```
+assets/<namespace>/lang/en_us.json
+assets/<namespace>/lang/zh_cn.json
+```
 
-For `GeckoLib` models:
+#### Frame JSON Format
 
-- `assets/<namespace>/geo/...`
-- `assets/<namespace>/animations/...`
-- `assets/<namespace>/textures/...`
-
-Translations:
-
-- `assets/<namespace>/lang/en_us.json`
-- `assets/<namespace>/lang/zh_cn.json`
-
-## Frame JSON Format
-
-Example:
+Example frame definition:
 
 ```json
 {
@@ -165,30 +176,27 @@ Example:
 }
 ```
 
-### Frame Fields
+**Field Reference:**
 
-- `weight`: frame weight
-- `model`: rendering definition
-- `wheel_base`: wheel layout
-- `length_px`: frame render length in pixels
-- `seat_height`: base seat height in pixels
-- `engine_pos_back`: engine position on Z axis in pixels
-- `engine_pos_up`: engine position on Y axis in pixels
-- `rear_attachment_pos`: rear attachment anchor in pixels
-- `front_attachment_pos`: front attachment anchor in pixels
-- `dimensions.width`: entity width in blocks
-- `dimensions.height`: entity height in blocks
-- `seats`: seat positions in block coordinates
-- `camera_positions`: camera offsets in block coordinates
-- `hitboxes`: custom hitbox definitions
-- `front_attachment_enabled`: whether front attachments are allowed
-- `rear_attachment_enabled`: whether rear attachments are allowed
-- `show_in_creative_tab`: whether the component appears in the RIA tab
+| Field | Description |
+|-------|-------------|
+| `weight` | Frame weight |
+| `model` | Rendering definition (see [Model Types](#model-definition-types)) |
+| `wheel_base` | Wheel layout (symmetric or per-wheel) |
+| `length_px` | Frame render length in pixels |
+| `seat_height` | Base seat height in pixels |
+| `engine_pos_back` / `engine_pos_up` | Engine position on Z / Y axis in pixels |
+| `rear_attachment_pos` / `front_attachment_pos` | Attachment anchor positions in pixels |
+| `dimensions.width` / `dimensions.height` | Entity dimensions in blocks |
+| `seats` | Seat positions in block coordinates |
+| `camera_positions` | Camera offsets in block coordinates |
+| `hitboxes` | Custom hitbox definitions |
+| `front_attachment_enabled` / `rear_attachment_enabled` | Allow attachments |
+| `show_in_creative_tab` | Show in the RIA creative tab |
 
-### Wheel Base Formats
+**Wheel Base Formats:**
 
 Simple symmetric layout:
-
 ```json
 "wheel_base": {
   "forward_separation": 44.0,
@@ -197,7 +205,6 @@ Simple symmetric layout:
 ```
 
 Custom per-wheel layout:
-
 ```json
 "wheel_base": {
   "wheels": [
@@ -209,9 +216,9 @@ Custom per-wheel layout:
 }
 ```
 
-## Wheel JSON Format
+#### Wheel JSON Format
 
-Example:
+Example wheel definition:
 
 ```json
 {
@@ -231,20 +238,26 @@ Example:
 }
 ```
 
-### Wheel Fields
+**Field Reference:**
 
-- `size`: wheel size used by Automobility logic
-- `grip`: grip value
-- `radius`: model radius in pixels
-- `width`: model width in pixels
-- `model`: rendering definition
-- `show_in_creative_tab`: whether the component appears in the RIA tab
+| Field | Description |
+|-------|-------------|
+| `size` | Wheel size (Automobility logic) |
+| `grip` | Grip value |
+| `radius` / `width` | Model dimensions in pixels |
+| `model` | Rendering definition |
+| `show_in_creative_tab` | Show in the RIA creative tab |
 
-## Model Definition Types
+<!-- TODO: Replace with actual screenshot -->
+<div align="center">
+  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="Datapack Frame And Wheel Example" width="600">
+  <br>
+  <em>Figure 1: Custom frame and wheel defined via datapack, shown in the creative tab</em>
+</div>
 
-### JsonEM
+#### Model Definition Types
 
-Use this when you want a baked JSON entity model.
+**JsonEM** — Baked JSON entity model:
 
 ```json
 "model": {
@@ -257,18 +270,9 @@ Use this when you want a baked JSON entity model.
 }
 ```
 
-Fields:
+- `render_type`: `entity_cutout` | `entity_cutout_no_cull` | `entity_translucent` | `entity_translucent_cull` | `entity_solid`
 
-- `type`: must be `jsonem`
-- `texture`: render texture
-- `model_id`: Automobility runtime model id
-- `layer_location`: baked layer source
-- `render_type`: one of `entity_cutout`, `entity_cutout_no_cull`, `entity_translucent`, `entity_translucent_cull`, `entity_solid`
-- `rotation_y`: optional Y rotation in degrees
-
-### GeckoLib
-
-Use this when you want to render a GeckoLib geo model.
+**GeckoLib** — Animated geo model:
 
 ```json
 "model": {
@@ -280,17 +284,7 @@ Use this when you want to render a GeckoLib geo model.
 }
 ```
 
-Fields:
-
-- `type`: must be `geckolib`
-- `texture`: render texture
-- `model_id`: Automobility runtime model id
-- `geo_model`: GeckoLib geo file
-- `animation`: GeckoLib animation file
-
-## Recipe Example
-
-Custom frame recipe:
+#### Recipe Example
 
 ```json
 {
@@ -308,161 +302,158 @@ Custom frame recipe:
 }
 ```
 
-## Example Pack
+### Example Pack
 
 A complete minimal example is included in this repository:
 
-- `examples/examplepack-data/`
-- `examples/examplepack-resources/`
-- `examples/examplepack/README.md`
+- [`examples/examplepack-data/`](examples/examplepack-data/)
+- [`examples/examplepack-resources/`](examples/examplepack-resources/)
+- [`examples/examplepack/README.md`](examples/examplepack/README.md)
 
 It contains:
+- A `JsonEM` frame and wheel example
+- A `GeckoLib` frame and wheel example
+- Matching recipes, translations, and resource-pack model files
 
-- a `JsonEM` frame and wheel example
-- a `GeckoLib` frame and wheel example
-- matching recipes
-- translations
-- resource-pack model files
 
-## Installation for Custom Content
-
-1. Put your datapack in the world's `datapacks/` folder.
-2. Put your resource pack in Minecraft's `resourcepacks/` folder.
-3. Enable the resource pack.
-4. Enter the world.
-5. Run `/reload` if needed.
-
-## Notes for Pack Authors
+### Notes for Pack Authors
 
 - Datapacks can define components without resource packs, but they will render as placeholders.
-- Missing-resource placeholders use a barrier texture so they are easy to identify in inventories.
+- Missing-resource placeholders use a barrier texture for easy identification.
 - `JsonEM` components need valid `assets/<namespace>/models/entity/.../main.json` files.
 - `GeckoLib` components need valid `geo`, `animation`, and texture resources.
-- Tooltips will warn the player when the required resource pack is missing.
+- Tooltips warn the player when the required resource pack is missing.
+- Custom models apply automatically after joining the world — no `F3 + T` needed.
+
+<!-- TODO: Replace with actual screenshot -->
+<div align="center">
+  <img src="ScreenShots/missing_resource_placeholder.png" alt="Missing Resource Placeholder" width="500">
+  <br>
+  <em>Figure 2: Placeholder model and tooltip warning when a resource pack is missing</em>
+</div>
 
 ---
 
 ## 中文
 
+### 目录
+
+- [模组简介](#模组简介)
+- [主要功能](#主要功能)
+- [依赖](#依赖)
+- [内置内容](#内置内容)
+- [安装方法](#安装方法)
+- [数据驱动教程](#数据驱动教程)
+- [示例包](#示例包)
+- [给内容作者的提示](#给内容作者的提示)
+
 ### 模组简介
 
-`RIAutomobility` 是一个基于 Minecraft `1.20.1 Forge` 的 `Automobility` 附属模组。
+`RIAutomobility` 是一个基于 Minecraft `1.20.1 Forge` 的 `Automobility` 附属模组。它在 Automobility 的基础上扩展了新的车辆组件，并为玩家和内容创作者提供了强大的自定义工具。
 
-它在 Automobility 的基础上扩展了：
-
-- 新的车架与车轮
-- 自定义多座位车辆逻辑
-- 自定义碰撞箱与摄像机定义
-- 内置组件与数据包自定义组件分离的创造模式标签页
-- 可通过数据包添加的自定义 `Frame` 与 `Wheel`
-- 同时支持 `JsonEM` 与 `GeckoLib` 的资源驱动模型
-
-这个模组既可以直接用于游玩，也适合内容作者通过数据包和资源包扩展自己的车辆组件。
+无论你是想直接使用内置新车，还是通过数据包和资源包设计自己的载具，RIAutomobility 都能满足你的需求。
 
 ### 主要功能
 
-- 为 Automobility 添加多种新的 RIA 车架和车轮
-- 为特殊车型提供自定义座位布局
-- 为 RIA 车辆提供自定义碰撞箱与视锥盒定义
-- 为内置 RIA `Frame` / `Wheel` 提供独立创造标签页
-- 为数据包添加的组件提供第二个 `RIAutomobility: Custom` 标签页
-- 支持通过数据包定义自定义 `Frame` / `Wheel`
-- 支持通过资源包为这些组件提供渲染资源
-- 支持两种自定义模型渲染方式：
-  - `JsonEM`
-  - `GeckoLib`
-- 当资源缺失时使用占位模型并在 tooltip 中提示
+- **全新车辆部件** — 为 Automobility 添加了多种自定义车架和车轮
+- **多座位载具** — 为大型或特殊车型提供自定义座位布局
+- **自定义碰撞箱与摄像机** — 为 RIA 车辆提供精细调整的碰撞箱和摄像机定义
+- **分类创造标签页** — 内置组件与数据包组件分类管理：
+  - `飞天奇匠` — 内置车架与车轮
+  - `飞天奇匠：自定义` — 数据包定义的组件
+- **数据包支持** — 通过 JSON 定义自定义 `Frame` / `Wheel`
+- **双渲染管线** — 同时支持 `JsonEM` 烘焙模型和 `GeckoLib` 动画模型
+- **安全降级** — 资源缺失时使用占位模型并提示，不会导致崩溃
 
 ### 依赖
 
-- Minecraft `1.20.1`
-- Forge `47.1.x`
-- `Automobility 0.4.2+1.20.1-forge`
-- `GeckoLib 4`
+| 模组 | 版本 |
+|------|------|
+| Minecraft | `1.20.1` |
+| Forge | `47.1.x` |
+| [Automobility](https://www.curseforge.com/minecraft/mc-mods/automobility) | `0.4.2+1.20.1-forge` |
+| [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) | `4.x` |
 
 ### 内置内容
 
-模组内置了多种 RIA 车辆部件，例如：
+模组内置了多种预制车辆和部件：
 
-- 双座 机动车 系列
-- 四座 机动车 系列
-- 大运
+**双座汽车系列**
+- 木质、铜质、钢质、黄金、璀璨
+
+**四座汽车系列**
+- 木质、铜质、钢质、黄金、璀璨
+
+**特殊车辆**
+- 大运（带集装箱支持）
 - DMC12
-- standard formula
-- 对应的自定义车轮
+- 标准方程式
 
-### 创造模式标签页
+**车轮**
+- DMC12 和标准方程式专用车轮
 
-RIA 组件不会放在默认 Automobility 标签页中。
+### 安装方法
 
-当前分为两个 RIA 标签页：
+#### 普通玩家
 
-- `RIAutomobility`：内置 RIA 车架与车轮
-- `RIAutomobility: Custom`：通过数据包定义的自定义组件
+1. 安装适用于 Minecraft 1.20.1 的 [Forge](https://files.minecraftforge.net/)
+2. 下载并安装 **Automobility** 和 **GeckoLib**
+3. 将 `RIAutomobility.jar` 放入 `mods/` 文件夹
+4. 启动游戏
 
-通过数据包定义且设置为可见的自定义组件，会显示在 `RIAutomobility: Custom` 标签页中。
+#### 自定义内容（数据包）
 
-### 资源缺失时的行为
+1. 将数据包放入存档的 `datapacks/` 文件夹
+2. 将资源包放入 Minecraft 的 `resourcepacks/` 文件夹
+3. 在游戏中启用资源包
+4. 进入存档，如需可执行 `/reload`
 
-如果数据包中存在组件定义，但资源包没有提供对应模型资源：
-
-- 游戏不会崩溃
-- 组件会显示为屏障贴图占位模型
-- tooltip 会显示 `该组件缺少对应资源包`
-
-这个机制同时适用于 `JsonEM` 和 `GeckoLib` 自定义组件。
-
-当资源包正确加载时，自定义 `JsonEM` 和 `GeckoLib` 模型会在进入世界后自动应用，正常情况下不需要手动按 `F3 + T`。
-
-## 数据驱动教程
-
-### 基本概念
+### 数据驱动教程
 
 自定义车辆组件分为两部分：
 
-1. 数据包：负责玩法定义
-2. 资源包：负责模型、贴图、动画资源
+| 部分 | 作用 |
+|------|------|
+| **数据包** | 玩法定义（数值、尺寸、座位、碰撞箱、模型引用） |
+| **资源包** | 模型、贴图、动画资源 |
 
-数据包定义组件的数值、尺寸、座位、碰撞箱、轮距以及模型引用。
+#### 数据包路径
 
-资源包提供这些模型引用实际对应的资源文件。
-
-### 数据包路径
-
-自定义车架定义：
-
-- `data/<namespace>/riautomobility/frames/<id>.json`
-
-自定义车轮定义：
-
-- `data/<namespace>/riautomobility/wheels/<id>.json`
+```
+data/<命名空间>/riautomobility/frames/<id>.json
+data/<命名空间>/riautomobility/wheels/<id>.json
+```
 
 可选的 Automobility 配方：
+```
+data/automobility/recipes/frame/<配方>.json
+data/automobility/recipes/wheel/<配方>.json
+```
 
-- `data/automobility/recipes/frame/<recipe>.json`
-- `data/automobility/recipes/wheel/<recipe>.json`
+#### 资源包路径
 
-### 资源包路径
+**JsonEM 模型：**
+```
+assets/<命名空间>/models/entity/automobile/frame/<名称>/main.json
+assets/<命名空间>/models/entity/automobile/wheel/<名称>/main.json
+```
 
-`JsonEM` 模型：
+**GeckoLib 模型：**
+```
+assets/<命名空间>/geo/...
+assets/<命名空间>/animations/...
+assets/<命名空间>/textures/...
+```
 
-- `assets/<namespace>/models/entity/automobile/frame/<name>/main.json`
-- `assets/<namespace>/models/entity/automobile/wheel/<name>/main.json`
+**翻译文件：**
+```
+assets/<命名空间>/lang/en_us.json
+assets/<命名空间>/lang/zh_cn.json
+```
 
-`GeckoLib` 模型：
+#### Frame JSON 格式
 
-- `assets/<namespace>/geo/...`
-- `assets/<namespace>/animations/...`
-- `assets/<namespace>/textures/...`
-
-翻译文件：
-
-- `assets/<namespace>/lang/en_us.json`
-- `assets/<namespace>/lang/zh_cn.json`
-
-## Frame JSON 格式
-
-示例：
+车架定义示例：
 
 ```json
 {
@@ -505,30 +496,27 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-### Frame 字段说明
+**字段说明：**
 
-- `weight`：车架重量
-- `model`：渲染定义
-- `wheel_base`：轮组布局
-- `length_px`：渲染长度，单位像素
-- `seat_height`：座位基准高度，单位像素
-- `engine_pos_back`：引擎在 Z 轴上的位置，单位像素
-- `engine_pos_up`：引擎在 Y 轴上的位置，单位像素
-- `rear_attachment_pos`：后部挂载点位置，单位像素
-- `front_attachment_pos`：前部挂载点位置，单位像素
-- `dimensions.width`：实体宽度，单位方块
-- `dimensions.height`：实体高度，单位方块
-- `seats`：座位坐标，单位方块
-- `camera_positions`：摄像机偏移，单位方块
-- `hitboxes`：自定义碰撞箱定义
-- `front_attachment_enabled`：是否允许前挂件
-- `rear_attachment_enabled`：是否允许后挂件
-- `show_in_creative_tab`：是否显示在 RIA 创造标签页中
+| 字段 | 说明 |
+|------|------|
+| `weight` | 车架重量 |
+| `model` | 渲染定义（详见 [模型类型](#模型定义类型)） |
+| `wheel_base` | 轮组布局（对称简写或逐轮定义） |
+| `length_px` | 渲染长度，单位像素 |
+| `seat_height` | 座位基准高度，单位像素 |
+| `engine_pos_back` / `engine_pos_up` | 引擎在 Z / Y 轴位置，单位像素 |
+| `rear_attachment_pos` / `front_attachment_pos` | 挂载锚点位置，单位像素 |
+| `dimensions.width` / `dimensions.height` | 实体尺寸，单位方块 |
+| `seats` | 座位坐标，单位方块 |
+| `camera_positions` | 摄像机偏移，单位方块 |
+| `hitboxes` | 自定义碰撞箱定义 |
+| `front_attachment_enabled` / `rear_attachment_enabled` | 是否允许挂件 |
+| `show_in_creative_tab` | 是否在 RIA 创造标签页显示 |
 
-### wheel_base 写法
+**wheel_base 写法：**
 
 对称简写：
-
 ```json
 "wheel_base": {
   "forward_separation": 44.0,
@@ -537,7 +525,6 @@ RIA 组件不会放在默认 Automobility 标签页中。
 ```
 
 逐轮自定义：
-
 ```json
 "wheel_base": {
   "wheels": [
@@ -549,9 +536,9 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-## Wheel JSON 格式
+#### Wheel JSON 格式
 
-示例：
+车轮定义示例：
 
 ```json
 {
@@ -571,20 +558,26 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-### Wheel 字段说明
+**字段说明：**
 
-- `size`：Automobility 逻辑使用的轮子尺寸
-- `grip`：抓地力
-- `radius`：模型半径，单位像素
-- `width`：模型宽度，单位像素
-- `model`：渲染定义
-- `show_in_creative_tab`：是否显示在 RIA 创造标签页中
+| 字段 | 说明 |
+|------|------|
+| `size` | Automobility 逻辑使用的轮子尺寸 |
+| `grip` | 抓地力 |
+| `radius` / `width` | 模型尺寸，单位像素 |
+| `model` | 渲染定义 |
+| `show_in_creative_tab` | 是否在 RIA 创造标签页显示 |
 
-## 模型定义类型
+<!-- TODO: 替换为实际截图 -->
+<div align="center">
+  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="数据包车架和车轮示例" width="600">
+  <br>
+  <em>图 1：通过数据包定义的自定义车架和车轮在创造标签页中的展示</em>
+</div>
 
-### JsonEM
+#### 模型定义类型
 
-适用于使用烘焙 JSON 实体模型的情况。
+**JsonEM** — 适用于烘焙 JSON 实体模型：
 
 ```json
 "model": {
@@ -597,18 +590,9 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-字段说明：
+- `render_type`: `entity_cutout` | `entity_cutout_no_cull` | `entity_translucent` | `entity_translucent_cull` | `entity_solid`
 
-- `type`：固定为 `jsonem`
-- `texture`：渲染贴图
-- `model_id`：Automobility 运行时模型 id
-- `layer_location`：烘焙模型层来源
-- `render_type`：可选 `entity_cutout`、`entity_cutout_no_cull`、`entity_translucent`、`entity_translucent_cull`、`entity_solid`
-- `rotation_y`：可选 Y 轴旋转角度
-
-### GeckoLib
-
-适用于使用 GeckoLib geo 模型的情况。
+**GeckoLib** — 适用于 GeckoLib 动画模型：
 
 ```json
 "model": {
@@ -620,17 +604,7 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-字段说明：
-
-- `type`：固定为 `geckolib`
-- `texture`：渲染贴图
-- `model_id`：Automobility 运行时模型 id
-- `geo_model`：GeckoLib geo 文件
-- `animation`：GeckoLib 动画文件
-
-## 配方示例
-
-自定义车架配方：
+#### 配方示例
 
 ```json
 {
@@ -648,34 +622,31 @@ RIA 组件不会放在默认 Automobility 标签页中。
 }
 ```
 
-## 示例包
+### 示例包
 
-仓库中已经附带了一套完整最小示例：
+仓库中已附带一套完整的最小示例：
 
-- `examples/examplepack-data/`
-- `examples/examplepack-resources/`
-- `examples/examplepack/README.md`
+- [`examples/examplepack-data/`](examples/examplepack-data/)
+- [`examples/examplepack-resources/`](examples/examplepack-resources/)
+- [`examples/examplepack/README.md`](examples/examplepack/README.md)
 
 其中包含：
-
 - 一套 `JsonEM` 车架与车轮示例
 - 一套 `GeckoLib` 车架与车轮示例
-- 对应配方
-- 翻译文件
-- 资源包模型文件
+- 对应配方、翻译文件和资源包模型
 
-## 自定义内容安装方式
-
-1. 将数据包放入存档的 `datapacks/` 文件夹。
-2. 将资源包放入 Minecraft 的 `resourcepacks/` 文件夹。
-3. 在游戏中启用资源包。
-4. 进入存档。
-5. 如有需要执行 `/reload`。
-
-## 给内容作者的提示
+### 给内容作者的提示
 
 - 只装数据包不装资源包也是允许的，但组件会显示为占位模型。
-- 缺失资源时，占位模型会使用屏障贴图，方便在物品栏中识别。
-- `JsonEM` 组件需要正确的 `assets/<namespace>/models/entity/.../main.json`。
+- 缺失资源时，占位模型使用屏障贴图，方便在物品栏中识别。
+- `JsonEM` 组件需要正确的 `assets/<命名空间>/models/entity/.../main.json`。
 - `GeckoLib` 组件需要正确的 `geo`、`animation` 和贴图资源。
 - 当资源缺失时，tooltip 会提示玩家缺少对应资源包。
+- 自定义模型在进入世界后自动生效，通常不需要按 `F3 + T`。
+
+<!-- TODO: 替换为实际截图 -->
+<div align="center">
+  <img src="ScreenShots/missing_resource_placeholder.png" alt="缺失资源占位模型" width="500">
+  <br>
+  <em>图 2：当资源包缺失时显示的占位模型与 Tooltip 警告</em>
+</div>
