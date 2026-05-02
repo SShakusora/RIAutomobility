@@ -27,19 +27,19 @@ import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.Standard
 import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelModel;
 import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelRenderer;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
-import io.github.foundationgames.automobility.util.EntityRenderHelper;
 import io.github.foundationgames.automobility.forge.vendored.jsonem.JsonEM;
+import io.github.foundationgames.automobility.util.EntityRenderHelper;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import org.slf4j.Logger;
 
 public class RIAutomobileModels {
     private static final Logger LOGGER = LogUtils.getLogger();

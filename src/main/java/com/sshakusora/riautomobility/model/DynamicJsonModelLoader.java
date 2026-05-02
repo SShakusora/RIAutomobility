@@ -1,8 +1,8 @@
 package com.sshakusora.riautomobility.model;
 
 import com.sshakusora.riautomobility.mixin.accessor.EntityModelSetAccessor;
-import net.minecraft.client.model.geom.EntityModelSet;
 import io.github.foundationgames.automobility.forge.vendored.jsonem.util.JsonEntityModelUtil;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.resources.ResourceLocation;

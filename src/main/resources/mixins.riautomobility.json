@@ -23,8 +23,8 @@
   "mixins": [
     "AutoMechanicTableRecipeMixin",
     "AutoMechanicTableRecipeSerializerMixin",
-    "AutomobileComponentItemMixin",
     "AutomobileAssemblerBlockEntityMixin",
+    "AutomobileComponentItemMixin",
     "AutomobileEntityCollisionMixin",
     "AutomobileItemMixin",
     "EntityMixin",

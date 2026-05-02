@@ -1,7 +1,6 @@
 package com.sshakusora.riautomobility.content;
 
 import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
-import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;

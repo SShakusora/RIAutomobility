@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
