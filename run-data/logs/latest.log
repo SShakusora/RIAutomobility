@@ -1,0 +1,36 @@
+[025月2026 16:09:59.581] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgedatauserdev, --assetIndex, 5, --assetsDir, C:\Users\14049\.gradle\caches\forge_gradle\assets, --gameDir, ., --fml.forgeVersion, 47.1.3, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, --mod, riautomobility, --all, --output, D:\Game\Minecraft Mod\Forge\RIAutomobility\src\generated\resources, --existing, D:\Game\Minecraft Mod\Forge\RIAutomobility\src\main\resources, --mixin.config, mixins.riautomobility.json]
+[025月2026 16:09:59.587] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.15 by Eclipse Adoptium; OS Windows 11 arch amd64 version 10.0
+[025月2026 16:09:59.702] [main/WARN] [net.minecraftforge.fml.loading.FMLConfig/CORE]: Configuration file D:\Game\Minecraft Mod\Forge\RIAutomobility\run-data\config\fml.toml is not correct. Correcting
+[025月2026 16:09:59.704] [main/INFO] [net.minecraftforge.fml.loading.FMLConfig/CORE]: Incorrect key [earlyWindowSkipGLVersions] was corrected from null to []
+[025月2026 16:09:59.705] [main/INFO] [net.minecraftforge.fml.loading.FMLConfig/CORE]: Incorrect key [earlyWindowSquir] was corrected from null to false
+[025月2026 16:09:59.724] [main/INFO] [net.minecraftforge.fml.loading.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgedatauserdev
+[025月2026 16:09:59.787] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/C:/Users/14049/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23128!/ Service=ModLauncher Env=CLIENT
+[025月2026 16:10:00.177] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\14049\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.1.3\9775dc3f284cdb3e0d33b372c328c6ef88e434b0\javafmllanguage-1.20.1-47.1.3.jar is missing mods.toml file
+[025月2026 16:10:00.182] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\14049\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.1.3\d785f4087ec3be094fd5aed801f5366ca958a81b\lowcodelanguage-1.20.1-47.1.3.jar is missing mods.toml file
+[025月2026 16:10:00.187] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\14049\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.1.3\be60c45f3578cdf944a669c6ea16fd91bec50f2e\mclanguage-1.20.1-47.1.3.jar is missing mods.toml file
+[025月2026 16:10:00.191] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\14049\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.1.3\1aadc0201d8e97b107d9978c7fe066bb54bbb9dc\fmlcore-1.20.1-47.1.3.jar is missing mods.toml file
+[025月2026 16:10:00.421] [main/INFO] [net.minecraftforge.fml.loading.moddiscovery.JarInJarDependencyLocator/]: Found 1 dependencies adding them to mods collection
+[025月2026 16:10:02.343] [main/INFO] [mixin/]: Compatibility level set to JAVA_17
+[025月2026 16:10:02.354] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgedatauserdev' with arguments [--gameDir, ., --assetsDir, C:\Users\14049\.gradle\caches\forge_gradle\assets, --assetIndex, 5, --mod, riautomobility, --all, --output, D:\Game\Minecraft Mod\Forge\RIAutomobility\src\generated\resources, --existing, D:\Game\Minecraft Mod\Forge\RIAutomobility\src\main\resources]
+[025月2026 16:10:02.477] [main/WARN] [mixin/]: Reference map 'mixins.riautomobility.refmap.json' for mixins.riautomobility.json could not be read. If this is a development environment you can ignore this message
+[025月2026 16:10:02.750] [main/INFO] [mixin/]: Remapping refMap jade.refmap.json using D:\Game\Minecraft Mod\Forge\RIAutomobility\build\createSrgToMcp\output.srg
+[025月2026 16:10:02.752] [main/INFO] [mixin/]: Remapping refMap geckolib.refmap.json using D:\Game\Minecraft Mod\Forge\RIAutomobility\build\createSrgToMcp\output.srg
+[025月2026 16:10:02.754] [main/INFO] [mixin/]: Remapping refMap automobility-refmap.json using D:\Game\Minecraft Mod\Forge\RIAutomobility\build\createSrgToMcp\output.srg
+[025月2026 16:10:02.756] [main/INFO] [mixin/]: Remapping refMap automobility-refmap.json using D:\Game\Minecraft Mod\Forge\RIAutomobility\build\createSrgToMcp\output.srg
+[025月2026 16:10:02.758] [main/INFO] [mixin/]: Remapping refMap IBEEditor-1.20-common-refmap.json using D:\Game\Minecraft Mod\Forge\RIAutomobility\build\createSrgToMcp\output.srg
+[025月2026 16:10:03.312] [main/INFO] [net.minecraftforge.data.loading.DatagenModLoader/]: Initializing Data Gatherer for mods [riautomobility]
+[025月2026 16:10:08.598] [modloading-worker-0/INFO] [com.github.franckyi.ibeeditor.common.CommonInit/]: Initializing IBE Editor - common
+[025月2026 16:10:08.624] [modloading-worker-0/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 47.1.3, for MC 1.20.1 with MCP 20230612.114412
+[025月2026 16:10:08.628] [modloading-worker-0/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v47.1.3 Initialized
+[025月2026 16:10:08.629] [modloading-worker-0/INFO] [com.github.franckyi.ibeeditor.client.ClientInit/]: Initializing IBE Editor - client
+[025月2026 16:10:08.838] [modloading-worker-0/WARN] [software.bernie.geckolib.GeckoLib/]: Minecraft.getInstance() was null, could not register reload listeners
+[025月2026 16:10:09.003] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager...
+[025月2026 16:10:09.009] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager took 3.677 ms
+[025月2026 16:10:09.541] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/D:/Game/Minecraft%20Mod/Forge/RIAutomobility/build/fg_cache/net/minecraftforge/forge/1.20.1-47.1.3_mapped_official_1.20.1/forge-1.20.1-47.1.3_mapped_official_1.20.1-recomp.jar%23191!/assets/.mcassetsroot' uses unexpected schema
+[025月2026 16:10:09.542] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/D:/Game/Minecraft%20Mod/Forge/RIAutomobility/build/fg_cache/net/minecraftforge/forge/1.20.1-47.1.3_mapped_official_1.20.1/forge-1.20.1-47.1.3_mapped_official_1.20.1-recomp.jar%23191!/data/.mcassetsroot' uses unexpected schema
+[025月2026 16:10:09.695] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: en_us
+[025月2026 16:10:09.702] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: en_us finished after 7 ms
+[025月2026 16:10:09.703] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: zh_cn
+[025月2026 16:10:09.706] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: zh_cn finished after 2 ms
+[025月2026 16:10:09.706] [main/INFO] [net.minecraft.data.DataGenerator/]: All providers took: 11 ms
+[025月2026 16:10:09.713] [main/INFO] [net.minecraft.data.HashCache/]: Caching: total files: 2, old count: 2, new count: 3, removed stale: 0, written: 1
