@@ -272,9 +272,16 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             return;
         }
 
+        AABB searchBox = this.getBoundingBox().inflate(3.0F, 3.0F, 3.0F);
+        for (HitboxEntity hitbox : this.hitboxes) {
+            if (hitbox.isAlive()) {
+                searchBox = searchBox.minmax(hitbox.getBoundingBox().inflate(3.0F, 3.0F, 3.0F));
+            }
+        }
+
         this.level().getEntitiesOfClass(
                 Entity.class,
-                this.getBoundingBox().inflate(3.0F, 3.0F, 3.0F),
+                searchBox,
                 entity -> {
                     if (entity == this) {
                         return false;
@@ -298,6 +305,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         }
 
         AABB frontBox = getBoundingBox().move(velocity.scale(0.5));
+        for (HitboxEntity hitbox : this.hitboxes) {
+            if (hitbox.isAlive()) {
+                frontBox = frontBox.minmax(hitbox.getBoundingBox().move(velocity.scale(0.5)));
+            }
+        }
         Vec3 velAdd = velocity.add(0, 0.1, 0).scale(3);
 
         for (Entity entity : level().getEntities(EntityTypeTest.forClass(Entity.class), frontBox, entity -> entity != this && !isOnRIAutomobile(entity))) {
@@ -814,6 +826,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             return right;
         }
         return new Vec3(this.getX(), box.maxY, this.getZ());
+    }
+
+    public List<HitboxEntity> getHitboxEntities() {
+        return Collections.unmodifiableList(this.hitboxes);
     }
 
     private void spawnHitboxes() {

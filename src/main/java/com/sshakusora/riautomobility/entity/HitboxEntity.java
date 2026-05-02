@@ -197,7 +197,15 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean isPushable() {
-        return false;
+        return true;
+    }
+
+    @Override
+    public void push(double x, double y, double z) {
+        AutomobileEntity auto = this.getAutomobile();
+        if (auto != null) {
+            auto.push(x, y, z);
+        }
     }
 
     @Override
