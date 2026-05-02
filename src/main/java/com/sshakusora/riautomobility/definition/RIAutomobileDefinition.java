@@ -14,6 +14,7 @@ public record RIAutomobileDefinition(
         EntityDimensions dimensions,
         List<Vec3> cameraPositions,
         List<Hitbox> hitboxes,
+        boolean hideEngine,
         boolean frontAttachmentEnabled,
         boolean rearAttachmentEnabled,
         List<ResourceLocation> frontAttachmentWhitelist,
@@ -68,6 +69,7 @@ public record RIAutomobileDefinition(
         private EntityDimensions dimensions = EntityDimensions.scalable(1.0F, 0.66F);
         private List<Vec3> cameraPositions = List.of(Vec3.ZERO);
         private List<Hitbox> hitboxes = List.of();
+        private boolean hideEngine = false;
         private boolean frontAttachmentEnabled = true;
         private boolean rearAttachmentEnabled = true;
         private List<ResourceLocation> frontAttachmentWhitelist = List.of();
@@ -105,6 +107,11 @@ public record RIAutomobileDefinition(
 
         public Builder hitboxes(Hitbox... hitboxes) {
             return this.hitboxes(Arrays.asList(hitboxes));
+        }
+
+        public Builder hideEngine(boolean hideEngine) {
+            this.hideEngine = hideEngine;
+            return this;
         }
 
         public Builder frontAttachmentEnabled(boolean enabled) {
@@ -175,6 +182,7 @@ public record RIAutomobileDefinition(
                     this.dimensions,
                     this.cameraPositions,
                     this.hitboxes,
+                    this.hideEngine,
                     this.frontAttachmentEnabled,
                     this.rearAttachmentEnabled,
                     this.frontAttachmentWhitelist,

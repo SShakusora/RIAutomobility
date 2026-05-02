@@ -15,6 +15,7 @@
   "seat_height": 4.0,
   "engine_pos_back": 14.0,
   "engine_pos_up": 3.0,
+  "hide_engine": true,
   "rear_attachment_pos": 18.0,
   "front_attachment_pos": 18.0,
   "dimensions": {

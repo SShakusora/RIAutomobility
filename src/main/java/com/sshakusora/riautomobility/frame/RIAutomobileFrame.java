@@ -147,6 +147,7 @@ public final class RIAutomobileFrame {
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0.2, -28.5455 / 16), 21.7727F / 8, 53.3636F / 16, false),
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0.2, -50.3182 / 16), 21.7727F / 8, 53.3636F / 16, true)
                         )
+                        .hideEngine(true)
                         .frontAttachmentEnabled(false)
                         .rearAttachmentEnabled(false)
         );
@@ -188,6 +189,7 @@ public final class RIAutomobileFrame {
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 34.2214F / 16), 24.2214F / 8, 22.97F / 16, false),
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, -34.2214F / 16), 24.2214F / 8, 28.97F / 16, true)
                         )
+                        .hideEngine(true)
                         .frontAttachmentEnabled(false)
                         .rearAttachmentEnabled(false)
         );
@@ -224,6 +226,7 @@ public final class RIAutomobileFrame {
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 22.4 / 16), 2.8F, 1.4F, false),
                                 new RIAutomobileDefinition.Hitbox(new Vec3(0, 0, 44.8 / 16), 2.8F, 1F, false)
                         )
+                        .hideEngine(true)
                         .frontAttachmentEnabled(false)
                         .rearAttachmentEnabled(false)
         );

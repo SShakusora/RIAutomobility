@@ -27,4 +27,8 @@ public final class RIAutomobileRegistry {
     public static boolean isRegistered(AutomobileFrame frame) {
         return frame != null && DEFINITIONS.containsKey(frame.getId());
     }
+
+    public static boolean hidesEngine(AutomobileFrame frame) {
+        return frame != null && get(frame).hideEngine();
+    }
 }

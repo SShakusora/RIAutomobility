@@ -55,6 +55,7 @@ Translations:
 - `model.model_id` is the runtime model id used by Automobility item and entity rendering.
 - The `example_buggy` pair uses `JsonEM`.
 - The `example_buggy_gecko` pair uses `GeckoLib` with `geo_model` and `animation` fields.
+- `example_buggy_gecko` also sets `hide_engine: true`, so the vehicle keeps its real engine logic but renders the built-in `AutomobileEngine.EMPTY` model.
 - If the resource pack is missing, the components will render with a barrier-texture placeholder instead of crashing the game.
 - In that case, tooltips will show a missing resource pack warning.
 - When the resource pack is enabled, both `JsonEM` and `GeckoLib` examples should apply automatically after joining the world. Manual `F3 + T` is normally not required.
@@ -121,6 +122,7 @@ Translations:
 - `model.model_id` 是 Automobility 物品与实体渲染时使用的运行时模型 id。
 - `example_buggy` 这一对组件使用 `JsonEM`。
 - `example_buggy_gecko` 这一对组件使用 `GeckoLib`，并通过 `geo_model` 与 `animation` 字段引用资源。
+- `example_buggy_gecko` 还设置了 `hide_engine: true`，因此载具仍然保留真实引擎逻辑，但渲染时会改用内置的 `AutomobileEngine.EMPTY` 模型。
 - 如果缺少资源包，组件会显示为屏障贴图占位，而不会导致游戏崩溃。
 - 此时 tooltip 会提示缺少资源包。
 - 当资源包启用后，`JsonEM` 和 `GeckoLib` 示例通常会在进入世界后自动生效，不需要手动按 `F3 + T`。

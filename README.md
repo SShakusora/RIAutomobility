@@ -156,6 +156,7 @@ Example frame definition:
   "seat_height": 4.0,
   "engine_pos_back": 14.0,
   "engine_pos_up": 3.0,
+  "hide_engine": false,
   "rear_attachment_pos": 18.0,
   "front_attachment_pos": 18.0,
   "dimensions": {
@@ -188,6 +189,7 @@ Example frame definition:
 | `length_px` | Frame render length in pixels |
 | `seat_height` | Base seat height in pixels |
 | `engine_pos_back` / `engine_pos_up` | Engine position on Z / Y axis in pixels |
+| `hide_engine` | Hide the engine model by rendering `AutomobileEngine.EMPTY` instead |
 | `rear_attachment_pos` / `front_attachment_pos` | Attachment anchor positions in pixels |
 | `dimensions.width` / `dimensions.height` | Entity dimensions in blocks |
 | `seats` | Seat positions in block coordinates |
@@ -478,6 +480,7 @@ assets/<命名空间>/lang/zh_cn.json
   "seat_height": 4.0,
   "engine_pos_back": 14.0,
   "engine_pos_up": 3.0,
+  "hide_engine": false,
   "rear_attachment_pos": 18.0,
   "front_attachment_pos": 18.0,
   "dimensions": {
@@ -510,6 +513,7 @@ assets/<命名空间>/lang/zh_cn.json
 | `length_px` | 渲染长度，单位像素 |
 | `seat_height` | 座位基准高度，单位像素 |
 | `engine_pos_back` / `engine_pos_up` | 引擎在 Z / Y 轴位置，单位像素 |
+| `hide_engine` | 是否隐藏引擎模型；启用后会改用 `AutomobileEngine.EMPTY` 的渲染 |
 | `rear_attachment_pos` / `front_attachment_pos` | 挂载锚点位置，单位像素 |
 | `dimensions.width` / `dimensions.height` | 实体尺寸，单位方块 |
 | `seats` | 座位坐标，单位方块 |

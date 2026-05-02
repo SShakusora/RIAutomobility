@@ -44,19 +44,15 @@ public abstract class AutomobileEntityCollisionMixin {
 
         List<AABB> allBoxes = new ArrayList<>();
         allBoxes.add(self.getBoundingBox());
-        
-        if (self instanceof RIAutomobileEntity riAuto) {
-            for (HitboxEntity hitbox : riAuto.getHitboxEntities()) {
-                if (hitbox.isCollisionReady()) {
-                    allBoxes.add(hitbox.getBoundingBox());
-                }
-            }
-        }
+
+        // Attached hitboxes are interaction proxies. Letting them participate in
+        // ground/wall checks makes the main automobile float or snag on terrain.
+        List<AABB> terrainBoxes = List.of(self.getBoundingBox());
 
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
         double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-        
-        for (AABB box : allBoxes) {
+
+        for (AABB box : terrainBoxes) {
             minX = Math.min(minX, box.minX);
             minY = Math.min(minY, box.minY);
             minZ = Math.min(minZ, box.minZ);
@@ -79,7 +75,7 @@ public abstract class AutomobileEntityCollisionMixin {
         
         Vec3 wallOffset = this.lastVelocity.normalize().scale(0.12);
         
-        for (AABB box : allBoxes) {
+        for (AABB box : terrainBoxes) {
             var groundBox = new AABB(box.minX, box.minY - 0.04, box.minZ, box.maxX, box.minY, box.maxZ);
             var width = (box.getXsize() + box.getZsize()) * 0.5f;
             var floorBox = new AABB(box.minX + (width * 0.94), box.minY - 0.05, box.minZ + (width * 0.94), box.maxX - (width * 0.94), box.minY, box.maxZ - (width * 0.94));
@@ -100,11 +96,11 @@ public abstract class AutomobileEntityCollisionMixin {
                         var state = self.level().getBlockState(pos);
                         var blockShape = state.getCollisionShape(self.level(), pos, shapeCtx).move(pos.getX(), pos.getY(), pos.getZ());
                         
-                        for (int i = 0; i < allBoxes.size(); i++) {
+                        for (int i = 0; i < terrainBoxes.size(); i++) {
                             this.automobileOnGround |= Shapes.joinIsNotEmpty(blockShape, groundCuboids.get(i), BooleanOp.AND);
                             this.isFloorDirectlyBelow |= Shapes.joinIsNotEmpty(blockShape, floorCuboids.get(i), BooleanOp.AND);
                         }
-                        for (int i = 0; i < allBoxes.size(); i++) {
+                        for (int i = 0; i < terrainBoxes.size(); i++) {
                             wallHit |= Shapes.joinIsNotEmpty(blockShape, wallCuboids.get(i), BooleanOp.AND);
                             stepWallHit |= Shapes.joinIsNotEmpty(blockShape, stepWallCuboids.get(i), BooleanOp.AND);
                         }
@@ -117,7 +113,7 @@ public abstract class AutomobileEntityCollisionMixin {
 
         var otherColliders = new HashSet<CollisionArea>();
         this.accumulateCollisionAreas(otherColliders);
-        for (AABB box : allBoxes) {
+        for (AABB box : terrainBoxes) {
             var groundBox = new AABB(box.minX, box.minY - 0.04, box.minZ, box.maxX, box.minY, box.maxZ);
             this.automobileOnGround |= otherColliders.stream().anyMatch(col -> col.boxIntersects(groundBox));
         }

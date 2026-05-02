@@ -24,6 +24,7 @@ public record FrameSpec(
         float seatHeight,
         float enginePosBack,
         float enginePosUp,
+        boolean hideEngine,
         float rearAttachmentPos,
         float frontAttachmentPos,
         float widthBlocks,
@@ -63,6 +64,7 @@ public record FrameSpec(
                 .seats(this.seats.stream().map(pos -> new RIAutomobileDefinition.SeatPos(pos.x, pos.y, pos.z)).toList())
                 .cameraPositions(this.cameraPositions)
                 .hitboxes(this.hitboxes.stream().map(HitboxSpec::toHitbox).toList())
+                .hideEngine(this.hideEngine)
                 .frontAttachmentEnabled(this.frontAttachmentEnabled)
                 .rearAttachmentEnabled(this.rearAttachmentEnabled)
                 .frontAttachmentWhitelist(this.frontAttachmentWhitelist)
@@ -85,6 +87,7 @@ public record FrameSpec(
                 GsonHelper.getAsFloat(json, "seat_height"),
                 GsonHelper.getAsFloat(json, "engine_pos_back"),
                 GsonHelper.getAsFloat(json, "engine_pos_up"),
+                GsonHelper.getAsBoolean(json, "hide_engine", false),
                 GsonHelper.getAsFloat(json, "rear_attachment_pos"),
                 GsonHelper.getAsFloat(json, "front_attachment_pos"),
                 GsonHelper.getAsFloat(dimensionsObject, "width"),
@@ -111,6 +114,7 @@ public record FrameSpec(
         json.addProperty("seat_height", this.seatHeight);
         json.addProperty("engine_pos_back", this.enginePosBack);
         json.addProperty("engine_pos_up", this.enginePosUp);
+        json.addProperty("hide_engine", this.hideEngine);
         json.addProperty("rear_attachment_pos", this.rearAttachmentPos);
         json.addProperty("front_attachment_pos", this.frontAttachmentPos);
 
