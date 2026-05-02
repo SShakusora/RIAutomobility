@@ -274,7 +274,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         AABB searchBox = this.getBoundingBox().inflate(3.0F, 3.0F, 3.0F);
         for (HitboxEntity hitbox : this.hitboxes) {
-            if (hitbox.isAlive()) {
+            if (hitbox.isCollisionReady()) {
                 searchBox = searchBox.minmax(hitbox.getBoundingBox().inflate(3.0F, 3.0F, 3.0F));
             }
         }
@@ -306,7 +306,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         AABB frontBox = getBoundingBox().move(velocity.scale(0.5));
         for (HitboxEntity hitbox : this.hitboxes) {
-            if (hitbox.isAlive()) {
+            if (hitbox.isCollisionReady()) {
                 frontBox = frontBox.minmax(hitbox.getBoundingBox().move(velocity.scale(0.5)));
             }
         }
@@ -630,8 +630,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         var collisions = new HashMap<AutomobileEntity, IncomingCollision>();
 
         for (HitboxEntity box : this.hitboxes) {
+            if (!box.isCollisionReady()) {
+                continue;
+            }
             AABB bbox = box.getBoundingBox().inflate(0.15);
-            for (HitboxEntity hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.getAutomobile() != this)) {
+            for (HitboxEntity hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.isCollisionReady() && h.getAutomobile() != this)) {
                 AutomobileEntity auto = hitbox.getAutomobile();
                 AABB intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
                 Vec3 collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
@@ -835,6 +838,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private void spawnHitboxes() {
         for (RIAutomobileDefinition.Hitbox def : getDefinition().hitboxes()) {
             HitboxEntity hitbox = new HitboxEntity(level(), this, def);
+            hitbox.syncPosition(this);
             this.level().addFreshEntity(hitbox);
             this.hitboxes.add(hitbox);
         }

@@ -33,6 +33,7 @@ public class HitboxEntity extends Entity{
     private static final int INVENTORY_SIZE = 54;
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private EntityDimensions size;
+    private boolean positionSynced;
 
     public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileDefinition.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
@@ -78,6 +79,12 @@ public class HitboxEntity extends Entity{
             this.zOld = this.getZ();
             this.setPos(nx, ny, nz);
         }
+
+        this.positionSynced = true;
+    }
+
+    public boolean isCollisionReady() {
+        return this.positionSynced && !this.isRemoved() && this.getAutomobile() != null;
     }
 
     @Override
@@ -192,7 +199,7 @@ public class HitboxEntity extends Entity{
 
     @Override
     public boolean canBeCollidedWith() {
-        return !this.isRemoved() && this.getAutomobile() != null;
+        return this.isCollisionReady();
     }
 
     @Override

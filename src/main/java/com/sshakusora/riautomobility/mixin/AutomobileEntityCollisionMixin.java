@@ -47,7 +47,7 @@ public abstract class AutomobileEntityCollisionMixin {
         
         if (self instanceof RIAutomobileEntity riAuto) {
             for (HitboxEntity hitbox : riAuto.getHitboxEntities()) {
-                if (hitbox.isAlive()) {
+                if (hitbox.isCollisionReady()) {
                     allBoxes.add(hitbox.getBoundingBox());
                 }
             }
