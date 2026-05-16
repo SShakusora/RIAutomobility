@@ -12,11 +12,11 @@ public class DmcModel extends GeoModel<DmcAnimatable> {
 
     @Override
     public ResourceLocation getTextureResource(DmcAnimatable animatable) {
-        return RIAutomobility.rl("textures/dmc12.png");
+        return RIAutomobility.rl("textures/entity/automobile/frame/dmc12.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(DmcAnimatable animatable) {
-        return RIAutomobility.rl("animations/dmc12.animation.json");
+        return RIAutomobility.rl("animations/empty.animation.json");
     }
 }

@@ -32,12 +32,12 @@
 					]
 				},
 				{
-					"name": "dmc12 车壳",
+					"name": "dmc12_body",
 					"pivot": [0.57561, 5.54073, -1.9819]
 				},
 				{
-					"name": "保险杠",
-					"parent": "dmc12 车壳",
+					"name": "bumper",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -1.03, -56.033],
 					"cubes": [
 						{
@@ -152,7 +152,7 @@
 				},
 				{
 					"name": "bone11",
-					"parent": "保险杠",
+					"parent": "bumper",
 					"pivot": [7.67862, -1.03, -53.51736]
 				},
 				{
@@ -357,7 +357,7 @@
 				},
 				{
 					"name": "bone9",
-					"parent": "保险杠",
+					"parent": "bumper",
 					"pivot": [-21.43204, 3.25402, -55.26152],
 					"cubes": [
 						{
@@ -395,8 +395,8 @@
 					]
 				},
 				{
-					"name": "车尾保险杠",
-					"parent": "dmc12 车壳",
+					"name": "rear_bumper",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -1.03, 55.433],
 					"cubes": [
 						{
@@ -523,7 +523,7 @@
 				},
 				{
 					"name": "bone62",
-					"parent": "车尾保险杠",
+					"parent": "rear_bumper",
 					"pivot": [7.67862, -1.03, 52.91736]
 				},
 				{
@@ -553,7 +553,7 @@
 				},
 				{
 					"name": "bone65",
-					"parent": "车尾保险杠",
+					"parent": "rear_bumper",
 					"pivot": [-21.43204, 3.25402, 54.66152],
 					"cubes": [
 						{
@@ -591,8 +591,8 @@
 					]
 				},
 				{
-					"name": "保险杠3",
-					"parent": "dmc12 车壳",
+					"name": "bumper_3",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -5.02, -53.653],
 					"cubes": [
 						{
@@ -695,7 +695,7 @@
 				},
 				{
 					"name": "bone29",
-					"parent": "保险杠3",
+					"parent": "bumper_3",
 					"pivot": [7.55347, -5.02, -51.23799]
 				},
 				{
@@ -739,7 +739,7 @@
 				},
 				{
 					"name": "bone32",
-					"parent": "保险杠3",
+					"parent": "bumper_3",
 					"pivot": [-20.39276, -0.73598, -52.91239],
 					"cubes": [
 						{
@@ -777,8 +777,8 @@
 					]
 				},
 				{
-					"name": "保险杠4",
-					"parent": "dmc12 车壳",
+					"name": "bumper_4",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -9.01, -53.653],
 					"cubes": [
 						{
@@ -797,7 +797,7 @@
 				},
 				{
 					"name": "bone34",
-					"parent": "保险杠4",
+					"parent": "bumper_4",
 					"pivot": [7.55347, -9.01, -51.23799]
 				},
 				{
@@ -877,7 +877,7 @@
 				},
 				{
 					"name": "bone37",
-					"parent": "保险杠4",
+					"parent": "bumper_4",
 					"pivot": [-20.39276, -4.72598, -52.91239],
 					"cubes": [
 						{
@@ -915,8 +915,8 @@
 					]
 				},
 				{
-					"name": "保险杠2",
-					"parent": "dmc12 车壳",
+					"name": "bumper_2",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -2.74, -55.2],
 					"cubes": [
 						{
@@ -1019,7 +1019,7 @@
 				},
 				{
 					"name": "bone12",
-					"parent": "保险杠2",
+					"parent": "bumper_2",
 					"pivot": [7.61727, -2.74, -51.70605]
 				},
 				{
@@ -1107,7 +1107,7 @@
 				},
 				{
 					"name": "bone15",
-					"parent": "保险杠2",
+					"parent": "bumper_2",
 					"pivot": [-20.92259, 3.32902, -54.12851],
 					"cubes": [
 						{
@@ -1145,8 +1145,8 @@
 					]
 				},
 				{
-					"name": "保险杠5",
-					"parent": "dmc12 车壳",
+					"name": "bumper_5",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -2.74, 55.2],
 					"cubes": [
 						{
@@ -1249,7 +1249,7 @@
 				},
 				{
 					"name": "bone68",
-					"parent": "保险杠5",
+					"parent": "bumper_5",
 					"pivot": [7.61727, -2.74, 51.70605]
 				},
 				{
@@ -1313,7 +1313,7 @@
 				},
 				{
 					"name": "bone72",
-					"parent": "保险杠5",
+					"parent": "bumper_5",
 					"pivot": [-20.92259, 3.32902, 54.12851],
 					"cubes": [
 						{
@@ -1351,8 +1351,8 @@
 					]
 				},
 				{
-					"name": "车灯饰板",
-					"parent": "dmc12 车壳",
+					"name": "light_trim_panel",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -13, -31.4],
 					"cubes": [
 						{
@@ -1371,7 +1371,7 @@
 				},
 				{
 					"name": "bone17",
-					"parent": "车灯饰板",
+					"parent": "light_trim_panel",
 					"pivot": [21.77882, 5.24, -49.25],
 					"rotation": [0, 0, -10],
 					"cubes": [
@@ -1391,7 +1391,7 @@
 				},
 				{
 					"name": "bone18",
-					"parent": "车灯饰板",
+					"parent": "light_trim_panel",
 					"pivot": [-21.76804, 5.24, -49.25],
 					"rotation": [0, 0, 10],
 					"cubes": [
@@ -1411,7 +1411,7 @@
 				},
 				{
 					"name": "bone19",
-					"parent": "车灯饰板",
+					"parent": "light_trim_panel",
 					"pivot": [0.00539, 8.432, -50.4995],
 					"rotation": [-27.5, 0, 0],
 					"cubes": [
@@ -1510,8 +1510,8 @@
 					]
 				},
 				{
-					"name": "车灯",
-					"parent": "dmc12 车壳",
+					"name": "car_light",
+					"parent": "dmc12_body",
 					"pivot": [20.8292, 9.41605, -51.02834],
 					"cubes": [
 						{
@@ -1565,8 +1565,8 @@
 					]
 				},
 				{
-					"name": "车灯2",
-					"parent": "车灯",
+					"name": "car_light_2",
+					"parent": "car_light",
 					"pivot": [-6.70978, 9.41605, -51.02834],
 					"cubes": [
 						{
@@ -1596,13 +1596,13 @@
 					]
 				},
 				{
-					"name": "前机盖",
-					"parent": "dmc12 车壳",
+					"name": "front_hood",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -13, -31.4]
 				},
 				{
 					"name": "bone21",
-					"parent": "前机盖",
+					"parent": "front_hood",
 					"pivot": [4.55, 9.059, -46.989],
 					"rotation": [5, 0, 0]
 				},
@@ -1657,13 +1657,13 @@
 					]
 				},
 				{
-					"name": "前机盖2",
-					"parent": "dmc12 车壳",
+					"name": "front_hood_2",
+					"parent": "dmc12_body",
 					"pivot": [-4.45, -13, -31.4]
 				},
 				{
 					"name": "bone74",
-					"parent": "前机盖2",
+					"parent": "front_hood_2",
 					"pivot": [-4.45, 9.059, -46.989],
 					"rotation": [5, 0, 0],
 					"cubes": [
@@ -1756,8 +1756,8 @@
 					]
 				},
 				{
-					"name": "轮毂",
-					"parent": "dmc12 车壳",
+					"name": "wheel_hub",
+					"parent": "dmc12_body",
 					"pivot": [6.67862, -1.03, -53.51736],
 					"cubes": [
 						{
@@ -1776,7 +1776,7 @@
 				},
 				{
 					"name": "bone24",
-					"parent": "轮毂",
+					"parent": "wheel_hub",
 					"pivot": [22.28739, 6.80825, -37.03545],
 					"rotation": [42.5, 0, 0],
 					"cubes": [
@@ -1816,7 +1816,7 @@
 				},
 				{
 					"name": "bone27",
-					"parent": "轮毂",
+					"parent": "wheel_hub",
 					"pivot": [22.28739, 7.62869, -25.39071],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -1836,7 +1836,7 @@
 				},
 				{
 					"name": "bone28",
-					"parent": "轮毂",
+					"parent": "wheel_hub",
 					"pivot": [22.28739, 2.17102, -23.29925],
 					"rotation": [12.5, 0, 0],
 					"cubes": [
@@ -1855,8 +1855,8 @@
 					]
 				},
 				{
-					"name": "轮毂3",
-					"parent": "dmc12 车壳",
+					"name": "wheel_hub_3",
+					"parent": "dmc12_body",
 					"pivot": [6.67862, -1.03, 10.68264],
 					"cubes": [
 						{
@@ -1875,7 +1875,7 @@
 				},
 				{
 					"name": "bone46",
-					"parent": "轮毂3",
+					"parent": "wheel_hub_3",
 					"pivot": [22.28739, 6.80825, 27.16455],
 					"rotation": [42.5, 0, 0],
 					"cubes": [
@@ -1915,7 +1915,7 @@
 				},
 				{
 					"name": "bone48",
-					"parent": "轮毂3",
+					"parent": "wheel_hub_3",
 					"pivot": [22.28739, 7.62869, 38.80929],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -1935,7 +1935,7 @@
 				},
 				{
 					"name": "bone49",
-					"parent": "轮毂3",
+					"parent": "wheel_hub_3",
 					"pivot": [22.28739, 2.17102, 40.90075],
 					"rotation": [12.5, 0, 0],
 					"cubes": [
@@ -1954,8 +1954,8 @@
 					]
 				},
 				{
-					"name": "轮毂2",
-					"parent": "dmc12 车壳",
+					"name": "wheel_hub_2",
+					"parent": "dmc12_body",
 					"pivot": [-37.94578, -1.03, -53.51736],
 					"cubes": [
 						{
@@ -1974,7 +1974,7 @@
 				},
 				{
 					"name": "bone39",
-					"parent": "轮毂2",
+					"parent": "wheel_hub_2",
 					"pivot": [-22.33701, 6.80825, -37.03545],
 					"rotation": [42.5, 0, 0],
 					"cubes": [
@@ -2014,7 +2014,7 @@
 				},
 				{
 					"name": "bone41",
-					"parent": "轮毂2",
+					"parent": "wheel_hub_2",
 					"pivot": [-22.33701, 7.62869, -25.39071],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -2034,7 +2034,7 @@
 				},
 				{
 					"name": "bone42",
-					"parent": "轮毂2",
+					"parent": "wheel_hub_2",
 					"pivot": [-22.33701, 2.17102, -23.29925],
 					"rotation": [12.5, 0, 0],
 					"cubes": [
@@ -2053,8 +2053,8 @@
 					]
 				},
 				{
-					"name": "轮毂4",
-					"parent": "dmc12 车壳",
+					"name": "wheel_hub_4",
+					"parent": "dmc12_body",
 					"pivot": [-37.94578, -1.03, 10.48264],
 					"cubes": [
 						{
@@ -2073,7 +2073,7 @@
 				},
 				{
 					"name": "bone77",
-					"parent": "轮毂4",
+					"parent": "wheel_hub_4",
 					"pivot": [-22.33701, 6.80825, 26.96455],
 					"rotation": [42.5, 0, 0],
 					"cubes": [
@@ -2113,7 +2113,7 @@
 				},
 				{
 					"name": "bone79",
-					"parent": "轮毂4",
+					"parent": "wheel_hub_4",
 					"pivot": [-22.33701, 7.62869, 38.60929],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -2133,7 +2133,7 @@
 				},
 				{
 					"name": "bone80",
-					"parent": "轮毂4",
+					"parent": "wheel_hub_4",
 					"pivot": [-22.33701, 2.17102, 40.70075],
 					"rotation": [12.5, 0, 0],
 					"cubes": [
@@ -2152,8 +2152,8 @@
 					]
 				},
 				{
-					"name": "车体中部饰条",
-					"parent": "dmc12 车壳",
+					"name": "body_center_trim",
+					"parent": "dmc12_body",
 					"pivot": [21.88672, -0.73598, -17.90652],
 					"rotation": [0, 0, 12.5],
 					"cubes": [
@@ -2172,8 +2172,8 @@
 					]
 				},
 				{
-					"name": "车体中部饰条2",
-					"parent": "dmc12 车壳",
+					"name": "body_center_trim_2",
+					"parent": "dmc12_body",
 					"pivot": [-22.98672, -0.73598, -17.90652],
 					"rotation": [0, 0, -12.5],
 					"cubes": [
@@ -2192,8 +2192,8 @@
 					]
 				},
 				{
-					"name": "车门",
-					"parent": "dmc12 车壳",
+					"name": "car_door",
+					"parent": "dmc12_body",
 					"pivot": [17.8659, 8.53788, 10.70839],
 					"cubes": [
 						{
@@ -2308,7 +2308,7 @@
 				},
 				{
 					"name": "bone45",
-					"parent": "车门",
+					"parent": "car_door",
 					"pivot": [16.53401, 24.36202, 6.09304],
 					"rotation": [0, 0, -20],
 					"cubes": [
@@ -2352,7 +2352,7 @@
 				},
 				{
 					"name": "bone44",
-					"parent": "车门",
+					"parent": "car_door",
 					"pivot": [21.72101, 11.42302, 0.94304],
 					"rotation": [0, 0, -12],
 					"cubes": [
@@ -2371,8 +2371,8 @@
 					]
 				},
 				{
-					"name": "车门2",
-					"parent": "dmc12 车壳",
+					"name": "car_door_2",
+					"parent": "dmc12_body",
 					"pivot": [-4.65, -13, -31.4],
 					"cubes": [
 						{
@@ -2655,7 +2655,7 @@
 				},
 				{
 					"name": "bone55",
-					"parent": "车门2",
+					"parent": "car_door_2",
 					"pivot": [-16.63401, 24.36202, 6.09304],
 					"rotation": [0, 0, 20],
 					"cubes": [
@@ -2699,7 +2699,7 @@
 				},
 				{
 					"name": "bone152",
-					"parent": "车门2",
+					"parent": "car_door_2",
 					"pivot": [-0.17601, 24.64703, -1.40696],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -2719,7 +2719,7 @@
 				},
 				{
 					"name": "bone56",
-					"parent": "车门2",
+					"parent": "car_door_2",
 					"pivot": [-21.82101, 11.42302, 0.94304],
 					"rotation": [0, 0, 12],
 					"cubes": [
@@ -2738,14 +2738,14 @@
 					]
 				},
 				{
-					"name": "前风挡",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield",
+					"parent": "dmc12_body",
 					"pivot": [18.73481, 19.05435, -8.28453],
 					"rotation": [-48.53845, -8.15632, -15.31472]
 				},
 				{
-					"name": "前风挡6",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_6",
+					"parent": "dmc12_body",
 					"pivot": [-18.83481, 19.05435, -8.28453],
 					"rotation": [-48.53845, 8.15632, 15.31472],
 					"cubes": [
@@ -2764,8 +2764,8 @@
 					]
 				},
 				{
-					"name": "前风挡2",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_2",
+					"parent": "dmc12_body",
 					"pivot": [-18.86881, 19.05435, -8.28453],
 					"rotation": [-48.53845, 8.15632, 15.31472],
 					"cubes": [
@@ -2797,7 +2797,7 @@
 				},
 				{
 					"name": "bone160",
-					"parent": "前风挡2",
+					"parent": "front_windshield_2",
 					"pivot": [6.02629, 20.5553, -11.6058],
 					"rotation": [0.42007, 5.98533, -15.97804],
 					"cubes": [
@@ -2849,7 +2849,7 @@
 				},
 				{
 					"name": "bone161",
-					"parent": "前风挡2",
+					"parent": "front_windshield_2",
 					"pivot": [-8.31561, 16.44877, -10.04169],
 					"rotation": [0.42007, 5.98533, -15.97804],
 					"cubes": [
@@ -2868,8 +2868,8 @@
 					]
 				},
 				{
-					"name": "前风挡10",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_10",
+					"parent": "dmc12_body",
 					"pivot": [18.76881, 19.05435, -8.28453],
 					"rotation": [-48.53845, -8.15632, -15.31472],
 					"cubes": [
@@ -2912,8 +2912,8 @@
 					]
 				},
 				{
-					"name": "前风挡3",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_3",
+					"parent": "dmc12_body",
 					"pivot": [19.21412, 18.77215, 12.94045],
 					"rotation": [-0.57005, 1.38844, -25.92222],
 					"cubes": [
@@ -2992,8 +2992,8 @@
 					]
 				},
 				{
-					"name": "前风挡9",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_9",
+					"parent": "dmc12_body",
 					"pivot": [-19.31412, 18.77215, 12.94045],
 					"rotation": [-0.57005, -1.38844, 25.92222],
 					"cubes": [
@@ -3072,8 +3072,8 @@
 					]
 				},
 				{
-					"name": "前风挡4",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_4",
+					"parent": "dmc12_body",
 					"pivot": [19.51562, 17.88615, 8.14883],
 					"rotation": [9.48089, 0.97768, -23.45567],
 					"cubes": [
@@ -3104,8 +3104,8 @@
 					]
 				},
 				{
-					"name": "前风挡8",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_8",
+					"parent": "dmc12_body",
 					"pivot": [-19.61562, 17.88615, 8.14883],
 					"rotation": [9.48089, -0.97768, 23.45567],
 					"cubes": [
@@ -3124,8 +3124,8 @@
 					]
 				},
 				{
-					"name": "前风挡5",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_5",
+					"parent": "dmc12_body",
 					"pivot": [19.51562, 17.88615, -0.85117],
 					"rotation": [-40.51911, 0.97768, -23.45567],
 					"cubes": [
@@ -3144,8 +3144,8 @@
 					]
 				},
 				{
-					"name": "前风挡7",
-					"parent": "dmc12 车壳",
+					"name": "front_windshield_7",
+					"parent": "dmc12_body",
 					"pivot": [-19.61562, 17.88615, -0.85117],
 					"rotation": [-40.51911, -0.97768, 23.45567],
 					"cubes": [
@@ -3165,7 +3165,7 @@
 				},
 				{
 					"name": "bone51",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [20.80574, 15.11149, 49.17221],
 					"rotation": [0, 0, -25],
 					"cubes": [
@@ -3223,7 +3223,7 @@
 				},
 				{
 					"name": "bone60",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [-20.90574, 15.11149, 49.17221],
 					"rotation": [0, 0, 25],
 					"cubes": [
@@ -3275,19 +3275,19 @@
 				},
 				{
 					"name": "bone54",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [-11.70574, 15.11149, 49.17221],
 					"rotation": [0, 0, 25]
 				},
 				{
 					"name": "bone59",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [11.60574, 15.11149, 49.17221],
 					"rotation": [0, 0, -25]
 				},
 				{
 					"name": "bone52",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [21.88672, 0.26402, 46.55463],
 					"rotation": [15, 0, 0],
 					"cubes": [
@@ -3307,13 +3307,13 @@
 				},
 				{
 					"name": "bone58",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [-21.98672, 0.26402, 46.55463],
 					"rotation": [15, 0, 0]
 				},
 				{
-					"name": "车尾饰板",
-					"parent": "dmc12 车壳",
+					"name": "rear_trim_panel",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -13, -31.4],
 					"cubes": [
 						{
@@ -3512,7 +3512,7 @@
 				},
 				{
 					"name": "bone168",
-					"parent": "车尾饰板",
+					"parent": "rear_trim_panel",
 					"pivot": [0.1155, 16.03815, 53.02809],
 					"rotation": [-13.5, 0, 0],
 					"cubes": [
@@ -3568,7 +3568,7 @@
 				},
 				{
 					"name": "bone53",
-					"parent": "车尾饰板",
+					"parent": "rear_trim_panel",
 					"pivot": [21.72101, 11.42302, 8.94304],
 					"rotation": [0, 0, -12],
 					"cubes": [
@@ -3599,8 +3599,8 @@
 					]
 				},
 				{
-					"name": "车尾饰板2",
-					"parent": "dmc12 车壳",
+					"name": "rear_trim_panel_2",
+					"parent": "dmc12_body",
 					"pivot": [-4.65, -13, -31.4],
 					"cubes": [
 						{
@@ -3619,7 +3619,7 @@
 				},
 				{
 					"name": "bone57",
-					"parent": "车尾饰板2",
+					"parent": "rear_trim_panel_2",
 					"pivot": [-21.82101, 11.42302, 8.94304],
 					"rotation": [0, 0, 12],
 					"cubes": [
@@ -3650,13 +3650,13 @@
 					]
 				},
 				{
-					"name": "后风挡",
-					"parent": "dmc12 车壳",
+					"name": "rear_windshield",
+					"parent": "dmc12_body",
 					"pivot": [18.28481, 18.65335, 42.21547]
 				},
 				{
 					"name": "bone81",
-					"parent": "后风挡",
+					"parent": "rear_windshield",
 					"pivot": [-0.22701, 24.46202, 22.19304],
 					"rotation": [-15, 0, 0],
 					"cubes": [
@@ -3784,7 +3784,7 @@
 				},
 				{
 					"name": "bone50",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [18.28481, 19.45335, 42.21547],
 					"rotation": [73.29707, 0.99904, -23.63545],
 					"cubes": [
@@ -3835,7 +3835,7 @@
 				},
 				{
 					"name": "bone61",
-					"parent": "dmc12 车壳",
+					"parent": "dmc12_body",
 					"pivot": [-18.48481, 19.45335, 42.21547],
 					"rotation": [73.29707, -0.99904, 23.63545],
 					"cubes": [
@@ -3885,8 +3885,8 @@
 					]
 				},
 				{
-					"name": "后视镜",
-					"parent": "dmc12 车壳",
+					"name": "rearview_mirror",
+					"parent": "dmc12_body",
 					"pivot": [20.95257, 14.53912, -8.65696],
 					"rotation": [0, 0, -28],
 					"cubes": [
@@ -3905,8 +3905,8 @@
 					]
 				},
 				{
-					"name": "后视镜2",
-					"parent": "后视镜",
+					"name": "rearview_mirror_2",
+					"parent": "rearview_mirror",
 					"pivot": [20.88361, 14.57013, -10.4464],
 					"rotation": [-47.5, 0, 2],
 					"cubes": [
@@ -3925,8 +3925,8 @@
 					]
 				},
 				{
-					"name": "后视镜3",
-					"parent": "后视镜",
+					"name": "rearview_mirror_3",
+					"parent": "rearview_mirror",
 					"pivot": [20.83825, 13.27092, -10.4464],
 					"rotation": [-90, 0, 2],
 					"cubes": [
@@ -3946,7 +3946,7 @@
 				},
 				{
 					"name": "bone43",
-					"parent": "后视镜",
+					"parent": "rearview_mirror",
 					"pivot": [21.89901, 14.20402, -7.85696],
 					"rotation": [0, 0, 27.5],
 					"cubes": [
@@ -3977,8 +3977,8 @@
 					]
 				},
 				{
-					"name": "后视镜4",
-					"parent": "dmc12 车壳",
+					"name": "rearview_mirror_4",
+					"parent": "dmc12_body",
 					"pivot": [-20.87257, 14.53912, -8.65696],
 					"rotation": [0, 0, 28],
 					"cubes": [
@@ -3997,8 +3997,8 @@
 					]
 				},
 				{
-					"name": "后视镜5",
-					"parent": "后视镜4",
+					"name": "rearview_mirror_5",
+					"parent": "rearview_mirror_4",
 					"pivot": [-20.80361, 14.57013, -10.4464],
 					"rotation": [-47.5, 0, -2],
 					"cubes": [
@@ -4017,8 +4017,8 @@
 					]
 				},
 				{
-					"name": "后视镜6",
-					"parent": "后视镜4",
+					"name": "rearview_mirror_6",
+					"parent": "rearview_mirror_4",
 					"pivot": [-20.75825, 13.27092, -10.4464],
 					"rotation": [-90, 0, -2],
 					"cubes": [
@@ -4038,7 +4038,7 @@
 				},
 				{
 					"name": "bone84",
-					"parent": "后视镜4",
+					"parent": "rearview_mirror_4",
 					"pivot": [-21.81901, 14.20402, -7.85696],
 					"rotation": [0, 0, -27.5],
 					"cubes": [
@@ -4069,8 +4069,8 @@
 					]
 				},
 				{
-					"name": "排气管",
-					"parent": "dmc12 车壳",
+					"name": "exhaust_pipe",
+					"parent": "dmc12_body",
 					"pivot": [4.55, -13.8, -34.6],
 					"cubes": [
 						{
@@ -4268,12 +4268,12 @@
 					]
 				},
 				{
-					"name": "中控台",
+					"name": "center_console",
 					"pivot": [-6.38, 0.08985, -10.96824]
 				},
 				{
-					"name": "方向盘",
-					"parent": "中控台",
+					"name": "steering_wheel",
+					"parent": "center_console",
 					"pivot": [11.31, 10.06955, -3.50471],
 					"rotation": [17.5, 0, 0],
 					"cubes": [
@@ -4437,7 +4437,7 @@
 				},
 				{
 					"name": "bone85",
-					"parent": "方向盘",
+					"parent": "steering_wheel",
 					"pivot": [15.24096, 13.23701, 0.51966]
 				},
 				{
@@ -4482,7 +4482,7 @@
 				},
 				{
 					"name": "bone88",
-					"parent": "方向盘",
+					"parent": "steering_wheel",
 					"pivot": [15.24096, 9.27073, 0.51966]
 				},
 				{
@@ -4598,8 +4598,8 @@
 					]
 				},
 				{
-					"name": "拨杆",
-					"parent": "方向盘",
+					"name": "lever",
+					"parent": "steering_wheel",
 					"pivot": [15.71178, 12.2324, -2.62444],
 					"rotation": [0.98448, -7.43547, -7.56397],
 					"cubes": [
@@ -4630,8 +4630,8 @@
 					]
 				},
 				{
-					"name": "拨杆2",
-					"parent": "方向盘",
+					"name": "lever_2",
+					"parent": "steering_wheel",
 					"pivot": [6.86475, 12.2324, -2.43769],
 					"rotation": [0.98448, 7.43547, 7.56397],
 					"cubes": [
@@ -4662,8 +4662,8 @@
 					]
 				},
 				{
-					"name": "仪表",
-					"parent": "中控台",
+					"name": "instrument_panel",
+					"parent": "center_console",
 					"pivot": [-37.45, 4.1, -0.2],
 					"cubes": [
 						{
@@ -4826,7 +4826,7 @@
 				},
 				{
 					"name": "bone171",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [11.3428, 9.72843, -1.21035],
 					"cubes": [
 						{
@@ -4935,7 +4935,7 @@
 				},
 				{
 					"name": "bone174",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [9.55372, 14.00854, -6.48078],
 					"rotation": [0, 0, -102.5],
 					"cubes": [
@@ -4957,7 +4957,7 @@
 				},
 				{
 					"name": "bone99",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [0.41, 3.25145, -14.84363],
 					"rotation": [12.5, 0, 0],
 					"cubes": [
@@ -4977,7 +4977,7 @@
 				},
 				{
 					"name": "bone155",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [0.41, -0.65374, -11.97788],
 					"rotation": [44, 0, 0],
 					"cubes": [
@@ -4997,7 +4997,7 @@
 				},
 				{
 					"name": "bone97",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.84, 5.875, -10.7],
 					"rotation": [0, -28, 0],
 					"cubes": [
@@ -5043,7 +5043,7 @@
 				},
 				{
 					"name": "bone100",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.28, 5.875, -10.7],
 					"rotation": [0, 28, 0],
 					"cubes": [
@@ -5103,7 +5103,7 @@
 				},
 				{
 					"name": "bone113",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [1.64, 0.975, 20],
 					"rotation": [0, 27.5, 0],
 					"cubes": [
@@ -5123,7 +5123,7 @@
 				},
 				{
 					"name": "bone114",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-2.58, 0.975, 20],
 					"rotation": [0, -27.5, 0],
 					"cubes": [
@@ -5143,7 +5143,7 @@
 				},
 				{
 					"name": "bone103",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.84, 2.225, -3.5],
 					"rotation": [-17.5, 0, 0],
 					"cubes": [
@@ -5163,7 +5163,7 @@
 				},
 				{
 					"name": "bone110",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.84, 2.225, 7.7],
 					"rotation": [17.5, 0, 0],
 					"cubes": [
@@ -5183,13 +5183,13 @@
 				},
 				{
 					"name": "bone111",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.84, 2.225, 8.7],
 					"rotation": [17.5, 0, 0]
 				},
 				{
 					"name": "bone151",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.04, 2.225, 8.7],
 					"cubes": [
 						{
@@ -5528,7 +5528,7 @@
 				},
 				{
 					"name": "bone106",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-0.85, 5.1, 4.3]
 				},
 				{
@@ -5545,7 +5545,7 @@
 				},
 				{
 					"name": "bone107",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-2.85, 5.1, 2.55],
 					"rotation": [0, -90, 0]
 				},
@@ -5563,7 +5563,7 @@
 				},
 				{
 					"name": "bone93",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [-1.84, 12.8, -10.7],
 					"rotation": [-17.5, 0, 0],
 					"cubes": [
@@ -5739,7 +5739,7 @@
 				},
 				{
 					"name": "bone92",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [18.25961, 10.3, -11.0694],
 					"rotation": [0, 27.5, 0]
 				},
@@ -5751,7 +5751,7 @@
 				},
 				{
 					"name": "bone91",
-					"parent": "仪表",
+					"parent": "instrument_panel",
 					"pivot": [11.85, 12.7626, -9.38887],
 					"rotation": [-45, 0, 0],
 					"cubes": [
@@ -5770,8 +5770,8 @@
 					]
 				},
 				{
-					"name": "广播",
-					"parent": "中控台",
+					"name": "radio",
+					"parent": "center_console",
 					"pivot": [7, -13.9, -29.2],
 					"cubes": [
 						{
@@ -5790,7 +5790,7 @@
 				},
 				{
 					"name": "bone96",
-					"parent": "广播",
+					"parent": "radio",
 					"pivot": [-3.83, 3.72981, -9.45598],
 					"rotation": [13, 0, 0],
 					"cubes": [
@@ -6277,7 +6277,7 @@
 					]
 				},
 				{
-					"name": "空调出风口",
+					"name": "ac_vent",
 					"parent": "bone96",
 					"pivot": [-3.83, 3.72981, -8.80598],
 					"cubes": [
@@ -6476,7 +6476,7 @@
 					]
 				},
 				{
-					"name": "座椅",
+					"name": "seat",
 					"pivot": [12.06569, 1.09847, 8.68146],
 					"cubes": [
 						{
@@ -6530,8 +6530,8 @@
 					]
 				},
 				{
-					"name": "椅背",
-					"parent": "座椅",
+					"name": "seat_back",
+					"parent": "seat",
 					"pivot": [11.17649, 6.68608, 16.30035],
 					"rotation": [-10, 0, 0],
 					"cubes": [
@@ -6599,13 +6599,13 @@
 				},
 				{
 					"name": "bone142",
-					"parent": "椅背",
+					"parent": "seat_back",
 					"pivot": [11.19899, 15.40808, 16.05393],
 					"rotation": [47.5, 0, 0]
 				},
 				{
 					"name": "bone140",
-					"parent": "椅背",
+					"parent": "seat_back",
 					"pivot": [16.82399, 14.33008, 16.16715],
 					"rotation": [0, 0, 42.5],
 					"cubes": [
@@ -6625,7 +6625,7 @@
 				},
 				{
 					"name": "bone141",
-					"parent": "椅背",
+					"parent": "seat_back",
 					"pivot": [5.50381, 14.33008, 16.16715],
 					"rotation": [0, 0, -42.5],
 					"cubes": [
@@ -6645,19 +6645,19 @@
 				},
 				{
 					"name": "bone138",
-					"parent": "椅背",
+					"parent": "seat_back",
 					"pivot": [18.35399, 3.89308, 15.96735],
 					"rotation": [0, 45, 0]
 				},
 				{
 					"name": "bone139",
-					"parent": "椅背",
+					"parent": "seat_back",
 					"pivot": [3.97381, 3.89308, 15.96735],
 					"rotation": [0, -45, 0]
 				},
 				{
 					"name": "bone135",
-					"parent": "座椅",
+					"parent": "seat",
 					"pivot": [11.19899, -0.02997, 3.15204],
 					"rotation": [40, 0, 0],
 					"cubes": [
@@ -6677,7 +6677,7 @@
 				},
 				{
 					"name": "bone136",
-					"parent": "座椅",
+					"parent": "seat",
 					"pivot": [17.76899, 1.37002, 4.90704],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -6709,7 +6709,7 @@
 				},
 				{
 					"name": "bone133",
-					"parent": "座椅",
+					"parent": "seat",
 					"pivot": [17.13899, 0.87002, 9.90204],
 					"rotation": [0, 0, -42.5],
 					"cubes": [
@@ -6729,7 +6729,7 @@
 				},
 				{
 					"name": "bone134",
-					"parent": "座椅",
+					"parent": "seat",
 					"pivot": [6.53881, 0.87002, 9.90204],
 					"rotation": [0, 0, 42.5],
 					"cubes": [
@@ -6748,7 +6748,7 @@
 					]
 				},
 				{
-					"name": "座椅2",
+					"name": "seat_2",
 					"pivot": [-10.73431, 1.09847, 8.68146],
 					"cubes": [
 						{
@@ -6802,8 +6802,8 @@
 					]
 				},
 				{
-					"name": "椅背2",
-					"parent": "座椅2",
+					"name": "seat_back_2",
+					"parent": "seat_2",
 					"pivot": [-11.62351, 6.68608, 16.30035],
 					"rotation": [-10, 0, 0],
 					"cubes": [
@@ -6871,13 +6871,13 @@
 				},
 				{
 					"name": "bone137",
-					"parent": "椅背2",
+					"parent": "seat_back_2",
 					"pivot": [-11.60101, 15.40808, 16.05393],
 					"rotation": [47.5, 0, 0]
 				},
 				{
 					"name": "bone143",
-					"parent": "椅背2",
+					"parent": "seat_back_2",
 					"pivot": [-5.97601, 14.33008, 16.16715],
 					"rotation": [0, 0, 42.5],
 					"cubes": [
@@ -6897,7 +6897,7 @@
 				},
 				{
 					"name": "bone144",
-					"parent": "椅背2",
+					"parent": "seat_back_2",
 					"pivot": [-17.29619, 14.33008, 16.16715],
 					"rotation": [0, 0, -42.5],
 					"cubes": [
@@ -6917,19 +6917,19 @@
 				},
 				{
 					"name": "bone145",
-					"parent": "椅背2",
+					"parent": "seat_back_2",
 					"pivot": [-4.44601, 3.89308, 15.96735],
 					"rotation": [0, 45, 0]
 				},
 				{
 					"name": "bone146",
-					"parent": "椅背2",
+					"parent": "seat_back_2",
 					"pivot": [-18.82619, 3.89308, 15.96735],
 					"rotation": [0, -45, 0]
 				},
 				{
 					"name": "bone147",
-					"parent": "座椅2",
+					"parent": "seat_2",
 					"pivot": [-11.60101, -0.02997, 3.15204],
 					"rotation": [40, 0, 0],
 					"cubes": [
@@ -6949,7 +6949,7 @@
 				},
 				{
 					"name": "bone148",
-					"parent": "座椅2",
+					"parent": "seat_2",
 					"pivot": [-5.03101, 1.37002, 4.90704],
 					"rotation": [-47.5, 0, 0],
 					"cubes": [
@@ -6981,7 +6981,7 @@
 				},
 				{
 					"name": "bone149",
-					"parent": "座椅2",
+					"parent": "seat_2",
 					"pivot": [-5.66101, 0.87002, 9.90204],
 					"rotation": [0, 0, -42.5],
 					"cubes": [
@@ -7001,7 +7001,7 @@
 				},
 				{
 					"name": "bone150",
-					"parent": "座椅2",
+					"parent": "seat_2",
 					"pivot": [-16.26119, 0.87002, 9.90204],
 					"rotation": [0, 0, 42.5],
 					"cubes": [
@@ -7020,7 +7020,7 @@
 					]
 				},
 				{
-					"name": "软包",
+					"name": "upholstery",
 					"pivot": [1.16566, 20.04575, -1.71742],
 					"cubes": [
 						{
@@ -7147,7 +7147,7 @@
 				},
 				{
 					"name": "bone156",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [18.25535, 18.08327, 17.43353],
 					"cubes": [
 						{
@@ -7168,7 +7168,7 @@
 				},
 				{
 					"name": "bone157",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [-18.45535, 18.08327, 17.43353],
 					"cubes": [
 						{
@@ -7189,7 +7189,7 @@
 				},
 				{
 					"name": "bone164",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [26.28273, 10.26, -44.54605],
 					"cubes": [
 						{
@@ -7253,7 +7253,7 @@
 				},
 				{
 					"name": "bone165",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [-26.88273, 10.26, -44.54605],
 					"cubes": [
 						{
@@ -7437,7 +7437,7 @@
 				},
 				{
 					"name": "bone159",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [3.28273, 18.66, -37.54605],
 					"cubes": [
 						{
@@ -7458,7 +7458,7 @@
 				},
 				{
 					"name": "bone158",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [0.06399, 23.92003, 0.30204],
 					"rotation": [-8, 0, 0],
 					"cubes": [
@@ -7490,7 +7490,7 @@
 				},
 				{
 					"name": "bone153",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [17.832, 18.53915, -7.04218],
 					"rotation": [-137.07832, -6.22247, -17.21538],
 					"cubes": [
@@ -7510,7 +7510,7 @@
 				},
 				{
 					"name": "bone154",
-					"parent": "软包",
+					"parent": "upholstery",
 					"pivot": [-17.732, 18.53915, -7.04218],
 					"rotation": [-137.07832, 6.22247, 17.21538],
 					"cubes": [
