@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
+import com.sshakusora.riautomobility.model.PlaceholderAutomobileModel;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -96,7 +97,7 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
         poseStack.pushPose();
         poseStack.scale(-1, -1, 1);
         MultiBufferSource.BufferSource fallbackBuffers = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-        VertexConsumer fallbackConsumer = fallbackBuffers.getBuffer(this.fallbackModel.renderType(com.sshakusora.riautomobility.model.PlaceholderAutomobileModel.TEXTURE));
+        VertexConsumer fallbackConsumer = fallbackBuffers.getBuffer(this.fallbackModel.renderType(PlaceholderAutomobileModel.TEXTURE));
         this.fallbackModel.renderToBuffer(poseStack, fallbackConsumer, packedLight, packedOverlay, red, green, blue, alpha);
         fallbackBuffers.endBatch();
         poseStack.popPose();

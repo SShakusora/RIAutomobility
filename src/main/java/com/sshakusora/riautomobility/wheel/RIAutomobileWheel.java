@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.wheel;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.util.RIAutomobilityRegistryUtil;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import net.minecraft.resources.ResourceLocation;
 
@@ -33,7 +34,7 @@ public final class RIAutomobileWheel {
     }
 
     public static AutomobileWheel register(AutomobileWheel wheel) {
-        return com.sshakusora.riautomobility.util.RIAutomobilityRegistryUtil.registerOrReplace(AutomobileWheel.REGISTRY, wheel);
+        return RIAutomobilityRegistryUtil.registerOrReplace(AutomobileWheel.REGISTRY, wheel);
     }
 
     public static void init() {

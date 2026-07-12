@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.definition;
 
+import com.sshakusora.riautomobility.util.RIAutomobilityRegistryUtil;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import net.minecraft.resources.ResourceLocation;
 
@@ -13,7 +14,7 @@ public final class RIAutomobileRegistry {
 
     public static AutomobileFrame register(AutomobileFrame frame, RIAutomobileDefinition definition) {
         DEFINITIONS.put(frame.getId(), definition);
-        return com.sshakusora.riautomobility.util.RIAutomobilityRegistryUtil.registerOrReplace(AutomobileFrame.REGISTRY, frame);
+        return RIAutomobilityRegistryUtil.registerOrReplace(AutomobileFrame.REGISTRY, frame);
     }
 
     public static RIAutomobileDefinition get(AutomobileFrame frame) {

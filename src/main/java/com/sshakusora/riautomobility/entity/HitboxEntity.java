@@ -9,6 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -113,8 +115,8 @@ public class HitboxEntity extends Entity{
                 this.level().playSound(
                         null,
                         this.blockPosition(),
-                        net.minecraft.sounds.SoundEvents.BARREL_OPEN,
-                        net.minecraft.sounds.SoundSource.BLOCKS, 1.0F,
+                        SoundEvents.BARREL_OPEN,
+                        SoundSource.BLOCKS, 1.0F,
                         1.0F
                         );
                 player.openMenu(new SimpleMenuProvider(

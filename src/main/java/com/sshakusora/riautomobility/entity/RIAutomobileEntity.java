@@ -40,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
+import java.util.function.Consumer;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
@@ -210,7 +211,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     @Override
-    public void forNearbyPlayers(int radius, boolean ignoreDriver, java.util.function.Consumer<ServerPlayer> action) {
+    public void forNearbyPlayers(int radius, boolean ignoreDriver, Consumer<ServerPlayer> action) {
         if (!usesRIASeats()) {
             super.forNearbyPlayers(radius, ignoreDriver, action);
             return;

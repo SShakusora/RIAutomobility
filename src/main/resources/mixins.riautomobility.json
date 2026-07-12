@@ -13,6 +13,7 @@
     "AutomobileRendererMixin",
     "AutomobilityClientMixin",
     "CameraMixin",
+    "CreativeModeInventoryScreenMixin",
     "EntityModelSetMixin",
     "ForgeGeometryBuilderMixin",
     "LocalPlayerMixin",

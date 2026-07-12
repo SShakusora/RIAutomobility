@@ -39,6 +39,7 @@ public final class RIAutomobilityCreativeTabs {
             .title(Component.translatable("itemGroup.riautomobility.custom_components"))
             .icon(() -> AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(RIAutomobileFrame.DMC12))
             .withTabsBefore(COMPONENTS.getKey())
+            .withTabFactory(CustomComponentsTab::new)
             .displayItems((params, output) -> {
                 AutomobileFrame.REGISTRY.forEach(frame -> {
                     if (RIAutomobilityComponentManager.isManagedFrame(frame) && !frame.isEmpty() && isVisible(frame)) {
@@ -77,5 +78,21 @@ public final class RIAutomobilityCreativeTabs {
     private static boolean isVisible(AutomobileWheel wheel) {
         var spec = RIAutomobilityComponentManager.getCustomWheels().get(wheel.getId());
         return spec == null || spec.showInCreativeTab();
+    }
+
+    private static boolean hasVisibleCustomComponents() {
+        return RIAutomobilityComponentManager.getCustomFrameSpecs().stream().anyMatch(spec -> spec.showInCreativeTab())
+                || RIAutomobilityComponentManager.getCustomWheelSpecs().stream().anyMatch(spec -> spec.showInCreativeTab());
+    }
+
+    private static final class CustomComponentsTab extends CreativeModeTab {
+        private CustomComponentsTab(Builder builder) {
+            super(builder);
+        }
+
+        @Override
+        public boolean shouldDisplay() {
+            return hasVisibleCustomComponents() && super.shouldDisplay();
+        }
     }
 }

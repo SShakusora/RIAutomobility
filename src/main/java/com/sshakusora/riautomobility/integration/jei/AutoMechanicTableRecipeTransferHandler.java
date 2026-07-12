@@ -6,6 +6,7 @@ import io.github.foundationgames.automobility.recipe.AutoMechanicTableRecipe;
 import io.github.foundationgames.automobility.screen.AutoMechanicTableScreenHandler;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
@@ -123,7 +124,7 @@ public class AutoMechanicTableRecipeTransferHandler implements IRecipeTransferHa
         }
 
         List<IRecipeSlotView> missing = new ArrayList<>();
-        List<IRecipeSlotView> inputSlots = recipeSlotsView.getSlotViews(mezz.jei.api.recipe.RecipeIngredientRole.INPUT);
+        List<IRecipeSlotView> inputSlots = recipeSlotsView.getSlotViews(RecipeIngredientRole.INPUT);
 
         for (int i = 0; i < ingredients.size(); i++) {
             Ingredient ingredient = ingredients.get(i);
