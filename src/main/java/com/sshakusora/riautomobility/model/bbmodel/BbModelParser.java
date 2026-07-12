@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import net.minecraft.util.GsonHelper;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -368,15 +369,15 @@ public final class BbModelParser {
         }
         JsonArray values = keyframe.getAsJsonArray(key);
         if (!values.isEmpty()) {
-            values.set(0, new com.google.gson.JsonPrimitive(-values.get(0).getAsFloat()));
+            values.set(0, new JsonPrimitive(-values.get(0).getAsFloat()));
         }
         if (invertY && values.size() > 1) {
-            values.set(1, new com.google.gson.JsonPrimitive(-values.get(1).getAsFloat()));
+            values.set(1, new JsonPrimitive(-values.get(1).getAsFloat()));
         }
     }
 
     private static JsonElement value(JsonObject object, String key) {
-        return object.has(key) ? object.get(key).deepCopy() : new com.google.gson.JsonPrimitive(0);
+        return object.has(key) ? object.get(key).deepCopy() : new JsonPrimitive(0);
     }
 
     private static float[] optionalFloatArray(JsonObject object, String key) {

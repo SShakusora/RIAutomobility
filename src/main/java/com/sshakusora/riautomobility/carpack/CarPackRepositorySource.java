@@ -24,7 +24,10 @@ public final class CarPackRepositorySource implements RepositorySource {
 
     @Override
     public void loadPacks(Consumer<Pack> consumer) {
-        for (CarPackManager.CarPack carPack : CarPackManager.discoverCarPacks()) {
+        var carPacks = packType == PackType.CLIENT_RESOURCES
+                ? CarPackManager.discoverClientResourcePacks()
+                : CarPackManager.discoverCarPacks();
+        for (CarPackManager.CarPack carPack : carPacks) {
             Pack pack = Pack.readMetaAndCreate(
                     carPack.id(),
                     Component.literal(carPack.displayName()),

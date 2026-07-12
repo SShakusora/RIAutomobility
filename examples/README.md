@@ -66,7 +66,9 @@ Translations:
 - If a client is missing the car pack resources, the components will render with a barrier-texture placeholder instead of crashing the game.
 - In that case, tooltips will show a missing car-pack resource warning.
 - The `JsonEM`, `GeckoLib`, and `BBModel` examples are loaded automatically. Manual resource-pack selection and `F3 + T` are not required.
-- On a dedicated server, install the same car packs in the server and client `riautomobility/` folders. A digest warning is shown when they differ.
+- On a dedicated server, install car packs only in the server `riautomobility/` folder. Joining clients automatically download missing or changed packs, verify their SHA-256 digests, and cache them under `riautomobility/cache/packs/`.
+- A matching manually installed client pack is reused without downloading. While connected, the server's pack list is authoritative; client-only packs are not enabled for that server.
+- Network transfers use 256 KiB chunks, have size and archive-safety limits, and disconnect the client if a required pack cannot be verified or loaded.
 
 ### Creating Your Own Variant
 
@@ -141,7 +143,9 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - 如果客户端缺少车包资源，组件会显示为屏障贴图占位，而不会导致游戏崩溃。
 - 此时 tooltip 会提示缺少车包资源。
 - `JsonEM`、`GeckoLib` 和 `BBModel` 示例都会自动加载，无需手动选择资源或按 `F3 + T`。
-- 专用服务器需要在服务端与客户端的 `riautomobility/` 目录安装相同车包；内容不一致时客户端会收到摘要警告。
+- 专用服务器只需把车包安装到服务端的 `riautomobility/` 目录。客户端加入时会自动下载缺失或已更新的车包，校验 SHA-256，并缓存到 `riautomobility/cache/packs/`。
+- 如果客户端手工安装的车包内容完全一致，会直接复用而不下载。连接服务器期间以服务端车包清单为准，不会启用仅客户端存在的车包。
+- 网络传输使用 256 KiB 分块，并限制压缩包大小、文件数量与解压后大小；必需车包无法通过校验或加载时会断开连接。
 
 ### 创建你自己的版本
 

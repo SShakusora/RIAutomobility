@@ -26,14 +26,25 @@ import java.util.zip.ZipFile;
 public final class CarPackManager {
     public static final String PACK_ID_PREFIX = "riautomobility/";
     public static final String DISABLED_DIRECTORY_NAME = "disabled";
+    public static final String CACHE_DIRECTORY_NAME = "cache";
+    private static final String TRANSFER_CACHE_DIRECTORY_NAME = "server-transfers";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int BUFFER_SIZE = 8192;
     private static final AABB WORLD_BOUNDS = new AABB(-3.0E7D, -2048.0D, -3.0E7D, 3.0E7D, 2048.0D, 3.0E7D);
+    private static volatile List<CarPack> clientResourcePacks;
 
     private CarPackManager() {}
 
     public static Path getRootDirectory() {
         return FMLPaths.GAMEDIR.get().resolve("riautomobility");
+    }
+
+    public static Path getClientPackCacheDirectory() {
+        return getRootDirectory().resolve(CACHE_DIRECTORY_NAME).resolve("packs");
+    }
+
+    public static Path getTransferCacheDirectory() {
+        return getRootDirectory().resolve(CACHE_DIRECTORY_NAME).resolve(TRANSFER_CACHE_DIRECTORY_NAME);
     }
 
     public static List<CarPack> discoverCarPacks() {
@@ -44,7 +55,8 @@ public final class CarPackManager {
             Files.createDirectories(root.resolve(DISABLED_DIRECTORY_NAME));
             try (DirectoryStream<Path> entries = Files.newDirectoryStream(root)) {
                 for (Path entry : entries) {
-                    if (entry.getFileName().toString().equalsIgnoreCase(DISABLED_DIRECTORY_NAME)) {
+                    if (entry.getFileName().toString().equalsIgnoreCase(DISABLED_DIRECTORY_NAME)
+                            || entry.getFileName().toString().equalsIgnoreCase(CACHE_DIRECTORY_NAME)) {
                         continue;
                     }
 
@@ -75,6 +87,27 @@ public final class CarPackManager {
             }
         }
         return List.copyOf(uniquePacks.values());
+    }
+
+    public static List<CarPack> discoverClientResourcePacks() {
+        List<CarPack> packs = clientResourcePacks;
+        return packs == null ? discoverCarPacks() : packs;
+    }
+
+    public static void setClientResourcePacks(List<CarPack> packs) {
+        clientResourcePacks = List.copyOf(packs);
+    }
+
+    public static void clearClientResourcePacks() {
+        clientResourcePacks = null;
+    }
+
+    public static CarPack cachedCarPack(CarPackManifestEntry manifest, Path archive) throws IOException {
+        Pack.ResourcesSupplier resources = FolderRepositorySource.detectPackResources(archive, false);
+        if (resources == null) {
+            throw new IOException("Downloaded car pack is not a valid resource pack: " + manifest.id());
+        }
+        return new CarPack(manifest.id(), manifest.displayName(), archive, resources, manifest.contentDigest());
     }
 
     public static Map<String, String> getDigests() {

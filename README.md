@@ -87,7 +87,7 @@ The mod ships with a variety of pre-made vehicles and components:
 2. Place its folder or `.zip` directly in Minecraft's `riautomobility/` folder
 3. Launch the game, or run `/riautomobility carpacks reload`
 
-Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers and clients must install matching car packs; the client reports missing or different packs when joining.
+Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers only need to install packs in the server `riautomobility/` folder: joining clients automatically download missing or changed packs, verify their SHA-256 digests, and cache them under `riautomobility/cache/packs/`. Matching manually installed client packs are reused without downloading.
 
 ### Car Pack Guide
 
@@ -428,7 +428,7 @@ It contains:
 2. 将车包文件夹或 `.zip` 直接放入 Minecraft 的 `riautomobility/` 文件夹
 3. 启动游戏，或执行 `/riautomobility carpacks reload`
 
-车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器与客户端必须安装相同车包，加入服务器时客户端会报告缺失或内容不同的车包。
+车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器只需在服务端的 `riautomobility/` 目录安装车包；客户端加入时会自动下载缺失或已更新的车包、校验 SHA-256，并缓存到 `riautomobility/cache/packs/`。内容一致的客户端本地车包会直接复用，无需重复下载。
 
 ### 车包教程
 
