@@ -129,6 +129,22 @@ public class RIAutomobileModels {
         }
     }
 
+    public static void registerTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+        clearMissingComponent(componentId);
+        registerDynamicModel(componentId, modelSpec);
+    }
+
+    public static void unregisterTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+        AutomobileModelsAccessor.riautomobility$getModelProviders().remove(modelSpec.modelId());
+        AutomobileModelsAccessor.riautomobility$getModels().remove(modelSpec.modelId());
+        if (modelSpec.isBbModel()) {
+            BbModelRepository.unregister(modelSpec);
+        } else if (!modelSpec.isGeckoLib() && modelSpec.layerLocation() != null) {
+            DynamicJsonModelLoader.unregister(new ModelLayerLocation(modelSpec.layerLocation(), "main"));
+        }
+        clearMissingComponent(componentId);
+    }
+
     private static void registerDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         if (modelSpec.isBbModel()) {
             registerDynamicBbModel(componentId, modelSpec);

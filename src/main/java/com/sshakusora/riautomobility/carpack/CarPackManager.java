@@ -32,6 +32,7 @@ public final class CarPackManager {
     private static final int BUFFER_SIZE = 8192;
     private static final AABB WORLD_BOUNDS = new AABB(-3.0E7D, -2048.0D, -3.0E7D, 3.0E7D, 2048.0D, 3.0E7D);
     private static volatile List<CarPack> clientResourcePacks;
+    private static volatile CarPack clientPreviewPack;
 
     private CarPackManager() {}
 
@@ -91,7 +92,14 @@ public final class CarPackManager {
 
     public static List<CarPack> discoverClientResourcePacks() {
         List<CarPack> packs = clientResourcePacks;
-        return packs == null ? discoverCarPacks() : packs;
+        List<CarPack> resolved = packs == null ? discoverCarPacks() : packs;
+        CarPack preview = clientPreviewPack;
+        if (preview == null) {
+            return resolved;
+        }
+        List<CarPack> withPreview = new ArrayList<>(resolved);
+        withPreview.add(preview);
+        return List.copyOf(withPreview);
     }
 
     public static void setClientResourcePacks(List<CarPack> packs) {
@@ -100,6 +108,19 @@ public final class CarPackManager {
 
     public static void clearClientResourcePacks() {
         clientResourcePacks = null;
+    }
+
+    public static void setClientPreviewPack(Path archive) throws IOException {
+        Pack.ResourcesSupplier resources = FolderRepositorySource.detectPackResources(archive, false);
+        if (resources == null) {
+            throw new IOException("Editor preview is not a valid resource pack");
+        }
+        clientPreviewPack = new CarPack(
+                PACK_ID_PREFIX + "editor-preview", "Vehicle editor preview", archive, resources, digest(archive));
+    }
+
+    public static void clearClientPreviewPack() {
+        clientPreviewPack = null;
     }
 
     public static CarPack cachedCarPack(CarPackManifestEntry manifest, Path archive) throws IOException {

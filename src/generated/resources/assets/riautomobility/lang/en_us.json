@@ -1,4 +1,5 @@
 {
+  "block.riautomobility.vehicle_import_table": "Vehicle Import Table",
   "commands.riautomobility.carpacks.reload.failed": "Failed to reload RIAutomobility car packs: %s",
   "commands.riautomobility.carpacks.reload.started": "Reloading RIAutomobility car packs...",
   "commands.riautomobility.carpacks.reload.success": "RIAutomobility car packs reloaded",

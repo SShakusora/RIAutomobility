@@ -6,12 +6,14 @@ import com.sshakusora.riautomobility.creative.RIAutomobilityCreativeTabs;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
+import com.sshakusora.riautomobility.editor.VehicleImportRegistries;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -48,6 +50,9 @@ public class RIAutomobility
         RIAutomobileFrame.init();
         RIAutomobileWheel.init();
         RIAutomobilityEntities.ENTITIES.register(bus);
+        VehicleImportRegistries.BLOCKS.register(bus);
+        VehicleImportRegistries.ITEMS.register(bus);
+        VehicleImportRegistries.MENUS.register(bus);
         RIAutomobilityNetwork.register();
     }
 
@@ -56,6 +61,9 @@ public class RIAutomobility
         @SubscribeEvent
         public static void onClientSetup(final FMLClientSetupEvent event){
             RIAutomobileModels.init();
+            event.enqueueWork(() -> MenuScreens.register(
+                    VehicleImportRegistries.VEHICLE_IMPORT_MENU.get(),
+                    com.sshakusora.riautomobility.editor.client.VehicleImportScreen::new));
             MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent evt) -> {
                 LocalPlayer player = Minecraft.getInstance().player;
                 Entity vehicle = null;
@@ -77,5 +85,6 @@ public class RIAutomobility
         public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event){
             RIAutomobilityKeyBindings.init(event);
         }
+
     }
 }

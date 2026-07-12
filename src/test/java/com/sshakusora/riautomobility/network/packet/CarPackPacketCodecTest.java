@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,5 +61,52 @@ class CarPackPacketCodecTest {
                 0,
                 new byte[CarPackChunkPacket.MAX_CHUNK_SIZE + 1]
         ));
+    }
+
+    @Test
+    void uploadPacketsRoundTripAndEnforceChunkLimit() {
+        UUID uploadId = UUID.randomUUID();
+        BeginCarPackUploadPacket begin = new BeginCarPackUploadPacket(
+                uploadId, "custom-car-frame", "custom", "car/frame", "frame", false, 4096, DIGEST);
+        FriendlyByteBuf beginBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            BeginCarPackUploadPacket.encode(begin, beginBuffer);
+            assertEquals(begin, BeginCarPackUploadPacket.decode(beginBuffer));
+        } finally {
+            beginBuffer.release();
+        }
+
+        byte[] data = {9, 8, 7};
+        CarPackUploadChunkPacket chunk = new CarPackUploadChunkPacket(uploadId, 2, data);
+        FriendlyByteBuf chunkBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            CarPackUploadChunkPacket.encode(chunk, chunkBuffer);
+            CarPackUploadChunkPacket decoded = CarPackUploadChunkPacket.decode(chunkBuffer);
+            assertEquals(uploadId, decoded.uploadId());
+            assertEquals(2, decoded.index());
+            assertArrayEquals(data, decoded.data());
+        } finally {
+            chunkBuffer.release();
+        }
+        assertThrows(IllegalArgumentException.class, () -> new CarPackUploadChunkPacket(
+                uploadId, 0, new byte[CarPackUploadChunkPacket.MAX_CHUNK_SIZE + 1]));
+
+        CompleteCarPackUploadPacket complete = new CompleteCarPackUploadPacket(uploadId);
+        FriendlyByteBuf completeBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            CompleteCarPackUploadPacket.encode(complete, completeBuffer);
+            assertEquals(complete, CompleteCarPackUploadPacket.decode(completeBuffer));
+        } finally {
+            completeBuffer.release();
+        }
+
+        CarPackUploadResultPacket result = new CarPackUploadResultPacket(uploadId, true, "installed");
+        FriendlyByteBuf resultBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            CarPackUploadResultPacket.encode(result, resultBuffer);
+            assertEquals(result, CarPackUploadResultPacket.decode(resultBuffer));
+        } finally {
+            resultBuffer.release();
+        }
     }
 }

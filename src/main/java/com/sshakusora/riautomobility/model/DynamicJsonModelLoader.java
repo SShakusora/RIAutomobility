@@ -23,6 +23,10 @@ public final class DynamicJsonModelLoader {
         REGISTERED_LAYERS.add(layer);
     }
 
+    public static void unregister(ModelLayerLocation layer) {
+        REGISTERED_LAYERS.remove(layer);
+    }
+
     public static void loadModels(ResourceManager manager, Map<ModelLayerLocation, LayerDefinition> roots) {
         for (ModelLayerLocation layer : REGISTERED_LAYERS) {
             ResourceLocation modelLocation = new ResourceLocation(

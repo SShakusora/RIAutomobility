@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "riautomobility:block/vehicle_import_table" }
+  }
+}

@@ -9,7 +9,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 
 public class RIAutomobilityNetwork {
-    private static final String PROTOCOL_VERSION = "3";
+    private static final String PROTOCOL_VERSION = "4";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             RIAutomobility.rl("main"),
@@ -92,5 +92,13 @@ public class RIAutomobilityNetwork {
                 CarPackSyncStatusPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER)
         );
+        CHANNEL.registerMessage(id++, BeginCarPackUploadPacket.class, BeginCarPackUploadPacket::encode,
+                BeginCarPackUploadPacket::decode, BeginCarPackUploadPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, CarPackUploadChunkPacket.class, CarPackUploadChunkPacket::encode,
+                CarPackUploadChunkPacket::decode, CarPackUploadChunkPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, CompleteCarPackUploadPacket.class, CompleteCarPackUploadPacket::encode,
+                CompleteCarPackUploadPacket::decode, CompleteCarPackUploadPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, CarPackUploadResultPacket.class, CarPackUploadResultPacket::encode,
+                CarPackUploadResultPacket::decode, CarPackUploadResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

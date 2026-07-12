@@ -39,6 +39,14 @@ public final class BbModelRepository {
         specs.add(spec);
     }
 
+    public static synchronized void unregister(FrameSpec.ModelSpec spec) {
+        if (spec.bbModel() == null) return;
+        List<FrameSpec.ModelSpec> specs = REGISTERED.get(spec.bbModel());
+        if (specs == null) return;
+        specs.removeIf(existing -> existing.modelId().equals(spec.modelId()));
+        if (specs.isEmpty()) REGISTERED.remove(spec.bbModel());
+    }
+
     public static synchronized void retain(Set<ResourceLocation> modelResources) {
         REGISTERED.keySet().retainAll(modelResources);
     }
