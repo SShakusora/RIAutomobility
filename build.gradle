@@ -130,8 +130,22 @@ mixin {
 }
 
 repositories {
-    maven { url "https://cursemaven.com" }
-    maven { url "https://maven.blamejared.com" }
+    maven {
+        name = "CurseMaven"
+        url = "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+
+    // JEI is published to BlameJared's Maven repository, not CurseMaven.
+    maven {
+        name = "JEI Maven"
+        url = "https://maven.blamejared.com"
+        content {
+            includeGroup "mezz.jei"
+        }
+    }
 }
 
 dependencies {
@@ -153,7 +167,6 @@ dependencies {
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
     runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
     runtimeOnly fg.deobf("curse.maven:jade-324717:6855440")
-    runtimeOnly fg.deobf("curse.maven:ibe-editor-256822:4994072")
 
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
     // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar

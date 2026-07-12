@@ -520,6 +520,16 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             return;
         }
 
+        Entity driver = getSeatPassenger(0);
+        if (passenger instanceof Player && driver != null && !(driver instanceof Player)) {
+            int freePassengerSeat = findFirstEmptySeat(1);
+            if (freePassengerSeat >= 0) {
+                setSeatPassenger(freePassengerSeat, driver);
+                setSeatPassenger(0, passenger);
+                return;
+            }
+        }
+
         int freeSeat = findFirstEmptySeat(0);
         if (freeSeat >= 0) {
             setSeatPassenger(freeSeat, passenger);
