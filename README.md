@@ -42,7 +42,7 @@ Whether you want to drive new vehicles out of the box or design your own through
   - `RIAutomobility` — built-in frames and wheels
   - `RIAutomobility: Custom` — car-pack-defined components
 - **Unified Car Packs** — Define custom `Frame` and `Wheel` components and ship their assets together
-- **Dual Rendering Pipelines** — Supports both `JsonEM` baked models and `GeckoLib` animated models
+- **Three Rendering Pipelines** — Supports `JsonEM`, `GeckoLib`, and native Blockbench `.bbmodel` projects
 - **Safe Fallbacks** — Missing resources render as a placeholder with tooltip warnings instead of crashing
 
 ### Dependencies
@@ -289,6 +289,29 @@ Example wheel definition:
 }
 ```
 
+**BBModel** — Native Blockbench project model:
+
+```json
+"model": {
+  "type": "bbmodel",
+  "texture": "examplepack:textures/entity/automobile/frame/example_buggy.png",
+  "model_id": "examplepack:frame_example_buggy_bbmodel",
+  "bbmodel": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
+  "bb_animation": "idle",
+  "render_type": "entity_cutout_no_cull",
+  "textures": {
+    "body": "examplepack:textures/entity/automobile/frame/example_buggy.png",
+    "trim": "examplepack:textures/entity/automobile/frame/example_buggy_trim.png"
+  }
+}
+```
+
+- Supports Blockbench project format `4.10` through `5.0`.
+- Native elements include cubes, meshes, texture meshes, groups, locators, null objects, and bounding boxes.
+- Supports multiple or embedded textures and position/rotation/scale animations with linear, step, Bezier, and Catmull-Rom interpolation.
+- Animation expressions use GeckoLib's Molang engine. Vehicle queries include `query.vehicle_steering`, `query.vehicle_wheel_angle`, `query.vehicle_engine_running`, `query.vehicle_turbo_charge`, and `query.vehicle_boost_timer`.
+- Third-party Blockbench formats and element types require a Java adapter registered through `BbFormatAdapterRegistry` or `BbElementDecoderRegistry`.
+
 #### Recipe Example
 
 ```json
@@ -317,6 +340,7 @@ A complete minimal example is included in this repository:
 It contains:
 - A `JsonEM` frame and wheel example
 - A `GeckoLib` frame and wheel example
+- A native Blockbench `.bbmodel` frame and wheel example
 - Matching recipes, translations, and resource-pack model files
 
 
@@ -326,6 +350,7 @@ It contains:
 - Missing-resource placeholders use a barrier texture for easy identification.
 - `JsonEM` components need valid `assets/<namespace>/models/entity/.../main.json` files.
 - `GeckoLib` components need valid `geo`, `animation`, and texture resources.
+- `BBModel` components need a valid `.bbmodel`; external texture paths must resolve inside a resource pack unless overridden by `model.textures`.
 - Tooltips warn the player when required car-pack assets are missing.
 - Custom models apply automatically after joining the world — no `F3 + T` needed.
 
@@ -366,7 +391,7 @@ It contains:
   - `飞天奇匠` — 内置车架与车轮
   - `飞天奇匠：自定义` — 车包定义的组件
 - **统一车包** — 在同一个车包中定义自定义 `Frame` / `Wheel` 并附带全部资源
-- **双渲染管线** — 同时支持 `JsonEM` 烘焙模型和 `GeckoLib` 动画模型
+- **三种渲染管线** — 同时支持 `JsonEM`、`GeckoLib` 与 Blockbench `.bbmodel` 工程模型
 - **安全降级** — 资源缺失时使用占位模型并提示，不会导致崩溃
 
 ### 依赖
@@ -613,6 +638,29 @@ assets/<命名空间>/lang/zh_cn.json
 }
 ```
 
+**BBModel** — 直接加载 Blockbench 工程模型：
+
+```json
+"model": {
+  "type": "bbmodel",
+  "texture": "examplepack:textures/entity/automobile/frame/example_buggy.png",
+  "model_id": "examplepack:frame_example_buggy_bbmodel",
+  "bbmodel": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
+  "bb_animation": "idle",
+  "render_type": "entity_cutout_no_cull",
+  "textures": {
+    "body": "examplepack:textures/entity/automobile/frame/example_buggy.png",
+    "trim": "examplepack:textures/entity/automobile/frame/example_buggy_trim.png"
+  }
+}
+```
+
+- 支持 Blockbench `4.10` 至 `5.0` 工程格式。
+- 原生支持 Cube、Mesh、Texture Mesh、Group、Locator、Null Object 与 Bounding Box。
+- 支持多贴图、内嵌贴图，以及位置/旋转/缩放动画和 Linear、Step、Bezier、Catmull-Rom 插值。
+- 动画表达式复用 GeckoLib 的 Molang 引擎，并提供车辆方向盘、车轮角度、引擎状态、涡轮值等查询变量。
+- 第三方 Blockbench 格式或元素需要通过 `BbFormatAdapterRegistry` 或 `BbElementDecoderRegistry` 注册 Java 适配器。
+
 #### 配方示例
 
 ```json
@@ -641,6 +689,7 @@ assets/<命名空间>/lang/zh_cn.json
 其中包含：
 - 一套 `JsonEM` 车架与车轮示例
 - 一套 `GeckoLib` 车架与车轮示例
+- 一套原生 Blockbench `.bbmodel` 车架与车轮示例
 - 对应配方、翻译文件和车包模型
 
 ### 给内容作者的提示
@@ -649,6 +698,7 @@ assets/<命名空间>/lang/zh_cn.json
 - 缺失资源时，占位模型使用屏障贴图，方便在物品栏中识别。
 - `JsonEM` 组件需要正确的 `assets/<命名空间>/models/entity/.../main.json`。
 - `GeckoLib` 组件需要正确的 `geo`、`animation` 和贴图资源。
+- `BBModel` 组件需要正确的 `.bbmodel`；外部贴图必须能从资源包解析，或由 `model.textures` 显式覆盖。
 - 当资源缺失时，tooltip 会提示玩家缺少对应车包资源。
 - 自定义模型在进入世界后自动生效，通常不需要按 `F3 + T`。
 

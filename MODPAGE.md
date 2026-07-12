@@ -45,12 +45,13 @@ The most powerful feature of this mod: **create your own vehicles using only JSO
 - Ship models and textures in the same car pack's `assets/` directory
 - Optional: add Auto Mechanic Table recipes for survival-mode crafting
 
-#### Dual Rendering Engine Support
+#### Three Rendering Engine Support
 
 Whether you are a modeling beginner or veteran, RIAutomobility has the right tools for you:
 
 - **JsonEM** — Simple JSON entity models, great for getting started quickly
 - **GeckoLib** — Powerful animated models with complex animation support
+- **BBModel** — Direct Blockbench project loading with cubes, meshes, multiple textures, and animation
 
 #### Safe & Stable Resource Handling
 
@@ -153,12 +154,13 @@ RIAutomobility 为车辆添加了真正的多座位支持。你可以邀请好�
 - 在同一车包的 `assets/` 目录附带自定义模型和贴图
 - 自定义配方，让车辆在生存模式中可合成
 
-#### 双渲染引擎支持
+#### 三种渲染引擎支持
 
 无论你是模型制作新手还是老手，RIAutomobility 都为你准备好了工具：
 
 - **JsonEM** — 使用简单的 JSON 实体模型，适合快速上手
 - **GeckoLib** — 使用功能强大的动画模型，支持复杂动画效果
+- **BBModel** — 直接加载 Blockbench 工程，支持方块、网格、多贴图与动画
 
 #### 安全稳定的资源处理
 

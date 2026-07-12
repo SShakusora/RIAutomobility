@@ -8,6 +8,7 @@ import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -48,6 +49,7 @@ public final class SyncCustomComponentsClientHandler {
         RIAutomobileWheel.reload();
         RIAutomobilityComponentManager.applyCustomComponents(frames, wheels);
         RIAutomobileModels.registerDynamicModels(frames.values(), wheels.values());
+        BbModelRepository.reload(minecraft.getResourceManager());
 
         if (minecraft.getEntityModels() != null) {
             DynamicJsonModelLoader.loadIntoEntityModelSet(minecraft.getEntityModels(), minecraft.getResourceManager());

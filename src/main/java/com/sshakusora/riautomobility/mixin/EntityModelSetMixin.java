@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
@@ -22,5 +23,6 @@ public class EntityModelSetMixin {
     private void riautomobility$loadDynamicJsonEntityModels(ResourceManager manager, CallbackInfo ci) {
         this.roots = new HashMap<>(this.roots);
         DynamicJsonModelLoader.loadModels(manager, this.roots);
+        BbModelRepository.reload(manager);
     }
 }

@@ -23,8 +23,10 @@ RIAutomobility automatically enables both the data and resource sides of every d
 - `examplepack:example_buggy` wheel
 - `examplepack:example_buggy_gecko` frame
 - `examplepack:example_buggy_gecko` wheel
+- `examplepack:example_buggy_bbmodel` frame
+- `examplepack:example_buggy_bbmodel` wheel
 
-All four components will appear in the `RIAutomobility: Custom` creative tab and can also be crafted in the Auto Mechanic Table using the included recipe JSON files.
+All six components will appear in the `RIAutomobility: Custom` creative tab and can also be crafted in the Auto Mechanic Table using the included recipe JSON files.
 
 ### Important Paths
 
@@ -34,6 +36,8 @@ Component definitions:
 - `data/examplepack/riautomobility/frames/example_buggy_gecko.json`
 - `data/examplepack/riautomobility/wheels/example_buggy.json`
 - `data/examplepack/riautomobility/wheels/example_buggy_gecko.json`
+- `data/examplepack/riautomobility/frames/example_buggy_bbmodel.json`
+- `data/examplepack/riautomobility/wheels/example_buggy_bbmodel.json`
 
 Car-pack models:
 
@@ -41,6 +45,8 @@ Car-pack models:
 - `assets/examplepack/models/entity/automobile/wheel/example_buggy/main.json`
 - `assets/examplepack/geo/frame/example_buggy.geo.json`
 - `assets/examplepack/geo/wheel/example_buggy.geo.json`
+- `assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel`
+- `assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel`
 
 Translations:
 
@@ -54,10 +60,11 @@ Translations:
 - `model.model_id` is the runtime model id used by Automobility item and entity rendering.
 - The `example_buggy` pair uses `JsonEM`.
 - The `example_buggy_gecko` pair uses `GeckoLib` with `geo_model` and `animation` fields.
+- The `example_buggy_bbmodel` pair loads native Blockbench project files. Its frame demonstrates groups, cubes, a mesh, multiple textures, and a looping animation.
 - `example_buggy_gecko` also sets `hide_engine: true`, so the vehicle keeps its real engine logic but renders the built-in `AutomobileEngine.EMPTY` model.
 - If a client is missing the car pack resources, the components will render with a barrier-texture placeholder instead of crashing the game.
 - In that case, tooltips will show a missing car-pack resource warning.
-- Both `JsonEM` and `GeckoLib` examples are loaded automatically. Manual resource-pack selection and `F3 + T` are not required.
+- The `JsonEM`, `GeckoLib`, and `BBModel` examples are loaded automatically. Manual resource-pack selection and `F3 + T` are not required.
 - On a dedicated server, install the same car packs in the server and client `riautomobility/` folders. A digest warning is shown when they differ.
 
 ### Creating Your Own Variant
@@ -90,8 +97,10 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - `examplepack:example_buggy` 车轮
 - `examplepack:example_buggy_gecko` 车架
 - `examplepack:example_buggy_gecko` 车轮
+- `examplepack:example_buggy_bbmodel` 车架
+- `examplepack:example_buggy_bbmodel` 车轮
 
-这四个组件都会显示在 `RIAutomobility: Custom` 创造模式标签页中，也可以通过附带的 Auto Mechanic Table 配方进行制作。
+这六个组件都会显示在 `RIAutomobility: Custom` 创造模式标签页中，也可以通过附带的 Auto Mechanic Table 配方进行制作。
 
 ### 重要路径
 
@@ -101,6 +110,8 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - `data/examplepack/riautomobility/frames/example_buggy_gecko.json`
 - `data/examplepack/riautomobility/wheels/example_buggy.json`
 - `data/examplepack/riautomobility/wheels/example_buggy_gecko.json`
+- `data/examplepack/riautomobility/frames/example_buggy_bbmodel.json`
+- `data/examplepack/riautomobility/wheels/example_buggy_bbmodel.json`
 
 车包模型：
 
@@ -108,6 +119,8 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - `assets/examplepack/models/entity/automobile/wheel/example_buggy/main.json`
 - `assets/examplepack/geo/frame/example_buggy.geo.json`
 - `assets/examplepack/geo/wheel/example_buggy.geo.json`
+- `assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel`
+- `assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel`
 
 翻译文件：
 
@@ -121,10 +134,11 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - `model.model_id` 是 Automobility 物品与实体渲染时使用的运行时模型 id。
 - `example_buggy` 这一对组件使用 `JsonEM`。
 - `example_buggy_gecko` 这一对组件使用 `GeckoLib`，并通过 `geo_model` 与 `animation` 字段引用资源。
+- `example_buggy_bbmodel` 直接加载 Blockbench 工程；其中车架展示了 Group、Cube、Mesh、多贴图和循环动画。
 - `example_buggy_gecko` 还设置了 `hide_engine: true`，因此载具仍然保留真实引擎逻辑，但渲染时会改用内置的 `AutomobileEngine.EMPTY` 模型。
 - 如果客户端缺少车包资源，组件会显示为屏障贴图占位，而不会导致游戏崩溃。
 - 此时 tooltip 会提示缺少车包资源。
-- `JsonEM` 和 `GeckoLib` 示例都会自动加载，无需手动选择资源或按 `F3 + T`。
+- `JsonEM`、`GeckoLib` 和 `BBModel` 示例都会自动加载，无需手动选择资源或按 `F3 + T`。
 - 专用服务器需要在服务端与客户端的 `riautomobility/` 目录安装相同车包；内容不一致时客户端会收到摘要警告。
 
 ### 创建你自己的版本

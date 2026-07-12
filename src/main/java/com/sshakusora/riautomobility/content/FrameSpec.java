@@ -13,7 +13,9 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public record FrameSpec(
         ResourceLocation id,
@@ -217,19 +219,30 @@ public record FrameSpec(
             String renderType,
             float rotationY,
             ResourceLocation geoModel,
-            ResourceLocation animation
+            ResourceLocation animation,
+            ResourceLocation bbModel,
+            Map<String, ResourceLocation> textureOverrides,
+            String bbAnimation
     ) {
         public static ModelSpec fromJson(JsonObject json) {
             String type = GsonHelper.getAsString(json, "type", "jsonem");
+            ResourceLocation texture = json.has("texture")
+                    ? parseId(GsonHelper.getAsString(json, "texture"))
+                    : "bbmodel".equalsIgnoreCase(type)
+                    ? new ResourceLocation("minecraft", "textures/item/barrier.png")
+                    : parseId(GsonHelper.getAsString(json, "texture"));
             return new ModelSpec(
                     type,
-                    parseId(GsonHelper.getAsString(json, "texture")),
+                    texture,
                     parseId(GsonHelper.getAsString(json, "model_id")),
                     json.has("layer_location") ? parseId(GsonHelper.getAsString(json, "layer_location")) : null,
                     GsonHelper.getAsString(json, "render_type", "entity_cutout"),
                     GsonHelper.getAsFloat(json, "rotation_y", 0.0F),
                     json.has("geo_model") ? parseId(GsonHelper.getAsString(json, "geo_model")) : null,
-                    json.has("animation") ? parseId(GsonHelper.getAsString(json, "animation")) : null
+                    json.has("animation") ? parseId(GsonHelper.getAsString(json, "animation")) : null,
+                    json.has("bbmodel") ? parseId(GsonHelper.getAsString(json, "bbmodel")) : null,
+                    readTextureOverrides(json),
+                    GsonHelper.getAsString(json, "bb_animation", "")
             );
         }
 
@@ -249,11 +262,38 @@ public record FrameSpec(
             if (this.animation != null) {
                 json.addProperty("animation", this.animation.toString());
             }
+            if (this.bbModel != null) {
+                json.addProperty("bbmodel", this.bbModel.toString());
+            }
+            if (!this.textureOverrides.isEmpty()) {
+                JsonObject textures = new JsonObject();
+                this.textureOverrides.forEach((key, value) -> textures.addProperty(key, value.toString()));
+                json.add("textures", textures);
+            }
+            if (!this.bbAnimation.isEmpty()) {
+                json.addProperty("bb_animation", this.bbAnimation);
+            }
             return json;
         }
 
         public boolean isGeckoLib() {
             return "geckolib".equalsIgnoreCase(this.type);
+        }
+
+        public boolean isBbModel() {
+            return "bbmodel".equalsIgnoreCase(this.type);
+        }
+
+        private static Map<String, ResourceLocation> readTextureOverrides(JsonObject json) {
+            if (!json.has("textures")) {
+                return Map.of();
+            }
+
+            Map<String, ResourceLocation> textures = new LinkedHashMap<>();
+            for (Map.Entry<String, JsonElement> entry : GsonHelper.getAsJsonObject(json, "textures").entrySet()) {
+                textures.put(entry.getKey(), parseId(entry.getValue().getAsString()));
+            }
+            return Map.copyOf(textures);
         }
     }
 

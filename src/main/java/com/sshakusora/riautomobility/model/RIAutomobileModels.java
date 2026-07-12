@@ -5,6 +5,8 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileModelsAccessor;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
+import com.sshakusora.riautomobility.model.bbmodel.DynamicBbModel;
 import com.sshakusora.riautomobility.model.frame.DoubleMotorcarFrameModel;
 import com.sshakusora.riautomobility.model.frame.QuadMotorcarFrameModel;
 import com.sshakusora.riautomobility.model.gecko.DynamicGeckoAnimatable;
@@ -40,6 +42,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class RIAutomobileModels {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -105,6 +108,7 @@ public class RIAutomobileModels {
 
     public static void applyDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
         clearMissingFlags(frames, wheels);
+        prepareBbModels(frames, wheels);
         for (FrameSpec spec : frames) {
             registerDynamicModel(spec.id(), spec.model());
         }
@@ -116,6 +120,7 @@ public class RIAutomobileModels {
 
     public static void registerDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
         clearMissingFlags(frames, wheels);
+        prepareBbModels(frames, wheels);
         for (FrameSpec spec : frames) {
             registerDynamicModel(spec.id(), spec.model());
         }
@@ -125,6 +130,10 @@ public class RIAutomobileModels {
     }
 
     private static void registerDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+        if (modelSpec.isBbModel()) {
+            registerDynamicBbModel(componentId, modelSpec);
+            return;
+        }
         if (modelSpec.isGeckoLib()) {
             registerDynamicGeckoModel(componentId, modelSpec);
             return;
@@ -142,6 +151,34 @@ public class RIAutomobileModels {
                 return createPlaceholderModel(ctx);
             }
         });
+    }
+
+    private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
+        Set<ResourceLocation> resources = Stream.concat(
+                        frames.stream().map(FrameSpec::model),
+                        wheels.stream().map(WheelSpec::model)
+                )
+                .filter(FrameSpec.ModelSpec::isBbModel)
+                .map(FrameSpec.ModelSpec::bbModel)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        BbModelRepository.retain(resources);
+    }
+
+    private static void registerDynamicBbModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+        try {
+            BbModelRepository.register(modelSpec);
+            AutomobileModels.register(modelSpec.modelId(), ctx -> new DynamicBbModel(
+                    componentId,
+                    modelSpec,
+                    createPlaceholderModel(ctx),
+                    RIAutomobileModels::markMissingComponent
+            ));
+        } catch (RuntimeException exception) {
+            markMissingComponent(componentId);
+            LOGGER.error("Failed to register dynamic Blockbench automobile model {} using {}", modelSpec.modelId(), modelSpec.bbModel(), exception);
+            AutomobileModels.register(modelSpec.modelId(), RIAutomobileModels::createPlaceholderModel);
+        }
     }
 
     private static void registerDynamicGeckoModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
@@ -180,6 +217,12 @@ public class RIAutomobileModels {
 
     public static boolean isMissingComponent(ResourceLocation componentId) {
         return componentId != null && MISSING_COMPONENTS.contains(componentId);
+    }
+
+    public static void clearMissingComponent(ResourceLocation componentId) {
+        if (componentId != null) {
+            MISSING_COMPONENTS.remove(componentId);
+        }
     }
 
     private static void clearMissingFlags(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
