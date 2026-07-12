@@ -3,12 +3,6 @@
   "grip": 0.62,
   "radius": 5.0,
   "width": 3.5,
-  "model": {
-    "type": "bbmodel",
-    "texture": "automobility:textures/entity/automobile/wheel/off_road.png",
-    "model_id": "examplepack:wheel_example_buggy_bbmodel",
-    "bbmodel": "examplepack:models/entity/automobile/wheel/example_buggy.bbmodel",
-    "render_type": "entity_cutout_no_cull"
-  },
+  "model": "examplepack:models/entity/automobile/wheel/example_buggy.bbmodel",
   "show_in_creative_tab": true
 }

@@ -134,6 +134,52 @@ class BbModelParserTest {
     }
 
     @Test
+    void componentBbModelStringDerivesRuntimeModelId() {
+        FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
+                new com.google.gson.JsonPrimitive("example:models/vehicles/car.bbmodel"),
+                new net.minecraft.resources.ResourceLocation("example", "car"),
+                "frame"
+        );
+
+        assertEquals("bbmodel", spec.type());
+        assertEquals("example:models/vehicles/car.bbmodel", spec.bbModel().toString());
+        assertEquals("example:riautomobility/frame/car", spec.modelId().toString());
+    }
+
+    @Test
+    void omittedComponentModelUsesConventionalBbModelPath() {
+        FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
+                null,
+                new net.minecraft.resources.ResourceLocation("example", "sports/red_car"),
+                "wheel"
+        );
+
+        assertEquals("example:models/entity/automobile/wheel/sports/red_car.bbmodel", spec.bbModel().toString());
+        assertEquals("example:riautomobility/wheel/sports/red_car", spec.modelId().toString());
+        assertEquals("", spec.bbAnimation());
+        assertTrue(spec.textureOverrides().isEmpty());
+    }
+
+    @Test
+    void parsesShorthandModelsInShippedComponentDefinitions() throws IOException {
+        net.minecraft.resources.ResourceLocation id = new net.minecraft.resources.ResourceLocation("examplepack", "example_buggy_bbmodel");
+        FrameSpec frame = FrameSpec.fromJson(id, JsonParser.parseString(Files.readString(Path.of(
+                "examples/examplepack/data/examplepack/riautomobility/frames/example_buggy_bbmodel.json"
+        ))).getAsJsonObject());
+        com.sshakusora.riautomobility.content.WheelSpec wheel = com.sshakusora.riautomobility.content.WheelSpec.fromJson(
+                id,
+                JsonParser.parseString(Files.readString(Path.of(
+                        "examples/examplepack/data/examplepack/riautomobility/wheels/example_buggy_bbmodel.json"
+                ))).getAsJsonObject()
+        );
+
+        assertEquals("examplepack:models/entity/automobile/frame/example_buggy.bbmodel", frame.model().bbModel().toString());
+        assertEquals("examplepack:riautomobility/frame/example_buggy_bbmodel", frame.model().modelId().toString());
+        assertEquals("examplepack:models/entity/automobile/wheel/example_buggy.bbmodel", wheel.model().bbModel().toString());
+        assertEquals("examplepack:riautomobility/wheel/example_buggy_bbmodel", wheel.model().modelId().toString());
+    }
+
+    @Test
     void evaluatesMolangAnimationValues() {
         BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
                 {

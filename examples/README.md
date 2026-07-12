@@ -61,6 +61,7 @@ Translations:
 - The `example_buggy` pair uses `JsonEM`.
 - The `example_buggy_gecko` pair uses `GeckoLib` with `geo_model` and `animation` fields.
 - The `example_buggy_bbmodel` pair loads native Blockbench project files. Its frame demonstrates groups, cubes, a mesh, multiple textures, and a looping animation.
+- BBModel component definitions use the one-line `model` resource shorthand; textures and the default animation come from the project file.
 - `example_buggy_gecko` also sets `hide_engine: true`, so the vehicle keeps its real engine logic but renders the built-in `AutomobileEngine.EMPTY` model.
 - If a client is missing the car pack resources, the components will render with a barrier-texture placeholder instead of crashing the game.
 - In that case, tooltips will show a missing car-pack resource warning.
@@ -135,6 +136,7 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分，�
 - `example_buggy` 这一对组件使用 `JsonEM`。
 - `example_buggy_gecko` 这一对组件使用 `GeckoLib`，并通过 `geo_model` 与 `animation` 字段引用资源。
 - `example_buggy_bbmodel` 直接加载 Blockbench 工程；其中车架展示了 Group、Cube、Mesh、多贴图和循环动画。
+- BBModel 组件使用单行 `model` 资源简写，贴图与默认动画直接来自工程文件。
 - `example_buggy_gecko` 还设置了 `hide_engine: true`，因此载具仍然保留真实引擎逻辑，但渲染时会改用内置的 `AutomobileEngine.EMPTY` 模型。
 - 如果客户端缺少车包资源，组件会显示为屏障贴图占位，而不会导致游戏崩溃。
 - 此时 tooltip 会提示缺少车包资源。

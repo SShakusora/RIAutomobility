@@ -1,17 +1,6 @@
 {
   "weight": 0.9,
-  "model": {
-    "type": "bbmodel",
-    "texture": "automobility:textures/entity/automobile/frame/standard_red.png",
-    "model_id": "examplepack:frame_example_buggy_bbmodel",
-    "bbmodel": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
-    "bb_animation": "idle",
-    "render_type": "entity_cutout_no_cull",
-    "textures": {
-      "body": "automobility:textures/entity/automobile/frame/standard_red.png",
-      "trim": "minecraft:textures/block/iron_block.png"
-    }
-  },
+  "model": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
   "wheel_base": { "forward_separation": 44.0, "side_separation": 26.0 },
   "length_px": 22.0,
   "seat_height": 4.0,

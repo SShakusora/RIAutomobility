@@ -292,20 +292,12 @@ Example wheel definition:
 **BBModel** — Native Blockbench project model:
 
 ```json
-"model": {
-  "type": "bbmodel",
-  "texture": "examplepack:textures/entity/automobile/frame/example_buggy.png",
-  "model_id": "examplepack:frame_example_buggy_bbmodel",
-  "bbmodel": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
-  "bb_animation": "idle",
-  "render_type": "entity_cutout_no_cull",
-  "textures": {
-    "body": "examplepack:textures/entity/automobile/frame/example_buggy.png",
-    "trim": "examplepack:textures/entity/automobile/frame/example_buggy_trim.png"
-  }
-}
+"model": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel"
 ```
 
+- `model` may be omitted when the project follows `assets/<namespace>/models/entity/automobile/<frame|wheel>/<component-path>.bbmodel`.
+- A BBModel resource string is enough for a non-conventional path. `type`, `texture`, `model_id`, and the first animation are inferred automatically.
+- Use the legacy model object only for optional overrides such as `bb_animation`, `render_type`, or `textures`; existing packs remain compatible.
 - Supports Blockbench project format `4.10` through `5.0`.
 - Native elements include cubes, meshes, texture meshes, groups, locators, null objects, and bounding boxes.
 - Supports multiple or embedded textures and position/rotation/scale animations with linear, step, Bezier, and Catmull-Rom interpolation.
@@ -641,20 +633,12 @@ assets/<命名空间>/lang/zh_cn.json
 **BBModel** — 直接加载 Blockbench 工程模型：
 
 ```json
-"model": {
-  "type": "bbmodel",
-  "texture": "examplepack:textures/entity/automobile/frame/example_buggy.png",
-  "model_id": "examplepack:frame_example_buggy_bbmodel",
-  "bbmodel": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel",
-  "bb_animation": "idle",
-  "render_type": "entity_cutout_no_cull",
-  "textures": {
-    "body": "examplepack:textures/entity/automobile/frame/example_buggy.png",
-    "trim": "examplepack:textures/entity/automobile/frame/example_buggy_trim.png"
-  }
-}
+"model": "examplepack:models/entity/automobile/frame/example_buggy.bbmodel"
 ```
 
+- 当工程位于 `assets/<命名空间>/models/entity/automobile/<frame|wheel>/<组件路径>.bbmodel` 时，可以完全省略 `model`。
+- 非约定路径只需填写 BBModel 资源字符串；`type`、`texture`、`model_id` 和首个动画会自动推导。
+- 仅在指定 `bb_animation`、`render_type` 或 `textures` 覆盖时使用原有对象格式；旧车包继续兼容。
 - 支持 Blockbench `4.10` 至 `5.0` 工程格式。
 - 原生支持 Cube、Mesh、Texture Mesh、Group、Locator、Null Object 与 Bounding Box。
 - 支持多贴图、内嵌贴图，以及位置/旋转/缩放动画和 Linear、Step、Bezier、Catmull-Rom 插值。
