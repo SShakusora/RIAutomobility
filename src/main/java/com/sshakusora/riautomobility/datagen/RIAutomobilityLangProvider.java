@@ -82,10 +82,17 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("key.riautomobility.boarding_as_passenger", "Board / Switch Seat");
             add("itemGroup.riautomobility.components", "RIAutomobility");
             add("itemGroup.riautomobility.custom_components", "RIAutomobility: Custom");
-            add("tooltip.riautomobility.missing_resource_pack", "Missing resource pack for this component");
+            add("tooltip.riautomobility.missing_car_pack_resources", "Missing car-pack resources for this component");
             add("entity.riautomobility.riautomobile", "RIAutomobile");
             add("entity.riautomobility.hitbox", "RIAutomobile");
             add("container.riautomobility.hitbox", "Box");
+            add("commands.riautomobility.carpacks.reload.started", "Reloading RIAutomobility car packs...");
+            add("commands.riautomobility.carpacks.reload.success", "RIAutomobility car packs reloaded");
+            add("commands.riautomobility.carpacks.reload.failed", "Failed to reload RIAutomobility car packs: %s");
+            add("message.riautomobility.carpacks.mismatch", "Car packs do not match the server.");
+            add("message.riautomobility.carpacks.missing", "Missing: %s.");
+            add("message.riautomobility.carpacks.different", "Different: %s.");
+            add("message.riautomobility.carpacks.client_only", "Client only: %s.");
         }
 
         @Override
@@ -126,10 +133,17 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("key.riautomobility.boarding_as_passenger", "上车 / 切换座位");
             add("itemGroup.riautomobility.components", "飞天奇匠");
             add("itemGroup.riautomobility.custom_components", "飞天奇匠：自定义");
-            add("tooltip.riautomobility.missing_resource_pack", "该组件缺少对应资源包");
+            add("tooltip.riautomobility.missing_car_pack_resources", "该组件缺少对应车包资源");
             add("entity.riautomobility.riautomobile", "机动车");
             add("entity.riautomobility.hitbox", "机动车");
             add("container.riautomobility.hitbox", "后备箱");
+            add("commands.riautomobility.carpacks.reload.started", "正在重载 RIAutomobility 车包……");
+            add("commands.riautomobility.carpacks.reload.success", "RIAutomobility 车包已重载");
+            add("commands.riautomobility.carpacks.reload.failed", "RIAutomobility 车包重载失败：%s");
+            add("message.riautomobility.carpacks.mismatch", "车包与服务器不一致。");
+            add("message.riautomobility.carpacks.missing", "缺少：%s。");
+            add("message.riautomobility.carpacks.different", "内容不同：%s。");
+            add("message.riautomobility.carpacks.client_only", "仅客户端存在：%s。");
         }
 
         @Override

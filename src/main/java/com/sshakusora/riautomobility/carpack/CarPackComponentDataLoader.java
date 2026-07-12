@@ -1,4 +1,4 @@
-package com.sshakusora.riautomobility.reload;
+package com.sshakusora.riautomobility.carpack;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,19 +21,17 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-public class RIAutomobilityComponentDataLoader extends SimplePreparableReloadListener<RIAutomobilityComponentDataLoader.LoadedContent> {
+public final class CarPackComponentDataLoader extends SimplePreparableReloadListener<CarPackComponentDataLoader.LoadedContent> {
     private static final Gson GSON = new GsonBuilder().create();
 
     @Override
     protected LoadedContent prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
-        return new LoadedContent(
-                loadFrames(resourceManager),
-                loadWheels(resourceManager)
-        );
+        return new LoadedContent(loadFrames(resourceManager), loadWheels(resourceManager));
     }
 
     @Override
@@ -41,7 +39,7 @@ public class RIAutomobilityComponentDataLoader extends SimplePreparableReloadLis
         RIAutomobileFrame.reload();
         RIAutomobileWheel.reload();
         RIAutomobilityComponentManager.applyCustomComponents(content.frames(), content.wheels());
-        RIAutomobilityReloadManager.refreshAllServerLevels();
+        CarPackManager.refreshAllServerLevels();
     }
 
     private static Map<ResourceLocation, FrameSpec> loadFrames(ResourceManager resourceManager) {
@@ -57,15 +55,34 @@ public class RIAutomobilityComponentDataLoader extends SimplePreparableReloadLis
     }
 
     private static void load(ResourceManager resourceManager, String root, JsonConsumer consumer) {
-        for (Map.Entry<ResourceLocation, Resource> entry : resourceManager.listResources(root, location -> location.getPath().endsWith(".json")).entrySet()) {
+        Map<ResourceLocation, List<Resource>> stacks = resourceManager.listResourceStacks(
+                root,
+                location -> location.getPath().endsWith(".json")
+        );
+        for (Map.Entry<ResourceLocation, List<Resource>> entry : stacks.entrySet()) {
+            Resource resource = highestPriorityCarPackResource(entry.getValue());
+            if (resource == null) {
+                continue;
+            }
+
             ResourceLocation file = entry.getKey();
             ResourceLocation id = toDataId(root, file);
-            try (Reader reader = entry.getValue().openAsReader()) {
+            try (Reader reader = resource.openAsReader()) {
                 consumer.accept(id, GsonHelper.fromJson(GSON, reader, JsonObject.class));
             } catch (IOException | JsonParseException exception) {
-                throw new IllegalStateException("Failed to load RIAutomobility component " + id + " from " + file, exception);
+                throw new IllegalStateException("Failed to load RIAutomobility car pack component " + id + " from " + file, exception);
             }
         }
+    }
+
+    private static Resource highestPriorityCarPackResource(List<Resource> resources) {
+        for (int index = resources.size() - 1; index >= 0; index--) {
+            Resource resource = resources.get(index);
+            if (resource.sourcePackId().startsWith(CarPackManager.PACK_ID_PREFIX)) {
+                return resource;
+            }
+        }
+        return null;
     }
 
     private static ResourceLocation toDataId(String root, ResourceLocation file) {

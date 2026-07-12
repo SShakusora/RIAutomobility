@@ -25,7 +25,7 @@ public abstract class AutomobileComponentItemTooltipMixin<T extends AutomobileCo
     private void appendMissingResourceHint(ItemStack stack, @Nullable Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo ci) {
         T component = this.getComponent(stack);
         if (RIAutomobileModels.isMissingComponent(component.getId())) {
-            tooltip.add(Component.translatable("tooltip.riautomobility.missing_resource_pack").withStyle(ChatFormatting.RED));
+            tooltip.add(Component.translatable("tooltip.riautomobility.missing_car_pack_resources").withStyle(ChatFormatting.RED));
         }
     }
 }

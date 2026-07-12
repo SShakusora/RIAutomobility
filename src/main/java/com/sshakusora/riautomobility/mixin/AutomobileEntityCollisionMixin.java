@@ -1,7 +1,5 @@
 package com.sshakusora.riautomobility.mixin;
 
-import com.sshakusora.riautomobility.entity.HitboxEntity;
-import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.core.BlockPos;

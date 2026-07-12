@@ -6,7 +6,7 @@
 [![Forge](https://img.shields.io/badge/Forge-47.1.x-e04e14)](https://files.minecraftforge.net/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 
-**A Forge addon for Automobility — expanding vehicles with custom frames, wheels, multi-seat support, and datapack-driven content.**
+**A Forge addon for Automobility — expanding vehicles with custom frames, wheels, multi-seat support, and unified car packs.**
 
 [English](#english) | [中文](#中文)
 
@@ -23,7 +23,7 @@
 - [Dependencies](#dependencies)
 - [Built-in Content](#built-in-content)
 - [Installation](#installation)
-- [Data-Driven Guide](#data-driven-guide)
+- [Car Pack Guide](#car-pack-guide)
 - [Example Pack](#example-pack)
 - [Notes for Pack Authors](#notes-for-pack-authors)
 
@@ -31,17 +31,17 @@
 
 `RIAutomobility` is a Forge addon for `Automobility` on Minecraft `1.20.1`. It extends the base mod with new vehicle components and powerful customization tools for both players and content creators.
 
-Whether you want to drive new vehicles out of the box or design your own through datapacks and resource packs, RIAutomobility has you covered.
+Whether you want to drive new vehicles out of the box or design your own through unified car packs, RIAutomobility has you covered.
 
 ### Features
 
 - **New Vehicle Components** — Multiple custom frames and wheels built on top of Automobility
 - **Multi-Seat Vehicles** — Custom seat layouts for larger or special vehicles
 - **Custom Hitboxes & Camera** — Fine-tuned collision and camera definitions for RIA vehicles
-- **Organized Creative Tabs** — Built-in and datapack components are neatly separated:
+- **Organized Creative Tabs** — Built-in and car-pack components are neatly separated:
   - `RIAutomobility` — built-in frames and wheels
-  - `RIAutomobility: Custom` — datapack-defined components
-- **Datapack Support** — Define custom `Frame` and `Wheel` components via JSON
+  - `RIAutomobility: Custom` — car-pack-defined components
+- **Unified Car Packs** — Define custom `Frame` and `Wheel` components and ship their assets together
 - **Dual Rendering Pipelines** — Supports both `JsonEM` baked models and `GeckoLib` animated models
 - **Safe Fallbacks** — Missing resources render as a placeholder with tooltip warnings instead of crashing
 
@@ -81,25 +81,26 @@ The mod ships with a variety of pre-made vehicles and components:
 3. Place `RIAutomobility.jar` in your `mods/` folder
 4. Launch the game
 
-#### For Custom Content (Datapacks)
+#### For Custom Content (Car Packs)
 
-1. Place your datapack in the world's `datapacks/` folder
-2. Place your resource pack in Minecraft's `resourcepacks/` folder
-3. Enable the resource pack in-game
-4. Enter the world and run `/reload` if needed
+1. Create one pack containing `pack.mcmeta`, `data/`, and `assets/`
+2. Place its folder or `.zip` directly in Minecraft's `riautomobility/` folder
+3. Launch the game, or run `/riautomobility carpacks reload`
 
-### Data-Driven Guide
+Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers and clients must install matching car packs; the client reports missing or different packs when joining.
 
-> **Tip:** Datapack changes can be hot-reloaded using `/reload` — no need to restart the game. Resource pack changes may require rejoining the world or pressing `F3 + T`.
+### Car Pack Guide
 
-Custom components are split into two parts:
+> **Tip:** `/riautomobility carpacks reload` rescans both definitions and client resources, so manual resource-pack selection and `F3 + T` are not required.
+
+Custom components use standard data and resource layouts inside one car pack:
 
 | Part | Purpose |
 |------|---------|
-| **Datapack** | Gameplay definition (stats, dimensions, seats, hitboxes, model references) |
-| **Resource Pack** | Model, texture, and animation assets |
+| **Data** | Gameplay definition (stats, dimensions, seats, hitboxes, model references) |
+| **Assets** | Model, texture, and animation assets |
 
-#### Datapack Paths
+#### Component Definition Paths
 
 ```
 data/<namespace>/riautomobility/frames/<id>.json
@@ -112,7 +113,7 @@ data/automobility/recipes/frame/<recipe>.json
 data/automobility/recipes/wheel/<recipe>.json
 ```
 
-#### Resource Pack Paths
+#### Asset Paths
 
 **JsonEM models:**
 ```
@@ -254,9 +255,9 @@ Example wheel definition:
 
 <!-- TODO: Replace with actual screenshot -->
 <div align="center">
-  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="Datapack Frame And Wheel Example" width="600">
+  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="Car Pack Frame And Wheel Example" width="600">
   <br>
-  <em>Figure 1: Custom frame and wheel defined via datapack, shown in the creative tab</em>
+  <em>Figure 1: Custom frame and wheel defined by a car pack, shown in the creative tab</em>
 </div>
 
 #### Model Definition Types
@@ -310,9 +311,8 @@ Example wheel definition:
 
 A complete minimal example is included in this repository:
 
-- [`examples/examplepack-data/`](examples/examplepack-data/)
-- [`examples/examplepack-resources/`](examples/examplepack-resources/)
-- [`examples/examplepack/README.md`](examples/examplepack/README.md)
+- [`examples/examplepack/`](examples/examplepack/)
+- [`examples/README.md`](examples/README.md)
 
 It contains:
 - A `JsonEM` frame and wheel example
@@ -322,18 +322,18 @@ It contains:
 
 ### Notes for Pack Authors
 
-- Datapacks can define components without resource packs, but they will render as placeholders.
+- A car pack can define components without matching assets, but they will render as placeholders.
 - Missing-resource placeholders use a barrier texture for easy identification.
 - `JsonEM` components need valid `assets/<namespace>/models/entity/.../main.json` files.
 - `GeckoLib` components need valid `geo`, `animation`, and texture resources.
-- Tooltips warn the player when the required resource pack is missing.
+- Tooltips warn the player when required car-pack assets are missing.
 - Custom models apply automatically after joining the world — no `F3 + T` needed.
 
 <!-- TODO: Replace with actual screenshot -->
 <div align="center">
   <img src="ScreenShots/missing_resource_placeholder.png" alt="Missing Resource Placeholder" width="500">
   <br>
-  <em>Figure 2: Placeholder model and tooltip warning when a resource pack is missing</em>
+  <em>Figure 2: Placeholder model and tooltip warning when car-pack assets are missing</em>
 </div>
 
 ---
@@ -347,7 +347,7 @@ It contains:
 - [依赖](#依赖)
 - [内置内容](#内置内容)
 - [安装方法](#安装方法)
-- [数据驱动教程](#数据驱动教程)
+- [车包教程](#车包教程)
 - [示例包](#示例包)
 - [给内容作者的提示](#给内容作者的提示)
 
@@ -355,17 +355,17 @@ It contains:
 
 `RIAutomobility` 是一个基于 Minecraft `1.20.1 Forge` 的 `Automobility` 附属模组。它在 Automobility 的基础上扩展了新的车辆组件，并为玩家和内容创作者提供了强大的自定义工具。
 
-无论你是想直接使用内置新车，还是通过数据包和资源包设计自己的载具，RIAutomobility 都能满足你的需求。
+无论你是想直接使用内置新车，还是通过统一车包设计自己的载具，RIAutomobility 都能满足你的需求。
 
 ### 主要功能
 
 - **全新车辆部件** — 为 Automobility 添加了多种自定义车架和车轮
 - **多座位载具** — 为大型或特殊车型提供自定义座位布局
 - **自定义碰撞箱与摄像机** — 为 RIA 车辆提供精细调整的碰撞箱和摄像机定义
-- **分类创造标签页** — 内置组件与数据包组件分类管理：
+- **分类创造标签页** — 内置组件与车包组件分类管理：
   - `飞天奇匠` — 内置车架与车轮
-  - `飞天奇匠：自定义` — 数据包定义的组件
-- **数据包支持** — 通过 JSON 定义自定义 `Frame` / `Wheel`
+  - `飞天奇匠：自定义` — 车包定义的组件
+- **统一车包** — 在同一个车包中定义自定义 `Frame` / `Wheel` 并附带全部资源
 - **双渲染管线** — 同时支持 `JsonEM` 烘焙模型和 `GeckoLib` 动画模型
 - **安全降级** — 资源缺失时使用占位模型并提示，不会导致崩溃
 
@@ -405,25 +405,26 @@ It contains:
 3. 将 `RIAutomobility.jar` 放入 `mods/` 文件夹
 4. 启动游戏
 
-#### 自定义内容（数据包）
+#### 自定义内容（车包）
 
-1. 将数据包放入存档的 `datapacks/` 文件夹
-2. 将资源包放入 Minecraft 的 `resourcepacks/` 文件夹
-3. 在游戏中启用资源包
-4. 进入存档，如需可执行 `/reload`
+1. 创建一个同时包含 `pack.mcmeta`、`data/` 和 `assets/` 的车包
+2. 将车包文件夹或 `.zip` 直接放入 Minecraft 的 `riautomobility/` 文件夹
+3. 启动游戏，或执行 `/riautomobility carpacks reload`
 
-### 数据驱动教程
+车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器与客户端必须安装相同车包，加入服务器时客户端会报告缺失或内容不同的车包。
 
-> **提示：** 数据包改动可以使用 `/reload` 进行热重载，无需重启游戏。资源包改动可能需要重新进入世界或按 `F3 + T` 刷新。
+### 车包教程
 
-自定义车辆组件分为两部分：
+> **提示：** `/riautomobility carpacks reload` 会同时重新扫描定义与客户端资源，无需手动选择资源或按 `F3 + T`。
+
+自定义车辆组件在同一个车包中使用标准的数据与资源目录：
 
 | 部分 | 作用 |
 |------|------|
-| **数据包** | 玩法定义（数值、尺寸、座位、碰撞箱、模型引用） |
-| **资源包** | 模型、贴图、动画资源 |
+| **数据** | 玩法定义（数值、尺寸、座位、碰撞箱、模型引用） |
+| **资源** | 模型、贴图、动画资源 |
 
-#### 数据包路径
+#### 组件定义路径
 
 ```
 data/<命名空间>/riautomobility/frames/<id>.json
@@ -436,7 +437,7 @@ data/automobility/recipes/frame/<配方>.json
 data/automobility/recipes/wheel/<配方>.json
 ```
 
-#### 资源包路径
+#### 资源路径
 
 **JsonEM 模型：**
 ```
@@ -578,9 +579,9 @@ assets/<命名空间>/lang/zh_cn.json
 
 <!-- TODO: 替换为实际截图 -->
 <div align="center">
-  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="数据包车架和车轮示例" width="600">
+  <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="车包车架和车轮示例" width="600">
   <br>
-  <em>图 1：通过数据包定义的自定义车架和车轮在创造标签页中的展示</em>
+  <em>图 1：通过车包定义的自定义车架和车轮在创造标签页中的展示</em>
 </div>
 
 #### 模型定义类型
@@ -634,27 +635,26 @@ assets/<命名空间>/lang/zh_cn.json
 
 仓库中已附带一套完整的最小示例：
 
-- [`examples/examplepack-data/`](examples/examplepack-data/)
-- [`examples/examplepack-resources/`](examples/examplepack-resources/)
-- [`examples/examplepack/README.md`](examples/examplepack/README.md)
+- [`examples/examplepack/`](examples/examplepack/)
+- [`examples/README.md`](examples/README.md)
 
 其中包含：
 - 一套 `JsonEM` 车架与车轮示例
 - 一套 `GeckoLib` 车架与车轮示例
-- 对应配方、翻译文件和资源包模型
+- 对应配方、翻译文件和车包模型
 
 ### 给内容作者的提示
 
-- 只装数据包不装资源包也是允许的，但组件会显示为占位模型。
+- 车包可以只定义组件而不提供对应资源，但组件会显示为占位模型。
 - 缺失资源时，占位模型使用屏障贴图，方便在物品栏中识别。
 - `JsonEM` 组件需要正确的 `assets/<命名空间>/models/entity/.../main.json`。
 - `GeckoLib` 组件需要正确的 `geo`、`animation` 和贴图资源。
-- 当资源缺失时，tooltip 会提示玩家缺少对应资源包。
+- 当资源缺失时，tooltip 会提示玩家缺少对应车包资源。
 - 自定义模型在进入世界后自动生效，通常不需要按 `F3 + T`。
 
 <!-- TODO: 替换为实际截图 -->
 <div align="center">
   <img src="ScreenShots/missing_resource_placeholder.png" alt="缺失资源占位模型" width="500">
   <br>
-  <em>图 2：当资源包缺失时显示的占位模型与 Tooltip 警告</em>
+  <em>图 2：当车包资源缺失时显示的占位模型与 Tooltip 警告</em>
 </div>

@@ -1,4 +1,7 @@
 {
+  "commands.riautomobility.carpacks.reload.failed": "Failed to reload RIAutomobility car packs: %s",
+  "commands.riautomobility.carpacks.reload.started": "Reloading RIAutomobility car packs...",
+  "commands.riautomobility.carpacks.reload.success": "RIAutomobility car packs reloaded",
   "container.riautomobility.hitbox": "Box",
   "entity.riautomobility.hitbox": "RIAutomobile",
   "entity.riautomobility.riautomobile": "RIAutomobile",
@@ -19,7 +22,11 @@
   "itemGroup.riautomobility.custom_components": "RIAutomobility: Custom",
   "key.categories.riautomobility": "RIAutomobility",
   "key.riautomobility.boarding_as_passenger": "Board / Switch Seat",
-  "tooltip.riautomobility.missing_resource_pack": "Missing resource pack for this component",
+  "message.riautomobility.carpacks.client_only": "Client only: %s.",
+  "message.riautomobility.carpacks.different": "Different: %s.",
+  "message.riautomobility.carpacks.mismatch": "Car packs do not match the server.",
+  "message.riautomobility.carpacks.missing": "Missing: %s.",
+  "tooltip.riautomobility.missing_car_pack_resources": "Missing car-pack resources for this component",
   "wheel.riautomobility.dmc12": "DMC12",
   "wheel.riautomobility.standard_formula": "Standard Formula"
 }
