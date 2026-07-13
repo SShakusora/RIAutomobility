@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -21,12 +22,15 @@ import java.util.function.Supplier;
 public class SyncCustomComponentsPacket {
     private final Map<ResourceLocation, FrameSpec> frames;
     private final Map<ResourceLocation, WheelSpec> wheels;
+    private final Map<ResourceLocation, EngineSpec> engines;
     private final List<CarPackManifestEntry> carPacks;
 
     public SyncCustomComponentsPacket(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
+                                      Map<ResourceLocation, EngineSpec> engines,
                                       List<CarPackManifestEntry> carPacks) {
         this.frames = frames;
         this.wheels = wheels;
+        this.engines = engines;
         this.carPacks = carPacks;
     }
 
@@ -34,6 +38,7 @@ public class SyncCustomComponentsPacket {
         return new SyncCustomComponentsPacket(
                 RIAutomobilityComponentManager.getCustomFrames(),
                 RIAutomobilityComponentManager.getCustomWheels(),
+                RIAutomobilityComponentManager.getCustomEngines(),
                 CarPackArchiveStore.prepareManifest()
         );
     }
@@ -47,6 +52,8 @@ public class SyncCustomComponentsPacket {
         for (WheelSpec spec : msg.wheels.values()) {
             spec.write(buf);
         }
+        buf.writeVarInt(msg.engines.size());
+        for (EngineSpec spec : msg.engines.values()) spec.write(buf);
         buf.writeVarInt(msg.carPacks.size());
         for (CarPackManifestEntry entry : msg.carPacks) {
             entry.write(buf);
@@ -73,6 +80,13 @@ public class SyncCustomComponentsPacket {
             WheelSpec spec = WheelSpec.read(buf);
             wheels.put(spec.id(), spec);
         }
+        int engineCount = buf.readVarInt();
+        if (engineCount < 0 || engineCount > 4096) throw new IllegalArgumentException("Invalid custom engine count: " + engineCount);
+        Map<ResourceLocation, EngineSpec> engines = new LinkedHashMap<>();
+        for (int i = 0; i < engineCount; i++) {
+            EngineSpec spec = EngineSpec.read(buf);
+            engines.put(spec.id(), spec);
+        }
         int packCount = buf.readVarInt();
         if (packCount < 0 || packCount > CarPackManifestEntry.MAX_PACKS) {
             throw new IllegalArgumentException("Invalid RIAutomobility car pack count: " + packCount);
@@ -81,12 +95,12 @@ public class SyncCustomComponentsPacket {
         for (int i = 0; i < packCount; i++) {
             carPacks.add(CarPackManifestEntry.read(buf));
         }
-        return new SyncCustomComponentsPacket(frames, wheels, carPacks);
+        return new SyncCustomComponentsPacket(frames, wheels, engines, carPacks);
     }
 
     public static void handle(SyncCustomComponentsPacket msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
-                SyncCustomComponentsClientHandler.handle(msg.frames, msg.wheels, msg.carPacks)));
+                SyncCustomComponentsClientHandler.handle(msg.frames, msg.wheels, msg.engines, msg.carPacks)));
         ctx.get().setPacketHandled(true);
     }
 }

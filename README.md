@@ -83,17 +83,21 @@ The mod ships with a variety of pre-made vehicles and components:
 
 #### For Custom Content (Car Packs)
 
-1. Create one pack containing `pack.mcmeta`, `data/`, and `assets/`
-2. Place its folder or `.zip` directly in Minecraft's `riautomobility/` folder
+1. Use the in-game Vehicle Import Table to import a `.bbmodel` project with embedded PNG textures and export a `.riauto` file, or create a ZIP-compatible archive containing `riauto.json`, `pack.mcmeta`, `data/`, and `assets/`, then give it the `.riauto` extension
+2. Place the `.riauto` file directly in Minecraft's `riautomobility/` folder
 3. Launch the game, or run `/riautomobility carpacks reload`
 
-Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers only need to install packs in the server `riautomobility/` folder: joining clients automatically download missing or changed packs, verify their SHA-256 digests, and cache them under `riautomobility/cache/packs/`. Matching manually installed client packs are reused without downloading.
+Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers only need to install packs in the server `riautomobility/` folder: joining clients automatically download missing or changed packs, verify their SHA-256 digests, and cache them under `riautomobility/cache/packs/`. Matching manually installed client packs are reused without downloading. Legacy folder and `.zip` packs remain readable for migration, but newly exported and published packs use `.riauto`.
+
+The Vehicle Import Table accepts only native Blockbench `.bbmodel` projects. All model textures must be embedded as PNG data in the project and are applied automatically. JsonEM and GeckoLib remain supported for manually authored car packs, but cannot be imported through the table.
 
 ### Car Pack Guide
 
 > **Tip:** `/riautomobility carpacks reload` rescans both definitions and client resources, so manual resource-pack selection and `F3 + T` are not required.
 
 Custom components use standard data and resource layouts inside one car pack:
+
+`riauto.json` is the format manifest. Format version `1` declares a pack id, display name, and the frame/wheel component ids contained by the archive.
 
 | Part | Purpose |
 |------|---------|
@@ -105,6 +109,7 @@ Custom components use standard data and resource layouts inside one car pack:
 ```
 data/<namespace>/riautomobility/frames/<id>.json
 data/<namespace>/riautomobility/wheels/<id>.json
+data/<namespace>/riautomobility/engines/<id>.json
 ```
 
 Optional Automobility recipes:
@@ -154,7 +159,6 @@ Example frame definition:
     "side_separation": 26.0
   },
   "length_px": 44.0,
-  "seat_height": 4.0,
   "engine_pos_back": 14.0,
   "engine_pos_up": 3.0,
   "hide_engine": false,
@@ -188,12 +192,11 @@ Example frame definition:
 | `model` | Rendering definition (see [Model Types](#model-definition-types)) |
 | `wheel_base` | Wheel layout (symmetric or per-wheel) |
 | `length_px` | Frame render length in pixels |
-| `seat_height` | Base seat height in pixels |
 | `engine_pos_back` / `engine_pos_up` | Engine position on Z / Y axis in pixels |
 | `hide_engine` | Hide the engine model by rendering `AutomobileEngine.EMPTY` instead |
 | `rear_attachment_pos` / `front_attachment_pos` | Attachment anchor positions in pixels |
 | `dimensions.width` / `dimensions.height` | Entity dimensions in blocks |
-| `seats` | Seat positions in block coordinates |
+| `seats` | Seat positions in block coordinates; `y` is the complete editable seat-height offset |
 | `camera_positions` | Camera offsets in block coordinates |
 | `hitboxes` | Custom hitbox definitions |
 | `front_attachment_enabled` / `rear_attachment_enabled` | Allow attachments |
@@ -424,17 +427,21 @@ It contains:
 
 #### 自定义内容（车包）
 
-1. 创建一个同时包含 `pack.mcmeta`、`data/` 和 `assets/` 的车包
-2. 将车包文件夹或 `.zip` 直接放入 Minecraft 的 `riautomobility/` 文件夹
+1. 使用游戏内的车辆导入台导入包含内嵌 PNG 纹理的 `.bbmodel` 工程并导出 `.riauto`，或创建一个包含 `riauto.json`、`pack.mcmeta`、`data/` 和 `assets/` 的 ZIP 兼容归档并将扩展名设为 `.riauto`
+2. 将 `.riauto` 文件直接放入 Minecraft 的 `riautomobility/` 文件夹
 3. 启动游戏，或执行 `/riautomobility carpacks reload`
 
-车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器只需在服务端的 `riautomobility/` 目录安装车包；客户端加入时会自动下载缺失或已更新的车包、校验 SHA-256，并缓存到 `riautomobility/cache/packs/`。内容一致的客户端本地车包会直接复用，无需重复下载。
+车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器只需在服务端的 `riautomobility/` 目录安装车包；客户端加入时会自动下载缺失或已更新的车包、校验 SHA-256，并缓存到 `riautomobility/cache/packs/`。内容一致的客户端本地车包会直接复用，无需重复下载。旧文件夹和 `.zip` 在迁移期仍可读取，但新导出和发布的车包统一使用 `.riauto`。
+
+车辆导入台现在只接受原生 Blockbench `.bbmodel` 工程。工程中的所有纹理都必须以内嵌 PNG 数据保存，导入后会自动应用。JsonEM 和 GeckoLib 仍可用于手工编写的车包，但不能再通过导入台导入。
 
 ### 车包教程
 
 > **提示：** `/riautomobility carpacks reload` 会同时重新扫描定义与客户端资源，无需手动选择资源或按 `F3 + T`。
 
 自定义车辆组件在同一个车包中使用标准的数据与资源目录：
+
+`riauto.json` 是格式清单。格式版本 `1` 声明车包 id、显示名称，以及归档内包含的车架和车轮组件 id。
 
 | 部分 | 作用 |
 |------|------|
@@ -446,6 +453,7 @@ It contains:
 ```
 data/<命名空间>/riautomobility/frames/<id>.json
 data/<命名空间>/riautomobility/wheels/<id>.json
+data/<命名空间>/riautomobility/engines/<id>.json
 ```
 
 可选的 Automobility 配方：
@@ -495,7 +503,6 @@ assets/<命名空间>/lang/zh_cn.json
     "side_separation": 26.0
   },
   "length_px": 44.0,
-  "seat_height": 4.0,
   "engine_pos_back": 14.0,
   "engine_pos_up": 3.0,
   "hide_engine": false,
@@ -529,12 +536,11 @@ assets/<命名空间>/lang/zh_cn.json
 | `model` | 渲染定义（详见 [模型类型](#模型定义类型)） |
 | `wheel_base` | 轮组布局（对称简写或逐轮定义） |
 | `length_px` | 渲染长度，单位像素 |
-| `seat_height` | 座位基准高度，单位像素 |
 | `engine_pos_back` / `engine_pos_up` | 引擎在 Z / Y 轴位置，单位像素 |
 | `hide_engine` | 是否隐藏引擎模型；启用后会改用 `AutomobileEngine.EMPTY` 的渲染 |
 | `rear_attachment_pos` / `front_attachment_pos` | 挂载锚点位置，单位像素 |
 | `dimensions.width` / `dimensions.height` | 实体尺寸，单位方块 |
-| `seats` | 座位坐标，单位方块 |
+| `seats` | 座位坐标，单位方块；其中 `y` 是唯一可编辑的座椅高度偏移 |
 | `camera_positions` | 摄像机偏移，单位方块 |
 | `hitboxes` | 自定义碰撞箱定义 |
 | `front_attachment_enabled` / `rear_attachment_enabled` | 是否允许挂件 |

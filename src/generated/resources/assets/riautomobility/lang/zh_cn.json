@@ -4,6 +4,7 @@
   "commands.riautomobility.carpacks.reload.started": "正在重载 RIAutomobility 车包……",
   "commands.riautomobility.carpacks.reload.success": "RIAutomobility 车包已重载",
   "container.riautomobility.hitbox": "后备箱",
+  "container.riautomobility.vehicle_import": "车辆导入台",
   "entity.riautomobility.hitbox": "机动车",
   "entity.riautomobility.riautomobile": "机动车",
   "frame.riautomobility.bejeweled_doublemotorcar": "璀璨双座汽车",

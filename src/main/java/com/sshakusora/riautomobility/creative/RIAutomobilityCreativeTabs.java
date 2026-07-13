@@ -2,9 +2,10 @@ package com.sshakusora.riautomobility.creative;
 
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
-import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.editor.VehicleImportRegistries;
+import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileComponent;
+import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.item.AutomobilityItems;
@@ -53,6 +54,11 @@ public final class RIAutomobilityCreativeTabs {
                         output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
                     }
                 });
+                AutomobileEngine.REGISTRY.forEach(engine -> {
+                    if (RIAutomobilityComponentManager.isManagedEngine(engine) && !engine.isEmpty() && isVisible(engine)) {
+                        output.accept(AutomobilityItems.AUTOMOBILE_ENGINE.require().createStack(engine));
+                    }
+                });
             })
             .build());
 
@@ -64,6 +70,9 @@ public final class RIAutomobilityCreativeTabs {
         }
         if (component instanceof AutomobileWheel wheel) {
             return wheel.getId().getNamespace().equals(RIAutomobility.MODID) || RIAutomobilityComponentManager.isManagedWheel(wheel);
+        }
+        if (component instanceof AutomobileEngine engine) {
+            return engine.getId().getNamespace().equals(RIAutomobility.MODID) || RIAutomobilityComponentManager.isManagedEngine(engine);
         }
         return component.getId().getNamespace().equals(RIAutomobility.MODID);
     }
@@ -82,9 +91,15 @@ public final class RIAutomobilityCreativeTabs {
         return spec == null || spec.showInCreativeTab();
     }
 
+    private static boolean isVisible(AutomobileEngine engine) {
+        var spec = RIAutomobilityComponentManager.getCustomEngines().get(engine.getId());
+        return spec == null || spec.showInCreativeTab();
+    }
+
     private static boolean hasVisibleCustomComponents() {
         return RIAutomobilityComponentManager.getCustomFrameSpecs().stream().anyMatch(spec -> spec.showInCreativeTab())
-                || RIAutomobilityComponentManager.getCustomWheelSpecs().stream().anyMatch(spec -> spec.showInCreativeTab());
+                || RIAutomobilityComponentManager.getCustomWheelSpecs().stream().anyMatch(spec -> spec.showInCreativeTab())
+                || RIAutomobilityComponentManager.getCustomEngineSpecs().stream().anyMatch(spec -> spec.showInCreativeTab());
     }
 
     private static final class CustomComponentsTab extends CreativeModeTab {

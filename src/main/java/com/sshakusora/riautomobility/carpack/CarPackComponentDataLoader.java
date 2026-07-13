@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -31,14 +32,14 @@ public final class CarPackComponentDataLoader extends SimplePreparableReloadList
 
     @Override
     protected LoadedContent prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
-        return new LoadedContent(loadFrames(resourceManager), loadWheels(resourceManager));
+        return new LoadedContent(loadFrames(resourceManager), loadWheels(resourceManager), loadEngines(resourceManager));
     }
 
     @Override
     protected void apply(LoadedContent content, ResourceManager resourceManager, ProfilerFiller profiler) {
         RIAutomobileFrame.reload();
         RIAutomobileWheel.reload();
-        RIAutomobilityComponentManager.applyCustomComponents(content.frames(), content.wheels());
+        RIAutomobilityComponentManager.applyCustomComponents(content.frames(), content.wheels(), content.engines());
         CarPackManager.refreshAllServerLevels();
     }
 
@@ -51,6 +52,12 @@ public final class CarPackComponentDataLoader extends SimplePreparableReloadList
     private static Map<ResourceLocation, WheelSpec> loadWheels(ResourceManager resourceManager) {
         Map<ResourceLocation, WheelSpec> result = new LinkedHashMap<>();
         load(resourceManager, "riautomobility/wheels", (id, json) -> result.put(id, WheelSpec.fromJson(id, json)));
+        return result;
+    }
+
+    private static Map<ResourceLocation, EngineSpec> loadEngines(ResourceManager resourceManager) {
+        Map<ResourceLocation, EngineSpec> result = new LinkedHashMap<>();
+        load(resourceManager, "riautomobility/engines", (id, json) -> result.put(id, EngineSpec.fromJson(id, json)));
         return result;
     }
 
@@ -95,5 +102,6 @@ public final class CarPackComponentDataLoader extends SimplePreparableReloadList
         void accept(ResourceLocation id, JsonObject json);
     }
 
-    public record LoadedContent(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels) {}
+    public record LoadedContent(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
+                                Map<ResourceLocation, EngineSpec> engines) {}
 }

@@ -12,6 +12,7 @@
     "AutomobileHudMixin",
     "AutomobileRendererMixin",
     "AutomobilityClientMixin",
+    "BEWLRsMixin",
     "CameraMixin",
     "CreativeModeInventoryScreenMixin",
     "EntityModelSetMixin",

@@ -1,15 +1,15 @@
 package com.sshakusora.riautomobility.editor.client;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -29,84 +29,113 @@ public final class VehiclePackBuilder {
         validateSources(draft);
         Files.createDirectories(destination.getParent());
 
-        String namespace = preview ? VehicleEditorDraft.PREVIEW_NAMESPACE : draft.namespace;
-        String componentPath = preview ? draft.previewKey : draft.componentPath;
+        String namespace = preview ? VehicleEditorDraft.PREVIEW_NAMESPACE : draft.namespace();
+        String componentPath = preview ? draft.previewKey(draft.target) : draft.componentPath();
         String kind = draft.target.path;
         Map<String, byte[]> entries = new LinkedHashMap<>();
         entries.put("pack.mcmeta", ("{\n  \"pack\": {\n    \"pack_format\": 15,\n    \"description\": \"RIAutomobility vehicle editor pack\"\n  }\n}\n")
                 .getBytes(StandardCharsets.UTF_8));
 
-        JsonObject component = draft.target == VehicleEditorDraft.Target.FRAME
-                ? draft.frameSpec(preview).toJson() : draft.wheelSpec(preview).toJson();
-        entries.put("data/" + namespace + "/riautomobility/" + (draft.target == VehicleEditorDraft.Target.FRAME ? "frames/" : "wheels/")
+        JsonObject metadata = new JsonObject();
+        metadata.addProperty("format", CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
+        String declaredComponentId = namespace + ":" + componentPath;
+        metadata.addProperty("id", declaredComponentId);
+        metadata.addProperty("name", draft.displayName);
+        JsonObject components = new JsonObject();
+        var frames = new JsonArray();
+        var wheels = new JsonArray();
+        var engines = new JsonArray();
+        switch (draft.target) {
+            case FRAME -> frames.add(declaredComponentId);
+            case WHEEL -> wheels.add(declaredComponentId);
+            case ENGINE -> engines.add(declaredComponentId);
+        }
+        components.add("frames", frames);
+        components.add("wheels", wheels);
+        components.add("engines", engines);
+        metadata.add("components", components);
+        entries.put(CarPackArchiveStore.RIAUTO_METADATA_FILE, GSON.toJson(metadata).getBytes(StandardCharsets.UTF_8));
+
+        JsonObject component = switch (draft.target) {
+            case FRAME -> draft.frameSpec(preview).toJson();
+            case WHEEL -> draft.wheelSpec(preview).toJson();
+            case ENGINE -> draft.engineSpec(preview).toJson();
+        };
+        entries.put("data/" + namespace + "/riautomobility/" + draft.target.path + "s/"
                 + componentPath + ".json", GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
 
-        switch (draft.modelFormat) {
-            case BBMODEL -> entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + ".bbmodel",
-                    readLimited(draft.modelFile));
-            case GECKOLIB -> {
-                entries.put("assets/" + namespace + "/geo/" + kind + "/" + componentPath + ".geo.json", readLimited(draft.modelFile));
-                byte[] animation = draft.animationFile == null
-                        ? "{\"format_version\":\"1.8.0\",\"animations\":{}}".getBytes(StandardCharsets.UTF_8)
-                        : readLimited(draft.animationFile);
-                entries.put("assets/" + namespace + "/animations/" + kind + "/" + componentPath + ".animation.json", animation);
-            }
-            case JSONEM -> entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + "/main.json",
-                    readLimited(draft.modelFile));
-        }
-        if (draft.textureFile != null) {
-            entries.put("assets/" + namespace + "/textures/entity/automobile/" + kind + "/" + componentPath + ".png",
-                    readLimited(draft.textureFile));
-        }
+        entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + ".bbmodel",
+                readLimited(draft.modelFile()));
 
         JsonObject language = new JsonObject();
         language.addProperty(draft.target.path + "." + namespace + "." + componentPath, draft.displayName);
         entries.put("assets/" + namespace + "/lang/en_us.json", GSON.toJson(language).getBytes(StandardCharsets.UTF_8));
         entries.put("assets/" + namespace + "/lang/zh_cn.json", GSON.toJson(language).getBytes(StandardCharsets.UTF_8));
 
-        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(destination), StandardCharsets.UTF_8)) {
-            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
-                ZipEntry zipEntry = new ZipEntry(entry.getKey());
-                zipEntry.setTime(0L);
-                zip.putNextEntry(zipEntry);
-                zip.write(entry.getValue());
-                zip.closeEntry();
-            }
+        writeArchive(destination, entries);
+        return destination;
+    }
+
+    static Path buildPreview(VehicleEditorDraft draft, Path destination) throws IOException {
+        Map<VehicleEditorDraft.Target, Path> modelFiles = new EnumMap<>(VehicleEditorDraft.Target.class);
+        Map<VehicleEditorDraft.Target, String> previewKeys = new EnumMap<>(VehicleEditorDraft.Target.class);
+        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
+            if (draft.modelFile(target) != null) modelFiles.put(target, draft.modelFile(target));
+            previewKeys.put(target, draft.previewKey(target));
         }
+        return buildPreview(modelFiles, previewKeys, destination);
+    }
+
+    static Path buildPreview(Map<VehicleEditorDraft.Target, Path> modelFiles,
+                             Map<VehicleEditorDraft.Target, String> previewKeys,
+                             Path destination) throws IOException {
+        Files.createDirectories(destination.getParent());
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("pack.mcmeta", ("{\n  \"pack\": {\n    \"pack_format\": 15,\n    \"description\": \"RIAutomobility combined vehicle preview\"\n  }\n}\n")
+                .getBytes(StandardCharsets.UTF_8));
+
+        int modelCount = 0;
+        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
+            Path modelFile = modelFiles.get(target);
+            if (modelFile == null) continue;
+            validateSource(modelFile);
+            String componentPath = previewKeys.get(target);
+            if (componentPath == null || !componentPath.matches("[a-z0-9/._-]+")) {
+                throw new IOException("Invalid preview component path for " + target.path);
+            }
+            entries.put("assets/" + VehicleEditorDraft.PREVIEW_NAMESPACE + "/models/entity/automobile/"
+                    + target.path + "/" + componentPath + ".bbmodel", readLimited(modelFile));
+            modelCount++;
+        }
+        if (modelCount == 0) throw new IOException("Choose at least one BBModel file");
+        writeArchive(destination, entries);
         return destination;
     }
 
     private static void validateSources(VehicleEditorDraft draft) throws IOException {
-        byte[] model = readLimited(draft.modelFile);
+        validateSource(draft.modelFile());
+    }
+
+    private static void validateSource(Path source) throws IOException {
+        byte[] model = readLimited(source);
         JsonObject json;
         try {
             json = JsonParser.parseString(new String(model, StandardCharsets.UTF_8)).getAsJsonObject();
         } catch (RuntimeException exception) {
             throw new IOException("Model is not a valid JSON object", exception);
         }
-        if (draft.modelFormat == VehicleEditorDraft.ModelFormat.BBMODEL) {
-            try {
-                BbModelParser.parse(json);
-            } catch (RuntimeException exception) {
-                throw new IOException("Invalid BBModel: " + exception.getMessage(), exception);
-            }
-        }
-        if (draft.animationFile != null) {
-            parseJsonFile(draft.animationFile, "animation");
-        }
-        if (draft.textureFile != null) {
-            byte[] png = readLimited(draft.textureFile);
-            if (png.length < 8 || png[0] != (byte) 0x89 || png[1] != 'P' || png[2] != 'N' || png[3] != 'G') {
-                throw new IOException("Texture is not a PNG file");
-            }
+        try {
+            validateEmbeddedTextures(BbModelParser.parse(json));
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid BBModel: " + exception.getMessage(), exception);
         }
     }
 
-    private static void parseJsonFile(Path path, String label) throws IOException {
+    static void validateEmbeddedTextures(BbModelData.Document document) throws IOException {
         try {
-            JsonParser.parseString(new String(readLimited(path), StandardCharsets.UTF_8));
+            BbModelParser.requireEmbeddedPngTextures(document);
         } catch (RuntimeException exception) {
-            throw new IOException("Invalid " + label + " JSON", exception);
+            throw new IOException(exception.getMessage(), exception);
         }
     }
 
@@ -119,5 +148,17 @@ public final class VehiclePackBuilder {
             throw new IOException("Source file exceeds " + MAX_SOURCE_FILE_SIZE + " bytes");
         }
         return Files.readAllBytes(path);
+    }
+
+    private static void writeArchive(Path destination, Map<String, byte[]> entries) throws IOException {
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(destination), StandardCharsets.UTF_8)) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                ZipEntry zipEntry = new ZipEntry(entry.getKey());
+                zipEntry.setTime(0L);
+                zip.putNextEntry(zipEntry);
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
     }
 }

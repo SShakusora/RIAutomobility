@@ -86,6 +86,7 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("entity.riautomobility.riautomobile", "RIAutomobile");
             add("entity.riautomobility.hitbox", "RIAutomobile");
             add("container.riautomobility.hitbox", "Box");
+            add("container.riautomobility.vehicle_import", "Vehicle Import Table");
             add("block.riautomobility.vehicle_import_table", "Vehicle Import Table");
             add("commands.riautomobility.carpacks.reload.started", "Reloading RIAutomobility car packs...");
             add("commands.riautomobility.carpacks.reload.success", "RIAutomobility car packs reloaded");
@@ -138,6 +139,7 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("entity.riautomobility.riautomobile", "机动车");
             add("entity.riautomobility.hitbox", "机动车");
             add("container.riautomobility.hitbox", "后备箱");
+            add("container.riautomobility.vehicle_import", "车辆导入台");
             add("block.riautomobility.vehicle_import_table", "车辆导入台");
             add("commands.riautomobility.carpacks.reload.started", "正在重载 RIAutomobility 车包……");
             add("commands.riautomobility.carpacks.reload.success", "RIAutomobility 车包已重载");

@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.carpack;
 
+import net.minecraft.server.packs.PackResources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,6 +29,65 @@ class CarPackArchiveStoreTest {
         ));
 
         assertDoesNotThrow(() -> CarPackArchiveStore.validateArchive(archive));
+    }
+
+    @Test
+    void acceptsAValidRiautoCarPack() throws IOException {
+        Path archive = createZip(Map.of(
+                "pack.mcmeta", "{\"pack\":{\"pack_format\":15,\"description\":\"test\"}}",
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[]}}",
+                "data/test/riautomobility/frames/car.json", "{}"
+        ));
+
+        assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
+    }
+
+    @Test
+    void acceptsAnEngineOnlyRiautoCarPack() throws IOException {
+        Path archive = createZip(Map.of(
+                "pack.mcmeta", "{\"pack\":{\"pack_format\":15,\"description\":\"test\"}}",
+                "riauto.json", "{\"format\":1,\"id\":\"test:engine\",\"name\":\"Test Engine\","
+                        + "\"components\":{\"frames\":[],\"wheels\":[],\"engines\":[\"test:engine\"]}}",
+                "data/test/riautomobility/engines/engine.json", "{}"
+        ));
+
+        assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
+    }
+
+    @Test
+    void opensRiautoWithMinecraftFilePackResources() throws IOException {
+        Path archive = Files.move(createZip(Map.of(
+                        "pack.mcmeta", "{\"pack\":{\"pack_format\":15,\"description\":\"test\"}}",
+                        "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                                + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[]}}"
+                )), temporaryDirectory.resolve("test.riauto"));
+
+        var supplier = CarPackManager.detectPackResources(archive);
+        assertNotNull(supplier);
+        try (PackResources resources = supplier.open("test")) {
+            assertNotNull(resources.getRootResource("pack.mcmeta"));
+        }
+    }
+
+    @Test
+    void rejectsRiautoWithoutFormatMetadata() throws IOException {
+        Path archive = createZip(Map.of("pack.mcmeta", "{}"));
+
+        IOException error = assertThrows(IOException.class,
+                () -> CarPackArchiveStore.validateRiautoArchive(archive));
+        assertTrue(error.getMessage().contains("riauto.json"));
+    }
+
+    @Test
+    void rejectsUnsupportedRiautoFormatVersion() throws IOException {
+        Path archive = createZip(Map.of(
+                "pack.mcmeta", "{}",
+                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[]}}"
+        ));
+
+        assertThrows(IOException.class, () -> CarPackArchiveStore.validateRiautoArchive(archive));
     }
 
     @Test

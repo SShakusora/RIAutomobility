@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "id": "examplepack:examplepack",
+  "name": "RIAutomobility Example Pack",
+  "components": {
+    "frames": [
+      "examplepack:example_buggy",
+      "examplepack:example_buggy_gecko",
+      "examplepack:example_buggy_bbmodel"
+    ],
+    "wheels": [
+      "examplepack:example_buggy",
+      "examplepack:example_buggy_gecko",
+      "examplepack:example_buggy_bbmodel"
+    ],
+    "engines": []
+  }
+}

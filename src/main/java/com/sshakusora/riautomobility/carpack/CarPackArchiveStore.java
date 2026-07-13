@@ -1,8 +1,15 @@
 package com.sshakusora.riautomobility.carpack;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -15,8 +22,11 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public final class CarPackArchiveStore {
+    public static final String RIAUTO_METADATA_FILE = "riauto.json";
+    public static final int RIAUTO_FORMAT_VERSION = 1;
     public static final int MAX_ENTRIES = 8192;
     public static final long MAX_UNCOMPRESSED_SIZE = 1024L * 1024L * 1024L;
+    public static final long MAX_ENTRY_SIZE = 256L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 8192;
     private static volatile Map<String, TransferPack> transferPacks = Map.of();
 
@@ -124,11 +134,15 @@ public final class CarPackArchiveStore {
         int entries = 0;
         long uncompressedSize = 0;
         boolean hasMetadata = false;
+        Set<String> entryNames = new HashSet<>();
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             Enumeration<? extends ZipEntry> enumeration = zip.entries();
             while (enumeration.hasMoreElements()) {
                 ZipEntry entry = enumeration.nextElement();
                 validateEntryName(entry.getName());
+                if (!entryNames.add(entry.getName())) {
+                    throw new IOException("Car pack archive contains duplicate entry: " + entry.getName());
+                }
                 if (entry.isDirectory()) {
                     continue;
                 }
@@ -138,7 +152,7 @@ public final class CarPackArchiveStore {
                 }
                 long size;
                 try (InputStream input = zip.getInputStream(entry)) {
-                    size = countBytes(input, MAX_UNCOMPRESSED_SIZE - uncompressedSize);
+                    size = countBytes(input, Math.min(MAX_ENTRY_SIZE, MAX_UNCOMPRESSED_SIZE - uncompressedSize));
                 }
                 uncompressedSize = Math.addExact(uncompressedSize, size);
                 if (uncompressedSize > MAX_UNCOMPRESSED_SIZE) {
@@ -151,6 +165,78 @@ public final class CarPackArchiveStore {
         }
         if (!hasMetadata) {
             throw new IOException("Car pack archive does not contain a root pack.mcmeta");
+        }
+    }
+
+    public static void validateRiautoArchive(Path archive) throws IOException {
+        validateArchive(archive);
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
+            if (metadataEntry == null || metadataEntry.isDirectory()) {
+                throw new IOException("RIAuto archive does not contain a root " + RIAUTO_METADATA_FILE);
+            }
+            JsonObject metadata;
+            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
+                metadata = JsonParser.parseReader(reader).getAsJsonObject();
+            }
+            validateRiautoMetadata(metadata);
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
+        }
+    }
+
+    private static void validateRiautoMetadata(JsonObject metadata) throws IOException {
+        if (!metadata.has("format") || !metadata.get("format").isJsonPrimitive()
+                || metadata.get("format").getAsInt() != RIAUTO_FORMAT_VERSION) {
+            throw new IOException("Unsupported RIAuto format version");
+        }
+        validateResourceLocation(requireString(metadata, "id"), "id");
+        String name = requireString(metadata, "name");
+        if (name.isBlank() || name.length() > 80) {
+            throw new IOException("RIAuto name must contain 1-80 characters");
+        }
+        JsonObject components = metadata.has("components") && metadata.get("components").isJsonObject()
+                ? metadata.getAsJsonObject("components") : null;
+        if (components == null) {
+            throw new IOException("RIAuto metadata is missing components");
+        }
+        int componentCount = validateComponentIds(components, "frames") + validateComponentIds(components, "wheels")
+                + (components.has("engines") ? validateComponentIds(components, "engines") : 0);
+        if (componentCount == 0) {
+            throw new IOException("RIAuto metadata must declare at least one frame, wheel, or engine");
+        }
+    }
+
+    private static int validateComponentIds(JsonObject components, String member) throws IOException {
+        if (!components.has(member) || !components.get(member).isJsonArray()) {
+            throw new IOException("RIAuto components." + member + " must be an array");
+        }
+        JsonArray values = components.getAsJsonArray(member);
+        Set<String> ids = new HashSet<>();
+        for (JsonElement value : values) {
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+                throw new IOException("RIAuto components." + member + " contains a non-string id");
+            }
+            String id = value.getAsString();
+            validateResourceLocation(id, "components." + member);
+            if (!ids.add(id)) {
+                throw new IOException("RIAuto components." + member + " contains duplicate id " + id);
+            }
+        }
+        return values.size();
+    }
+
+    private static String requireString(JsonObject object, String member) throws IOException {
+        if (!object.has(member) || !object.get(member).isJsonPrimitive()
+                || !object.getAsJsonPrimitive(member).isString()) {
+            throw new IOException("RIAuto metadata field '" + member + "' must be a string");
+        }
+        return object.get(member).getAsString();
+    }
+
+    private static void validateResourceLocation(String value, String member) throws IOException {
+        if (!value.matches("[a-z0-9_.-]+:[a-z0-9/._-]+") || value.contains("..")) {
+            throw new IOException("RIAuto metadata field '" + member + "' contains invalid id " + value);
         }
     }
 

@@ -3,8 +3,11 @@ package com.sshakusora.riautomobility.editor.upload;
 import com.google.gson.JsonObject;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
+import com.sshakusora.riautomobility.editor.client.VehicleEditorDraft;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.BeginCarPackUploadPacket;
 import com.sshakusora.riautomobility.network.packet.CarPackUploadChunkPacket;
@@ -81,10 +84,11 @@ public final class CarPackUploadService {
             if (upload.written != upload.request.archiveSize()) throw new IOException("Uploaded size does not match declaration");
             String digest = CarPackArchiveStore.sha256(upload.temporary);
             if (!digest.equals(upload.request.sha256())) throw new IOException("Uploaded SHA-256 does not match declaration");
-            CarPackArchiveStore.validateArchive(upload.temporary);
+            CarPackArchiveStore.validateRiautoArchive(upload.temporary);
             validateEditorArchive(upload.temporary, upload.request);
 
-            Path target = CarPackManager.getRootDirectory().resolve(upload.request.packName() + ".zip").normalize();
+            Path target = CarPackManager.getRootDirectory()
+                    .resolve(upload.request.packName() + CarPackManager.CAR_PACK_EXTENSION).normalize();
             if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize())) throw new IOException("Invalid target path");
             if (Files.exists(target) && !upload.request.overwrite()) throw new IOException("A car pack with this name already exists");
             Files.move(upload.temporary, target, StandardCopyOption.REPLACE_EXISTING);
@@ -103,9 +107,11 @@ public final class CarPackUploadService {
 
     private static void validateMetadata(BeginCarPackUploadPacket request) throws IOException {
         if (!request.packName().matches("[a-z0-9_.-]{1,96}")) throw new IOException("Invalid pack name");
-        if (!request.namespace().matches("[a-z0-9_.-]{1,64}")) throw new IOException("Invalid namespace");
-        if (!request.componentPath().matches("[a-z0-9/._-]{1,192}") || request.componentPath().contains("..")) throw new IOException("Invalid component path");
-        if (!request.target().equals("frame") && !request.target().equals("wheel")) throw new IOException("Invalid component target");
+        if (!request.namespace().equals(VehicleEditorDraft.GENERATED_NAMESPACE)) throw new IOException("Invalid generated namespace");
+        if (!request.componentPath().matches(VehicleEditorDraft.GENERATED_COMPONENT_PREFIX + "[0-9a-f]{32}")) {
+            throw new IOException("Invalid generated component id");
+        }
+        if (!request.target().equals("frame") && !request.target().equals("wheel") && !request.target().equals("engine")) throw new IOException("Invalid component target");
         if (request.archiveSize() <= 0 || request.archiveSize() > MAX_UPLOAD_SIZE) throw new IOException("Upload size is outside the allowed range");
         if (!request.sha256().matches("[0-9a-f]{64}")) throw new IOException("Invalid SHA-256");
     }
@@ -113,7 +119,7 @@ public final class CarPackUploadService {
     private static void validateEditorArchive(Path archive, BeginCarPackUploadPacket request) throws IOException {
         String namespacePrefix = "assets/" + request.namespace() + "/";
         String dataPrefix = "data/" + request.namespace() + "/";
-        String expected = dataPrefix + "riautomobility/" + (request.target().equals("frame") ? "frames/" : "wheels/")
+        String expected = dataPrefix + "riautomobility/" + request.target() + "s/"
                 + request.componentPath() + ".json";
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             var entries = zip.entries();
@@ -121,21 +127,56 @@ public final class CarPackUploadService {
                 ZipEntry entry = entries.nextElement();
                 if (entry.isDirectory()) continue;
                 String name = entry.getName();
-                if (!name.equals("pack.mcmeta") && !name.startsWith(namespacePrefix) && !name.startsWith(dataPrefix)) {
+                if (!name.equals("pack.mcmeta") && !name.equals(CarPackArchiveStore.RIAUTO_METADATA_FILE)
+                        && !name.startsWith(namespacePrefix) && !name.startsWith(dataPrefix)) {
                     throw new IOException("Archive contains content outside its declared namespace: " + name);
                 }
             }
             ZipEntry componentEntry = zip.getEntry(expected);
             if (componentEntry == null) throw new IOException("Archive is missing " + expected);
+            ZipEntry metadataEntry = zip.getEntry(CarPackArchiveStore.RIAUTO_METADATA_FILE);
+            JsonObject metadata;
+            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
+                metadata = GsonHelper.parse(reader);
+            }
+            String componentId = request.namespace() + ":" + request.componentPath();
+            String componentList = request.target() + "s";
+            boolean declared = false;
+            for (var element : metadata.getAsJsonObject("components").getAsJsonArray(componentList)) {
+                if (element.isJsonPrimitive() && componentId.equals(element.getAsString())) {
+                    declared = true;
+                    break;
+                }
+            }
+            if (!declared) throw new IOException("RIAuto metadata does not declare " + componentId);
             JsonObject json;
             try (var reader = new InputStreamReader(zip.getInputStream(componentEntry), StandardCharsets.UTF_8)) {
                 json = GsonHelper.parse(reader);
             }
             ResourceLocation id = new ResourceLocation(request.namespace(), request.componentPath());
-            if (request.target().equals("frame")) FrameSpec.fromJson(id, json);
-            else WheelSpec.fromJson(id, json);
+            FrameSpec.ModelSpec model = switch (request.target()) {
+                case "frame" -> FrameSpec.fromJson(id, json).model();
+                case "wheel" -> WheelSpec.fromJson(id, json).model();
+                case "engine" -> EngineSpec.fromJson(id, json).model();
+                default -> throw new IOException("Invalid component target");
+            };
+            String modelPath = "models/entity/automobile/" + request.target() + "/"
+                    + request.componentPath() + ".bbmodel";
+            ResourceLocation expectedModel = new ResourceLocation(request.namespace(), modelPath);
+            if (!"bbmodel".equals(model.type()) || !expectedModel.equals(model.bbModel())) {
+                throw new IOException("Vehicle Import Table uploads must use the generated BBModel resource " + expectedModel);
+            }
+            ZipEntry modelEntry = zip.getEntry("assets/" + request.namespace() + "/" + modelPath);
+            if (modelEntry == null || modelEntry.isDirectory()) {
+                throw new IOException("Archive is missing embedded-texture BBModel " + expectedModel);
+            }
+            JsonObject modelJson;
+            try (var reader = new InputStreamReader(zip.getInputStream(modelEntry), StandardCharsets.UTF_8)) {
+                modelJson = GsonHelper.parse(reader);
+            }
+            BbModelParser.requireEmbeddedPngTextures(BbModelParser.parse(modelJson));
         } catch (RuntimeException exception) {
-            throw new IOException("Component JSON is invalid: " + exception.getMessage(), exception);
+            throw new IOException("Vehicle Import Table archive is invalid: " + exception.getMessage(), exception);
         }
     }
 

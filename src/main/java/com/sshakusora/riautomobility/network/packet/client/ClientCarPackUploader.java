@@ -24,8 +24,8 @@ public final class ClientCarPackUploader {
         UUID id = UUID.randomUUID();
         byte[] bytes = Files.readAllBytes(archive);
         CALLBACKS.put(id, callback);
-        RIAutomobilityNetwork.CHANNEL.sendToServer(new BeginCarPackUploadPacket(id, draft.packName(), draft.namespace,
-                draft.componentPath, draft.target.path, draft.overwrite, bytes.length, CarPackArchiveStore.sha256(archive)));
+        RIAutomobilityNetwork.CHANNEL.sendToServer(new BeginCarPackUploadPacket(id, draft.packName(), draft.namespace(),
+                draft.componentPath(), draft.target.path, draft.overwrite, bytes.length, CarPackArchiveStore.sha256(archive)));
         int chunkSize = CarPackUploadChunkPacket.MAX_CHUNK_SIZE;
         for (int offset = 0, index = 0; offset < bytes.length; offset += chunkSize, index++) {
             int length = Math.min(chunkSize, bytes.length - offset);

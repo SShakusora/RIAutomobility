@@ -3,10 +3,11 @@ package com.sshakusora.riautomobility;
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.client.RIAutomobilityKeyBindings;
 import com.sshakusora.riautomobility.creative.RIAutomobilityCreativeTabs;
+import com.sshakusora.riautomobility.editor.VehicleImportRegistries;
+import com.sshakusora.riautomobility.editor.client.VehicleImportScreen;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
-import com.sshakusora.riautomobility.editor.VehicleImportRegistries;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
@@ -63,7 +64,7 @@ public class RIAutomobility
             RIAutomobileModels.init();
             event.enqueueWork(() -> MenuScreens.register(
                     VehicleImportRegistries.VEHICLE_IMPORT_MENU.get(),
-                    com.sshakusora.riautomobility.editor.client.VehicleImportScreen::new));
+                    VehicleImportScreen::new));
             MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent evt) -> {
                 LocalPlayer player = Minecraft.getInstance().player;
                 Entity vehicle = null;

@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.model;
 
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileModelsAccessor;
@@ -106,27 +107,29 @@ public class RIAutomobileModels {
         DynamicJsonModelLoader.register(PLACEHOLDER_LAYER);
     }
 
-    public static void applyDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
-        clearMissingFlags(frames, wheels);
-        prepareBbModels(frames, wheels);
+    public static void applyDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
+        clearMissingFlags(frames, wheels, engines);
+        prepareBbModels(frames, wheels, engines);
         for (FrameSpec spec : frames) {
             registerDynamicModel(spec.id(), spec.model());
         }
         for (WheelSpec spec : wheels) {
             registerDynamicModel(spec.id(), spec.model());
         }
+        for (EngineSpec spec : engines) registerDynamicModel(spec.id(), spec.model());
         rebuildDynamicModels();
     }
 
-    public static void registerDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
-        clearMissingFlags(frames, wheels);
-        prepareBbModels(frames, wheels);
+    public static void registerDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
+        clearMissingFlags(frames, wheels, engines);
+        prepareBbModels(frames, wheels, engines);
         for (FrameSpec spec : frames) {
             registerDynamicModel(spec.id(), spec.model());
         }
         for (WheelSpec spec : wheels) {
             registerDynamicModel(spec.id(), spec.model());
         }
+        for (EngineSpec spec : engines) registerDynamicModel(spec.id(), spec.model());
     }
 
     public static void registerTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
@@ -169,11 +172,10 @@ public class RIAutomobileModels {
         });
     }
 
-    private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
-        Set<ResourceLocation> resources = Stream.concat(
-                        frames.stream().map(FrameSpec::model),
-                        wheels.stream().map(WheelSpec::model)
-                )
+    private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
+        Set<ResourceLocation> resources = Stream.concat(Stream.concat(
+                        frames.stream().map(FrameSpec::model), wheels.stream().map(WheelSpec::model)),
+                        engines.stream().map(EngineSpec::model))
                 .filter(FrameSpec.ModelSpec::isBbModel)
                 .map(FrameSpec.ModelSpec::bbModel)
                 .filter(java.util.Objects::nonNull)
@@ -241,9 +243,10 @@ public class RIAutomobileModels {
         }
     }
 
-    private static void clearMissingFlags(Collection<FrameSpec> frames, Collection<WheelSpec> wheels) {
+    private static void clearMissingFlags(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
         frames.forEach(spec -> MISSING_COMPONENTS.remove(spec.id()));
         wheels.forEach(spec -> MISSING_COMPONENTS.remove(spec.id()));
+        engines.forEach(spec -> MISSING_COMPONENTS.remove(spec.id()));
     }
 
     private static void rebuildDynamicModels() {

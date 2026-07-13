@@ -85,7 +85,7 @@ public record FrameSpec(
                 ModelSpec.fromComponentJson(json.get("model"), id, "frame"),
                 WheelBaseSpec.fromJson(GsonHelper.getAsJsonObject(json, "wheel_base")),
                 GsonHelper.getAsFloat(json, "length_px"),
-                GsonHelper.getAsFloat(json, "seat_height"),
+                GsonHelper.getAsFloat(json, "seat_height", 4.0F),
                 GsonHelper.getAsFloat(json, "engine_pos_back"),
                 GsonHelper.getAsFloat(json, "engine_pos_up"),
                 GsonHelper.getAsBoolean(json, "hide_engine", false),
@@ -112,7 +112,11 @@ public record FrameSpec(
         json.add("model", this.model.toJson());
         json.add("wheel_base", this.wheelBase.toJson());
         json.addProperty("length_px", this.lengthPx);
-        json.addProperty("seat_height", this.seatHeight);
+        // seat_height is a legacy Automobility offset. New normalized frame
+        // definitions keep it at the neutral 4 px and express height in seats[].y.
+        if (Float.compare(this.seatHeight, 4.0F) != 0) {
+            json.addProperty("seat_height", this.seatHeight);
+        }
         json.addProperty("engine_pos_back", this.enginePosBack);
         json.addProperty("engine_pos_up", this.enginePosUp);
         json.addProperty("hide_engine", this.hideEngine);

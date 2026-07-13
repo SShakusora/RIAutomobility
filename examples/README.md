@@ -8,14 +8,14 @@ This folder contains a complete minimal unified car pack for adding custom `Fram
 
 ### Contents
 
-- `examplepack/`: one car pack containing `pack.mcmeta`, `data/`, and `assets/`
+- `examplepack/`: one unpacked development car pack containing `riauto.json`, `pack.mcmeta`, `data/`, and `assets/`
 
 ### Install
 
-1. Copy `examplepack` into the game directory's `riautomobility/` folder.
+1. ZIP the contents of `examplepack` (without an extra enclosing directory), rename the archive to `examplepack.riauto`, and copy it into the game directory's `riautomobility/` folder.
 2. Start the game, or run `/riautomobility carpacks reload` while a world/server is running.
 
-RIAutomobility automatically enables both the data and resource sides of every direct child pack. Folder packs and `.zip` packs are supported. Move a pack into `riautomobility/disabled/` to disable it.
+RIAutomobility automatically enables both the data and resource sides of every direct child pack. `.riauto` is the supported distribution format; legacy folder and `.zip` packs remain readable for migration. Move a pack into `riautomobility/disabled/` to disable it.
 
 ### What It Adds
 
@@ -85,14 +85,14 @@ Translations:
 
 ### 内容
 
-- `examplepack/`：同时包含 `pack.mcmeta`、`data/` 和 `assets/` 的单一车包
+- `examplepack/`：同时包含 `riauto.json`、`pack.mcmeta`、`data/` 和 `assets/` 的开发态车包目录
 
 ### 安装方法
 
-1. 将 `examplepack` 复制到游戏目录的 `riautomobility/` 文件夹。
+1. 将 `examplepack` 内的内容直接压缩（不要额外套一层目录），把归档改名为 `examplepack.riauto`，再复制到游戏目录的 `riautomobility/` 文件夹。
 2. 启动游戏，或在世界/服务器运行时执行 `/riautomobility carpacks reload`。
 
-RIAutomobility 会自动启用每个直接子车包的数据和资源部分，同时支持文件夹和 `.zip`。要停用车包，将其移入 `riautomobility/disabled/`。
+RIAutomobility 会自动启用每个直接子车包的数据和资源部分。`.riauto` 是正式分发格式；旧文件夹和 `.zip` 在迁移期仍可读取。要停用车包，将其移入 `riautomobility/disabled/`。
 
 ### 添加了什么
 

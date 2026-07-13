@@ -21,9 +21,15 @@ final class PreviewAutomobile implements RenderableAutomobile {
         this.engineRunning = !this.engineRunning;
     }
 
-    @Override public AutomobileFrame getFrame() { return this.draft.previewFrame(); }
-    @Override public AutomobileEngine getEngine() { return this.draft.hideEngine ? AutomobileEngine.EMPTY : this.draft.selectedEngine; }
-    @Override public AutomobileWheel getWheels() { return this.draft.previewWheel(); }
+    @Override public AutomobileFrame getFrame() {
+        return this.draft.isPartVisible(VehicleEditorDraft.Target.FRAME) ? this.draft.previewFrame() : this.draft.previewSupportFrame();
+    }
+    @Override public AutomobileEngine getEngine() {
+        return this.draft.isPartVisible(VehicleEditorDraft.Target.ENGINE) ? this.draft.previewEngine() : AutomobileEngine.EMPTY;
+    }
+    @Override public AutomobileWheel getWheels() {
+        return this.draft.isPartVisible(VehicleEditorDraft.Target.WHEEL) ? this.draft.previewWheel() : AutomobileWheel.EMPTY;
+    }
     @Override public @Nullable RearAttachment getRearAttachment() { return null; }
     @Override public @Nullable FrontAttachment getFrontAttachment() { return null; }
     @Override public float getAutomobileYaw(float tickDelta) { return 0; }

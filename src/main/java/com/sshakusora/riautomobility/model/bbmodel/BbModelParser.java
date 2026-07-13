@@ -13,6 +13,10 @@ import java.util.*;
 public final class BbModelParser {
     public static final String MIN_VERSION = "4.10";
     public static final String MAX_VERSION = "5.0";
+    private static final String EMBEDDED_PNG_PREFIX = "data:image/png;base64,";
+    private static final byte[] PNG_SIGNATURE = {
+            (byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'
+    };
 
     static {
         BbElementDecoderRegistry.register("cube", BbModelParser::decodeCube);
@@ -24,6 +28,36 @@ public final class BbModelParser {
     }
 
     private BbModelParser() {}
+
+    public static void requireEmbeddedPngTextures(BbModelData.Document document) {
+        if (document.textures().isEmpty()) {
+            throw new IllegalArgumentException("BBModel must contain at least one embedded PNG texture");
+        }
+        for (BbModelData.Texture texture : document.textures()) {
+            String source = texture.source();
+            if (source == null || !source.startsWith(EMBEDDED_PNG_PREFIX)) {
+                throw new IllegalArgumentException("BBModel texture '" + texture.name()
+                        + "' must be embedded as a PNG data URL");
+            }
+            byte[] bytes;
+            try {
+                bytes = Base64.getDecoder().decode(source.substring(EMBEDDED_PNG_PREFIX.length()));
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("BBModel texture '" + texture.name()
+                        + "' contains invalid Base64 data", exception);
+            }
+            if (bytes.length < PNG_SIGNATURE.length) {
+                throw new IllegalArgumentException("BBModel texture '" + texture.name()
+                        + "' does not contain a valid PNG image");
+            }
+            for (int index = 0; index < PNG_SIGNATURE.length; index++) {
+                if (bytes[index] != PNG_SIGNATURE[index]) {
+                    throw new IllegalArgumentException("BBModel texture '" + texture.name()
+                            + "' does not contain a valid PNG image");
+                }
+            }
+        }
+    }
 
     public static BbModelData.Document parse(JsonObject source) {
         if (!source.has("meta")) {

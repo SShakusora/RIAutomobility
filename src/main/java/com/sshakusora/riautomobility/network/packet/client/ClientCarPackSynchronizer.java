@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
@@ -58,12 +59,13 @@ public final class ClientCarPackSynchronizer {
     public static void begin(
             Map<ResourceLocation, FrameSpec> frames,
             Map<ResourceLocation, WheelSpec> wheels,
+            Map<ResourceLocation, EngineSpec> engines,
             List<CarPackManifestEntry> manifest
     ) {
         long generation = GENERATION.incrementAndGet();
         Session next;
         try {
-            next = new Session(generation, frames, wheels, validateManifest(manifest));
+            next = new Session(generation, frames, wheels, engines, validateManifest(manifest));
         } catch (RuntimeException exception) {
             failWithoutSession("Invalid server car pack manifest", exception);
             return;
@@ -232,11 +234,14 @@ public final class ClientCarPackSynchronizer {
 
     private static void pruneCache(Session current) {
         Set<String> retained = current.manifest.stream()
-                .map(entry -> entry.archiveDigest() + ".zip")
+                .map(entry -> entry.archiveDigest() + CarPackManager.CAR_PACK_EXTENSION)
                 .collect(java.util.stream.Collectors.toSet());
         try (var files = Files.list(CarPackManager.getClientPackCacheDirectory())) {
             List<Path> cached = files.filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().endsWith(".zip"))
+                    .filter(path -> {
+                        String name = path.getFileName().toString();
+                        return name.endsWith(CarPackManager.CAR_PACK_EXTENSION) || name.endsWith(".zip");
+                    })
                     .sorted(java.util.Comparator.comparingLong(ClientCarPackSynchronizer::lastModified))
                     .toList();
             long total = 0;
@@ -316,7 +321,7 @@ public final class ClientCarPackSynchronizer {
                     return;
                 }
                 try {
-                    SyncCustomComponentsClientHandler.applyComponents(minecraft, current.frames, current.wheels);
+                    SyncCustomComponentsClientHandler.applyComponents(minecraft, current.frames, current.wheels, current.engines);
                     RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackSyncStatusPacket(
                             true,
                             current.manifest.size() + " car pack(s) ready"
@@ -414,7 +419,8 @@ public final class ClientCarPackSynchronizer {
     }
 
     private static Path cachePath(CarPackManifestEntry manifest) {
-        return CarPackManager.getClientPackCacheDirectory().resolve(manifest.archiveDigest() + ".zip");
+        return CarPackManager.getClientPackCacheDirectory()
+                .resolve(manifest.archiveDigest() + CarPackManager.CAR_PACK_EXTENSION);
     }
 
     private static void moveAtomically(Path source, Path target) throws IOException {
@@ -437,6 +443,7 @@ public final class ClientCarPackSynchronizer {
         private final long generation;
         private final Map<ResourceLocation, FrameSpec> frames;
         private final Map<ResourceLocation, WheelSpec> wheels;
+        private final Map<ResourceLocation, EngineSpec> engines;
         private final List<CarPackManifestEntry> manifest;
         private final Map<String, CarPackManager.CarPack> resolved = new LinkedHashMap<>();
         private final Map<String, CarPackManifestEntry> missing = new LinkedHashMap<>();
@@ -446,10 +453,12 @@ public final class ClientCarPackSynchronizer {
         private long lastActivityNanos = System.nanoTime();
 
         private Session(long generation, Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
+                        Map<ResourceLocation, EngineSpec> engines,
                         List<CarPackManifestEntry> manifest) {
             this.generation = generation;
             this.frames = Map.copyOf(frames);
             this.wheels = Map.copyOf(wheels);
+            this.engines = Map.copyOf(engines);
             this.manifest = manifest;
         }
     }

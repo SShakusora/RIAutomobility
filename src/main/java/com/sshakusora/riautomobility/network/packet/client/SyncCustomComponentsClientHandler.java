@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.network.packet.client;
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
+import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -24,15 +25,17 @@ public final class SyncCustomComponentsClientHandler {
     private SyncCustomComponentsClientHandler() {}
 
     public static void handle(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
+                              Map<ResourceLocation, EngineSpec> engines,
                               List<CarPackManifestEntry> manifest) {
-        ClientCarPackSynchronizer.begin(frames, wheels, manifest);
+        ClientCarPackSynchronizer.begin(frames, wheels, engines, manifest);
     }
 
-    static void applyComponents(Minecraft minecraft, Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels) {
+    static void applyComponents(Minecraft minecraft, Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
+                                Map<ResourceLocation, EngineSpec> engines) {
         RIAutomobileFrame.reload();
         RIAutomobileWheel.reload();
-        RIAutomobilityComponentManager.applyCustomComponents(frames, wheels);
-        RIAutomobileModels.registerDynamicModels(frames.values(), wheels.values());
+        RIAutomobilityComponentManager.applyCustomComponents(frames, wheels, engines);
+        RIAutomobileModels.registerDynamicModels(frames.values(), wheels.values(), engines.values());
         BbModelRepository.reload(minecraft.getResourceManager());
 
         if (minecraft.getEntityModels() != null) {
