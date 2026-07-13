@@ -10,7 +10,8 @@ import java.util.Map;
 public final class RIAutomobileRegistry {
     private static final Map<ResourceLocation, RIAutomobileDefinition> DEFINITIONS = new HashMap<>();
 
-    private RIAutomobileRegistry() {}
+    private RIAutomobileRegistry() {
+    }
 
     public static AutomobileFrame register(AutomobileFrame frame, RIAutomobileDefinition definition) {
         DEFINITIONS.put(frame.getId(), definition);
@@ -31,5 +32,10 @@ public final class RIAutomobileRegistry {
 
     public static boolean hidesEngine(AutomobileFrame frame) {
         return frame != null && get(frame).hideEngine();
+    }
+
+    public static void remove(ResourceLocation id) {
+        DEFINITIONS.remove(id);
+        RIAutomobilityRegistryUtil.remove(AutomobileFrame.REGISTRY, id);
     }
 }

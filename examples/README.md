@@ -8,14 +8,14 @@ This folder contains a complete minimal unified car pack for adding custom `Fram
 
 ### Contents
 
-- `examplepack/`: one unpacked development car pack containing `riauto.json`, `pack.mcmeta`, `data/`, and `assets/`
+- `examplepack/`: one unpacked source tree containing `riauto.json` and only RIAutomobility component/model/texture paths
 
 ### Install
 
 1. ZIP the contents of `examplepack` (without an extra enclosing directory), rename the archive to `examplepack.riauto`, and copy it into the game directory's `riautomobility/` folder.
 2. Start the game, or run `/riautomobility carpacks reload` while a world/server is running.
 
-RIAutomobility automatically enables both the data and resource sides of every direct child pack. `.riauto` is the supported distribution format; legacy folder and `.zip` packs remain readable for migration. Move a pack into `riautomobility/disabled/` to disable it.
+RIAutomobility mounts `.riauto` files through its private runtime without a Minecraft resource reload. Unpacked folders and `.zip` files are not runtime pack formats.
 
 ### What It Adds
 
@@ -26,7 +26,7 @@ RIAutomobility automatically enables both the data and resource sides of every d
 - `examplepack:example_buggy_bbmodel` frame
 - `examplepack:example_buggy_bbmodel` wheel
 
-All six components will appear in the `RIAutomobility: Custom` creative tab and can also be crafted in the Auto Mechanic Table using the included recipe JSON files.
+All six components will appear in the `RIAutomobility: Custom` creative tab.
 
 ### Important Paths
 
@@ -47,10 +47,6 @@ Car-pack models:
 - `assets/examplepack/geo/wheel/example_buggy.geo.json`
 - `assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel`
 - `assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel`
-
-Translations:
-
-- `assets/examplepack/lang/en_us.json`
 
 ### Notes
 
@@ -73,9 +69,8 @@ Translations:
 ### Creating Your Own Variant
 
 1. Change the ids from `example_buggy` to your own name.
-2. Update recipe result `component` ids to match.
-3. Replace `layer_location`, `model_id`, and `texture` with your own assets.
-4. If you add your own textures, place them in the same car pack under `assets/<namespace>/textures/...`.
+2. Replace `layer_location`, `model_id`, and `texture` with your own assets.
+3. If you add your own textures, place them in the same car pack under `assets/<namespace>/textures/...`.
 
 ---
 
@@ -85,14 +80,14 @@ Translations:
 
 ### 内容
 
-- `examplepack/`：同时包含 `riauto.json`、`pack.mcmeta`、`data/` 和 `assets/` 的开发态车包目录
+- `examplepack/`：包含 `riauto.json` 以及 RIAutomobility 私有组件、模型和贴图路径的源码目录
 
 ### 安装方法
 
 1. 将 `examplepack` 内的内容直接压缩（不要额外套一层目录），把归档改名为 `examplepack.riauto`，再复制到游戏目录的 `riautomobility/` 文件夹。
 2. 启动游戏，或在世界/服务器运行时执行 `/riautomobility carpacks reload`。
 
-RIAutomobility 会自动启用每个直接子车包的数据和资源部分。`.riauto` 是正式分发格式；旧文件夹和 `.zip` 在迁移期仍可读取。要停用车包，将其移入 `riautomobility/disabled/`。
+RIAutomobility 通过私有运行时挂载 `.riauto`，不会触发 Minecraft 资源刷新。解压目录和 `.zip` 不再作为运行时车包格式。
 
 ### 添加了什么
 
@@ -103,7 +98,7 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分。`.
 - `examplepack:example_buggy_bbmodel` 车架
 - `examplepack:example_buggy_bbmodel` 车轮
 
-这六个组件都会显示在 `RIAutomobility: Custom` 创造模式标签页中，也可以通过附带的 Auto Mechanic Table 配方进行制作。
+这六个组件都会显示在 `RIAutomobility: Custom` 创造模式标签页中。
 
 ### 重要路径
 
@@ -124,10 +119,6 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分。`.
 - `assets/examplepack/geo/wheel/example_buggy.geo.json`
 - `assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel`
 - `assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel`
-
-翻译文件：
-
-- `assets/examplepack/lang/en_us.json`
 
 ### 说明
 
@@ -150,6 +141,5 @@ RIAutomobility 会自动启用每个直接子车包的数据和资源部分。`.
 ### 创建你自己的版本
 
 1. 将 `example_buggy` 改成你自己的组件名称。
-2. 同步修改配方结果里的 `component` id。
-3. 将 `layer_location`、`model_id` 和 `texture` 替换成你自己的资源路径。
-4. 如果你添加了自己的贴图，请放在同一车包的 `assets/<namespace>/textures/...` 路径下。
+2. 将 `layer_location`、`model_id` 和 `texture` 替换成你自己的资源路径。
+3. 如果你添加了自己的贴图，请放在同一车包的 `assets/<namespace>/textures/...` 路径下。

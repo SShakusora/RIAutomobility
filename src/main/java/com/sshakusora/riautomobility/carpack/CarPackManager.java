@@ -3,7 +3,6 @@ package com.sshakusora.riautomobility.carpack;
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import net.minecraft.server.packs.FilePackResources;
-import net.minecraft.server.packs.repository.FolderRepositorySource;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -36,7 +35,8 @@ public final class CarPackManager {
     private static volatile List<CarPack> clientResourcePacks;
     private static volatile CarPack clientPreviewPack;
 
-    private CarPackManager() {}
+    private CarPackManager() {
+    }
 
     public static Path getRootDirectory() {
         return FMLPaths.GAMEDIR.get().resolve("riautomobility");
@@ -63,18 +63,15 @@ public final class CarPackManager {
                         continue;
                     }
 
-                    Pack.ResourcesSupplier resources = detectPackResources(entry);
-                    if (resources == null) {
+                    if (!isRiautoArchive(entry) || !Files.isRegularFile(entry, LinkOption.NOFOLLOW_LINKS)) {
                         continue;
                     }
-
-                    if (isRiautoArchive(entry)) {
-                        try {
-                            CarPackArchiveStore.validateRiautoArchive(entry);
-                        } catch (IOException exception) {
-                            LOGGER.warn("Ignoring invalid RIAutomobility car pack {}", entry, exception);
-                            continue;
-                        }
+                    Pack.ResourcesSupplier resources = detectPackResources(entry);
+                    try {
+                        CarPackArchiveStore.validateRiautoArchive(entry);
+                    } catch (IOException exception) {
+                        LOGGER.warn("Ignoring invalid RIAutomobility car pack {}", entry, exception);
+                        continue;
                     }
 
                     String name = entry.getFileName().toString();
@@ -124,7 +121,7 @@ public final class CarPackManager {
     public static void setClientPreviewPack(Path archive) throws IOException {
         Pack.ResourcesSupplier resources = detectPackResources(archive);
         if (resources == null) {
-            throw new IOException("Editor preview is not a valid resource pack");
+            throw new IOException("Editor preview is not a valid RIAuto archive");
         }
         clientPreviewPack = new CarPack(
                 PACK_ID_PREFIX + "editor-preview", "Vehicle editor preview", archive, resources, digest(archive));
@@ -137,7 +134,7 @@ public final class CarPackManager {
     public static CarPack cachedCarPack(CarPackManifestEntry manifest, Path archive) throws IOException {
         Pack.ResourcesSupplier resources = detectPackResources(archive);
         if (resources == null) {
-            throw new IOException("Downloaded car pack is not a valid resource pack: " + manifest.id());
+            throw new IOException("Downloaded car pack is not a readable RIAuto archive: " + manifest.id());
         }
         return new CarPack(manifest.id(), manifest.displayName(), archive, resources, manifest.contentDigest());
     }
@@ -200,7 +197,7 @@ public final class CarPackManager {
             var file = path.toFile();
             return id -> new FilePackResources(id, file, false);
         }
-        return FolderRepositorySource.detectPackResources(path, false);
+        return null;
     }
 
     private static boolean isRiautoArchive(Path path) {
@@ -277,5 +274,6 @@ public final class CarPackManager {
         return result.toString();
     }
 
-    public record CarPack(String id, String displayName, Path path, Pack.ResourcesSupplier resources, String digest) {}
+    public record CarPack(String id, String displayName, Path path, Pack.ResourcesSupplier resources, String digest) {
+    }
 }

@@ -10,10 +10,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -84,7 +81,7 @@ public final class CarPackTransferSender {
                 if (!player.connection.connection.isConnected()) {
                     throw new IOException("Player disconnected during car pack transfer");
                 }
-                byte[] data = read == buffer.length ? buffer.clone() : java.util.Arrays.copyOf(buffer, read);
+                byte[] data = read == buffer.length ? buffer.clone() : Arrays.copyOf(buffer, read);
                 send(player, new CarPackChunkPacket(pack.manifest().archiveDigest(), index++, data));
                 sent += read;
                 if (sent > pack.manifest().archiveSize()) {

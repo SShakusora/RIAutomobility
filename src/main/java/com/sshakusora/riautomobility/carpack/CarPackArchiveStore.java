@@ -10,10 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -30,7 +27,8 @@ public final class CarPackArchiveStore {
     private static final int BUFFER_SIZE = 8192;
     private static volatile Map<String, TransferPack> transferPacks = Map.of();
 
-    private CarPackArchiveStore() {}
+    private CarPackArchiveStore() {
+    }
 
     public static synchronized List<CarPackManifestEntry> prepareManifest() {
         Map<String, TransferPack> prepared = new LinkedHashMap<>();
@@ -146,6 +144,9 @@ public final class CarPackArchiveStore {
                 if (entry.isDirectory()) {
                     continue;
                 }
+                if (!isAllowedRuntimeEntry(entry.getName())) {
+                    throw new IOException("RIAuto archive contains unsupported vanilla resource/data content: " + entry.getName());
+                }
                 entries++;
                 if (entries > MAX_ENTRIES) {
                     throw new IOException("Car pack archive contains too many entries");
@@ -158,18 +159,14 @@ public final class CarPackArchiveStore {
                 if (uncompressedSize > MAX_UNCOMPRESSED_SIZE) {
                     throw new IOException("Car pack archive expands beyond the safety limit");
                 }
-                hasMetadata |= "pack.mcmeta".equals(entry.getName());
+                hasMetadata |= RIAUTO_METADATA_FILE.equals(entry.getName());
             }
         } catch (ArithmeticException exception) {
             throw new IOException("Car pack archive size overflow", exception);
         }
         if (!hasMetadata) {
-            throw new IOException("Car pack archive does not contain a root pack.mcmeta");
+            throw new IOException("Car pack archive does not contain a root " + RIAUTO_METADATA_FILE);
         }
-    }
-
-    public static void validateRiautoArchive(Path archive) throws IOException {
-        validateArchive(archive);
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
             if (metadataEntry == null || metadataEntry.isDirectory()) {
@@ -180,9 +177,14 @@ public final class CarPackArchiveStore {
                 metadata = JsonParser.parseReader(reader).getAsJsonObject();
             }
             validateRiautoMetadata(metadata);
+            validateDeclaredComponentFiles(metadata, entryNames);
         } catch (RuntimeException exception) {
             throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
+    }
+
+    public static void validateRiautoArchive(Path archive) throws IOException {
+        validateArchive(archive);
     }
 
     private static void validateRiautoMetadata(JsonObject metadata) throws IOException {
@@ -240,6 +242,34 @@ public final class CarPackArchiveStore {
         }
     }
 
+    private static void validateDeclaredComponentFiles(JsonObject metadata, Set<String> entries) throws IOException {
+        JsonObject components = metadata.getAsJsonObject("components");
+        for (String kind : List.of("frames", "wheels", "engines")) {
+            if (!components.has(kind)) continue;
+            for (JsonElement element : components.getAsJsonArray(kind)) {
+                String[] id = element.getAsString().split(":", 2);
+                String expected = "data/" + id[0] + "/riautomobility/" + kind + "/" + id[1] + ".json";
+                if (!entries.contains(expected)) {
+                    throw new IOException("RIAuto metadata declares missing component file " + expected);
+                }
+            }
+        }
+    }
+
+    private static boolean isAllowedRuntimeEntry(String name) {
+        if (RIAUTO_METADATA_FILE.equals(name)) return true;
+        if (name.matches("data/[a-z0-9_.-]+/riautomobility/(frames|wheels|engines)/[a-z0-9/._-]+\\.json")) {
+            return true;
+        }
+        if (name.matches("assets/[a-z0-9_.-]+/models/entity/automobile/(frame|wheel|engine)/[a-z0-9/._-]+\\.(json|bbmodel)")) {
+            return true;
+        }
+        if (name.matches("assets/[a-z0-9_.-]+/(geo|animations)/[a-z0-9/._-]+\\.json")) {
+            return true;
+        }
+        return name.matches("assets/[a-z0-9_.-]+/textures/[a-z0-9/._-]+\\.png(\\.mcmeta)?");
+    }
+
     public static String sha256(Path path) throws IOException {
         MessageDigest digest;
         try {
@@ -284,7 +314,7 @@ public final class CarPackArchiveStore {
     private static void moveAtomically(Path source, Path target) throws IOException {
         try {
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (java.nio.file.AtomicMoveNotSupportedException exception) {
+        } catch (AtomicMoveNotSupportedException exception) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
@@ -302,5 +332,6 @@ public final class CarPackArchiveStore {
         return result.toString();
     }
 
-    public record TransferPack(CarPackManifestEntry manifest, Path archive) {}
+    public record TransferPack(CarPackManifestEntry manifest, Path archive) {
+    }
 }

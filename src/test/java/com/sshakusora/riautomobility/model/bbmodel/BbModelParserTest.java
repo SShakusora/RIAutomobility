@@ -1,7 +1,13 @@
 package com.sshakusora.riautomobility.model.bbmodel;
 
+import JsonPrimitive;
+import List;
+import Vector2f;
+import Vector3f;
 import com.google.gson.JsonParser;
 import com.sshakusora.riautomobility.content.FrameSpec;
+import com.sshakusora.riautomobility.content.WheelSpec;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -136,8 +142,8 @@ class BbModelParserTest {
     @Test
     void componentBbModelStringDerivesRuntimeModelId() {
         FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
-                new com.google.gson.JsonPrimitive("example:models/vehicles/car.bbmodel"),
-                new net.minecraft.resources.ResourceLocation("example", "car"),
+                new JsonPrimitive("example:models/vehicles/car.bbmodel"),
+                new ResourceLocation("example", "car"),
                 "frame"
         );
 
@@ -150,7 +156,7 @@ class BbModelParserTest {
     void omittedComponentModelUsesConventionalBbModelPath() {
         FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
                 null,
-                new net.minecraft.resources.ResourceLocation("example", "sports/red_car"),
+                new ResourceLocation("example", "sports/red_car"),
                 "wheel"
         );
 
@@ -162,11 +168,11 @@ class BbModelParserTest {
 
     @Test
     void parsesShorthandModelsInShippedComponentDefinitions() throws IOException {
-        net.minecraft.resources.ResourceLocation id = new net.minecraft.resources.ResourceLocation("examplepack", "example_buggy_bbmodel");
+        ResourceLocation id = new ResourceLocation("examplepack", "example_buggy_bbmodel");
         FrameSpec frame = FrameSpec.fromJson(id, JsonParser.parseString(Files.readString(Path.of(
                 "examples/examplepack/data/examplepack/riautomobility/frames/example_buggy_bbmodel.json"
         ))).getAsJsonObject());
-        com.sshakusora.riautomobility.content.WheelSpec wheel = com.sshakusora.riautomobility.content.WheelSpec.fromJson(
+        WheelSpec wheel = WheelSpec.fromJson(
                 id,
                 JsonParser.parseString(Files.readString(Path.of(
                         "examples/examplepack/data/examplepack/riautomobility/wheels/example_buggy_bbmodel.json"
@@ -209,70 +215,70 @@ class BbModelParserTest {
     void preservesIncomingAndOutgoingKeyframeDataPoints() {
         BbModelData.Keyframe before = new BbModelData.Keyframe(
                 "position", 0, "step",
-                java.util.List.of(
-                        new BbModelData.DataPoint(new com.google.gson.JsonPrimitive(1), new com.google.gson.JsonPrimitive(0), new com.google.gson.JsonPrimitive(0)),
-                        new BbModelData.DataPoint(new com.google.gson.JsonPrimitive(2), new com.google.gson.JsonPrimitive(0), new com.google.gson.JsonPrimitive(0))
+                List.of(
+                        new BbModelData.DataPoint(new JsonPrimitive(1), new JsonPrimitive(0), new JsonPrimitive(0)),
+                        new BbModelData.DataPoint(new JsonPrimitive(2), new JsonPrimitive(0), new JsonPrimitive(0))
                 ), new float[0], new float[0], new float[0], new float[0]
         );
         BbModelData.Keyframe after = keyframe(1.0F, new float[0], new float[0], new float[0], new float[0]);
-        org.joml.Vector3f value = BbAnimationPlayer.sampleChannel(java.util.List.of(before, after), 0.5F, new org.joml.Vector3f());
+        Vector3f value = BbAnimationPlayer.sampleChannel(List.of(before, after), 0.5F, new Vector3f());
 
         assertEquals(2.0F, value.x, 0.0001F);
     }
 
     @Test
     void convertsBlockbenchCoordinatesToAutomobilityModelSpace() {
-        org.joml.Vector3f position = BbCoordinateSystem.position(new org.joml.Vector3f(2, 5, 7));
-        org.joml.Vector3f rotation = BbCoordinateSystem.rotation(new org.joml.Vector3f(10, 20, 30));
+        Vector3f position = BbCoordinateSystem.position(new Vector3f(2, 5, 7));
+        Vector3f rotation = BbCoordinateSystem.rotation(new Vector3f(10, 20, 30));
 
-        assertEquals(new org.joml.Vector3f(2, -5, 7), position);
-        assertEquals(new org.joml.Vector3f(-10, 20, -30), rotation);
+        assertEquals(new Vector3f(2, -5, 7), position);
+        assertEquals(new Vector3f(-10, 20, -30), rotation);
     }
 
     @Test
     void coordinateReflectionPreservesFaceWindingAndUvPairing() {
-        org.joml.Vector3f[] vertices = {
-                new org.joml.Vector3f(0, 0, 0),
-                new org.joml.Vector3f(1, 0, 0),
-                new org.joml.Vector3f(1, 1, 0),
-                new org.joml.Vector3f(0, 1, 0)
+        Vector3f[] vertices = {
+                new Vector3f(0, 0, 0),
+                new Vector3f(1, 0, 0),
+                new Vector3f(1, 1, 0),
+                new Vector3f(0, 1, 0)
         };
-        org.joml.Vector2f[] uvs = {
-                new org.joml.Vector2f(0, 0),
-                new org.joml.Vector2f(1, 0),
-                new org.joml.Vector2f(1, 1),
-                new org.joml.Vector2f(0, 1)
+        Vector2f[] uvs = {
+                new Vector2f(0, 0),
+                new Vector2f(1, 0),
+                new Vector2f(1, 1),
+                new Vector2f(0, 1)
         };
 
         BbCoordinateSystem.ConvertedQuad converted = BbCoordinateSystem.quad(vertices, uvs);
-        org.joml.Vector3f normal = new org.joml.Vector3f(converted.vertices()[1])
+        Vector3f normal = new Vector3f(converted.vertices()[1])
                 .sub(converted.vertices()[0])
-                .cross(new org.joml.Vector3f(converted.vertices()[2]).sub(converted.vertices()[0]));
+                .cross(new Vector3f(converted.vertices()[2]).sub(converted.vertices()[0]));
 
         assertTrue(normal.z > 0);
-        assertEquals(new org.joml.Vector3f(1, -1, 0), converted.vertices()[0]);
-        assertEquals(new org.joml.Vector2f(1, 1), converted.uvs()[0]);
+        assertEquals(new Vector3f(1, -1, 0), converted.vertices()[0]);
+        assertEquals(new Vector2f(1, 1), converted.uvs()[0]);
     }
 
     @Test
     void coordinateReflectionKeepsDegenerateTriangleNormalValid() {
-        org.joml.Vector3f[] vertices = {
-                new org.joml.Vector3f(0, 0, 0),
-                new org.joml.Vector3f(1, 0, 0),
-                new org.joml.Vector3f(0, 1, 0),
-                new org.joml.Vector3f(0, 1, 0)
+        Vector3f[] vertices = {
+                new Vector3f(0, 0, 0),
+                new Vector3f(1, 0, 0),
+                new Vector3f(0, 1, 0),
+                new Vector3f(0, 1, 0)
         };
-        org.joml.Vector2f[] uvs = {
-                new org.joml.Vector2f(0, 0),
-                new org.joml.Vector2f(1, 0),
-                new org.joml.Vector2f(0, 1),
-                new org.joml.Vector2f(0, 1)
+        Vector2f[] uvs = {
+                new Vector2f(0, 0),
+                new Vector2f(1, 0),
+                new Vector2f(0, 1),
+                new Vector2f(0, 1)
         };
 
         BbCoordinateSystem.ConvertedQuad converted = BbCoordinateSystem.quad(vertices, uvs);
-        org.joml.Vector3f normal = new org.joml.Vector3f(converted.vertices()[1])
+        Vector3f normal = new Vector3f(converted.vertices()[1])
                 .sub(converted.vertices()[0])
-                .cross(new org.joml.Vector3f(converted.vertices()[2]).sub(converted.vertices()[0]));
+                .cross(new Vector3f(converted.vertices()[2]).sub(converted.vertices()[0]));
 
         assertTrue(normal.lengthSquared() > 0);
         assertTrue(normal.z > 0);
@@ -281,7 +287,7 @@ class BbModelParserTest {
     private static BbModelData.Keyframe keyframe(float time, float[] rightTime, float[] rightValue, float[] leftTime, float[] leftValue) {
         return new BbModelData.Keyframe(
                 "position", time, "bezier",
-                java.util.List.of(new BbModelData.DataPoint(new com.google.gson.JsonPrimitive(0), new com.google.gson.JsonPrimitive(0), new com.google.gson.JsonPrimitive(0))),
+                List.of(new BbModelData.DataPoint(new JsonPrimitive(0), new JsonPrimitive(0), new JsonPrimitive(0))),
                 leftTime, leftValue, rightTime, rightValue
         );
     }

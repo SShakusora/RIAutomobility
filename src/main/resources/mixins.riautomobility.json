@@ -21,7 +21,9 @@
     "accessor.AutoMechanicTableRecipeAccessor",
     "accessor.AutoMechanicTableScreenAccessor",
     "accessor.AutomobileModelsAccessor",
-    "accessor.EntityModelSetAccessor"
+    "accessor.EntityModelSetAccessor",
+    "accessor.GeckoLibCacheAccessor",
+    "accessor.ReloadableResourceManagerAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",

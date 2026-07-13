@@ -19,7 +19,8 @@ public final class VehiclePackBuilder {
     public static final long MAX_SOURCE_FILE_SIZE = 32L * 1024L * 1024L;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    private VehiclePackBuilder() {}
+    private VehiclePackBuilder() {
+    }
 
     public static Path build(VehicleEditorDraft draft, Path destination, boolean preview) throws IOException {
         String validation = draft.validationError();
@@ -33,9 +34,6 @@ public final class VehiclePackBuilder {
         String componentPath = preview ? draft.previewKey(draft.target) : draft.componentPath();
         String kind = draft.target.path;
         Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put("pack.mcmeta", ("{\n  \"pack\": {\n    \"pack_format\": 15,\n    \"description\": \"RIAutomobility vehicle editor pack\"\n  }\n}\n")
-                .getBytes(StandardCharsets.UTF_8));
-
         JsonObject metadata = new JsonObject();
         metadata.addProperty("format", CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
         String declaredComponentId = namespace + ":" + componentPath;
@@ -67,11 +65,6 @@ public final class VehiclePackBuilder {
         entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + ".bbmodel",
                 readLimited(draft.modelFile()));
 
-        JsonObject language = new JsonObject();
-        language.addProperty(draft.target.path + "." + namespace + "." + componentPath, draft.displayName);
-        entries.put("assets/" + namespace + "/lang/en_us.json", GSON.toJson(language).getBytes(StandardCharsets.UTF_8));
-        entries.put("assets/" + namespace + "/lang/zh_cn.json", GSON.toJson(language).getBytes(StandardCharsets.UTF_8));
-
         writeArchive(destination, entries);
         return destination;
     }
@@ -91,9 +84,6 @@ public final class VehiclePackBuilder {
                              Path destination) throws IOException {
         Files.createDirectories(destination.getParent());
         Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put("pack.mcmeta", ("{\n  \"pack\": {\n    \"pack_format\": 15,\n    \"description\": \"RIAutomobility combined vehicle preview\"\n  }\n}\n")
-                .getBytes(StandardCharsets.UTF_8));
-
         int modelCount = 0;
         for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
             Path modelFile = modelFiles.get(target);

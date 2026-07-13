@@ -17,15 +17,22 @@ public final class RIAutomobilityComponentManager {
     private static final Map<ResourceLocation, WheelSpec> CUSTOM_WHEELS = new LinkedHashMap<>();
     private static final Map<ResourceLocation, EngineSpec> CUSTOM_ENGINES = new LinkedHashMap<>();
 
-    private RIAutomobilityComponentManager() {}
+    private RIAutomobilityComponentManager() {
+    }
+
+    public static void clearCustomComponents() {
+        CUSTOM_FRAMES.keySet().forEach(RIAutomobileRegistry::remove);
+        CUSTOM_WHEELS.keySet().forEach(id -> RIAutomobilityRegistryUtil.remove(AutomobileWheel.REGISTRY, id));
+        CUSTOM_ENGINES.keySet().forEach(id -> RIAutomobilityRegistryUtil.remove(AutomobileEngine.REGISTRY, id));
+        CUSTOM_FRAMES.clear();
+        CUSTOM_WHEELS.clear();
+        CUSTOM_ENGINES.clear();
+    }
 
     public static void applyCustomComponents(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
                                              Map<ResourceLocation, EngineSpec> engines) {
-        CUSTOM_FRAMES.clear();
         CUSTOM_FRAMES.putAll(frames);
-        CUSTOM_WHEELS.clear();
         CUSTOM_WHEELS.putAll(wheels);
-        CUSTOM_ENGINES.clear();
         CUSTOM_ENGINES.putAll(engines);
 
         for (FrameSpec spec : CUSTOM_FRAMES.values()) {
@@ -47,7 +54,9 @@ public final class RIAutomobilityComponentManager {
         return Map.copyOf(CUSTOM_WHEELS);
     }
 
-    public static Map<ResourceLocation, EngineSpec> getCustomEngines() { return Map.copyOf(CUSTOM_ENGINES); }
+    public static Map<ResourceLocation, EngineSpec> getCustomEngines() {
+        return Map.copyOf(CUSTOM_ENGINES);
+    }
 
     public static Collection<FrameSpec> getCustomFrameSpecs() {
         return CUSTOM_FRAMES.values();
@@ -57,7 +66,9 @@ public final class RIAutomobilityComponentManager {
         return CUSTOM_WHEELS.values();
     }
 
-    public static Collection<EngineSpec> getCustomEngineSpecs() { return CUSTOM_ENGINES.values(); }
+    public static Collection<EngineSpec> getCustomEngineSpecs() {
+        return CUSTOM_ENGINES.values();
+    }
 
     public static boolean isManagedFrame(AutomobileFrame frame) {
         return frame != null && CUSTOM_FRAMES.containsKey(frame.getId());

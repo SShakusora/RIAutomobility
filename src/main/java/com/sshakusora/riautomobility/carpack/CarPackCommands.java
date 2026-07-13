@@ -11,7 +11,8 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = RIAutomobility.MODID)
 public final class CarPackCommands {
-    private CarPackCommands() {}
+    private CarPackCommands() {
+    }
 
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
@@ -28,19 +29,15 @@ public final class CarPackCommands {
 
     private static int reload(CommandSourceStack source) {
         var server = source.getServer();
-        var repository = server.getPackRepository();
-        repository.reload();
-        var selectedPacks = repository.getSelectedIds();
         source.sendSuccess(() -> Component.translatable("commands.riautomobility.carpacks.reload.started"), true);
-        server.reloadResources(selectedPacks).whenComplete((unused, error) ->
-                server.execute(() -> {
-                    if (error == null) {
-                        source.sendSuccess(() -> Component.translatable("commands.riautomobility.carpacks.reload.success"), true);
-                    } else {
-                        source.sendFailure(Component.translatable("commands.riautomobility.carpacks.reload.failed", error.getMessage()));
-                    }
-                })
-        );
-        return 1;
+        try {
+            CarPackRuntime.reloadServer();
+            CarPackEvents.CommonEvents.syncAll(server);
+            source.sendSuccess(() -> Component.translatable("commands.riautomobility.carpacks.reload.success"), true);
+            return 1;
+        } catch (RuntimeException exception) {
+            source.sendFailure(Component.translatable("commands.riautomobility.carpacks.reload.failed", exception.getMessage()));
+            return 0;
+        }
     }
 }

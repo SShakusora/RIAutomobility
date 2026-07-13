@@ -38,11 +38,9 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RIAutomobileModels {
@@ -50,8 +48,9 @@ public class RIAutomobileModels {
     private static final ModelLayerLocation PLACEHOLDER_LAYER = new ModelLayerLocation(RIAutomobility.rl("automobile/missing_component"), "main");
     private static final Set<ResourceLocation> MISSING_COMPONENTS = new HashSet<>();
     private static EntityRendererProvider.Context renderContext;
+    private static final Map<ResourceLocation, FrameSpec.ModelSpec> CUSTOM_MODEL_SPECS = new LinkedHashMap<>();
 
-    public static void init(){
+    public static void init() {
         EntityRenderHelper.registerContextListener(ctx -> {
             renderContext = ctx;
             rebuildDynamicModels();
@@ -108,28 +107,27 @@ public class RIAutomobileModels {
     }
 
     public static void applyDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
-        clearMissingFlags(frames, wheels, engines);
-        prepareBbModels(frames, wheels, engines);
-        for (FrameSpec spec : frames) {
-            registerDynamicModel(spec.id(), spec.model());
-        }
-        for (WheelSpec spec : wheels) {
-            registerDynamicModel(spec.id(), spec.model());
-        }
-        for (EngineSpec spec : engines) registerDynamicModel(spec.id(), spec.model());
+        registerDynamicModels(frames, wheels, engines);
         rebuildDynamicModels();
     }
 
     public static void registerDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
+        CUSTOM_MODEL_SPECS.forEach(RIAutomobileModels::unregisterDynamicModel);
+        CUSTOM_MODEL_SPECS.clear();
         clearMissingFlags(frames, wheels, engines);
         prepareBbModels(frames, wheels, engines);
         for (FrameSpec spec : frames) {
             registerDynamicModel(spec.id(), spec.model());
+            CUSTOM_MODEL_SPECS.put(spec.id(), spec.model());
         }
         for (WheelSpec spec : wheels) {
             registerDynamicModel(spec.id(), spec.model());
+            CUSTOM_MODEL_SPECS.put(spec.id(), spec.model());
         }
-        for (EngineSpec spec : engines) registerDynamicModel(spec.id(), spec.model());
+        for (EngineSpec spec : engines) {
+            registerDynamicModel(spec.id(), spec.model());
+            CUSTOM_MODEL_SPECS.put(spec.id(), spec.model());
+        }
     }
 
     public static void registerTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
@@ -138,6 +136,10 @@ public class RIAutomobileModels {
     }
 
     public static void unregisterTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+        unregisterDynamicModel(componentId, modelSpec);
+    }
+
+    private static void unregisterDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         AutomobileModelsAccessor.riautomobility$getModelProviders().remove(modelSpec.modelId());
         AutomobileModelsAccessor.riautomobility$getModels().remove(modelSpec.modelId());
         if (modelSpec.isBbModel()) {
@@ -174,12 +176,12 @@ public class RIAutomobileModels {
 
     private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
         Set<ResourceLocation> resources = Stream.concat(Stream.concat(
-                        frames.stream().map(FrameSpec::model), wheels.stream().map(WheelSpec::model)),
+                                frames.stream().map(FrameSpec::model), wheels.stream().map(WheelSpec::model)),
                         engines.stream().map(EngineSpec::model))
                 .filter(FrameSpec.ModelSpec::isBbModel)
                 .map(FrameSpec.ModelSpec::bbModel)
-                .filter(java.util.Objects::nonNull)
-                .collect(java.util.stream.Collectors.toSet());
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         BbModelRepository.retain(resources);
     }
 

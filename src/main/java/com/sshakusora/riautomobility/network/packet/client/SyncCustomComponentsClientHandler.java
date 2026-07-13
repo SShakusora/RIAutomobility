@@ -22,7 +22,8 @@ import java.util.Map;
 public final class SyncCustomComponentsClientHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private SyncCustomComponentsClientHandler() {}
+    private SyncCustomComponentsClientHandler() {
+    }
 
     public static void handle(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
                               Map<ResourceLocation, EngineSpec> engines,
@@ -32,6 +33,7 @@ public final class SyncCustomComponentsClientHandler {
 
     static void applyComponents(Minecraft minecraft, Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
                                 Map<ResourceLocation, EngineSpec> engines) {
+        RIAutomobilityComponentManager.clearCustomComponents();
         RIAutomobileFrame.reload();
         RIAutomobileWheel.reload();
         RIAutomobilityComponentManager.applyCustomComponents(frames, wheels, engines);

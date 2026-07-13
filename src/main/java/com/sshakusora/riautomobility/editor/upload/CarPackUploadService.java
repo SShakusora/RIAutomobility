@@ -2,7 +2,9 @@ package com.sshakusora.riautomobility.editor.upload;
 
 import com.google.gson.JsonObject;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
+import com.sshakusora.riautomobility.carpack.CarPackEvents;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
+import com.sshakusora.riautomobility.carpack.CarPackRuntime;
 import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -35,7 +37,8 @@ public final class CarPackUploadService {
     private static final long UPLOAD_TIMEOUT_MILLIS = 60_000L;
     private static final Map<UUID, Upload> UPLOADS = new HashMap<>();
 
-    private CarPackUploadService() {}
+    private CarPackUploadService() {
+    }
 
     public static void begin(ServerPlayer player, BeginCarPackUploadPacket request) {
         try {
@@ -61,7 +64,8 @@ public final class CarPackUploadService {
         try {
             requirePermission(player);
             if (packet.index() != upload.nextChunk) throw new IOException("Upload chunks arrived out of order");
-            if (upload.written + packet.data().length > upload.request.archiveSize()) throw new IOException("Upload exceeds declared size");
+            if (upload.written + packet.data().length > upload.request.archiveSize())
+                throw new IOException("Upload exceeds declared size");
             upload.output.write(packet.data());
             upload.written += packet.data().length;
             upload.nextChunk++;
@@ -81,24 +85,25 @@ public final class CarPackUploadService {
         try {
             requirePermission(player);
             upload.output.close();
-            if (upload.written != upload.request.archiveSize()) throw new IOException("Uploaded size does not match declaration");
+            if (upload.written != upload.request.archiveSize())
+                throw new IOException("Uploaded size does not match declaration");
             String digest = CarPackArchiveStore.sha256(upload.temporary);
-            if (!digest.equals(upload.request.sha256())) throw new IOException("Uploaded SHA-256 does not match declaration");
+            if (!digest.equals(upload.request.sha256()))
+                throw new IOException("Uploaded SHA-256 does not match declaration");
             CarPackArchiveStore.validateRiautoArchive(upload.temporary);
             validateEditorArchive(upload.temporary, upload.request);
 
             Path target = CarPackManager.getRootDirectory()
                     .resolve(upload.request.packName() + CarPackManager.CAR_PACK_EXTENSION).normalize();
-            if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize())) throw new IOException("Invalid target path");
-            if (Files.exists(target) && !upload.request.overwrite()) throw new IOException("A car pack with this name already exists");
+            if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize()))
+                throw new IOException("Invalid target path");
+            if (Files.exists(target) && !upload.request.overwrite())
+                throw new IOException("A car pack with this name already exists");
             Files.move(upload.temporary, target, StandardCopyOption.REPLACE_EXISTING);
 
-            var server = player.server;
-            server.getPackRepository().reload();
-            server.reloadResources(server.getPackRepository().getSelectedIds()).whenComplete((unused, error) -> server.execute(() -> {
-                if (error == null) success(player, uploadId, "Installed " + target.getFileName());
-                else fail(player, uploadId, "Installed, but reload failed: " + error.getMessage());
-            }));
+            CarPackRuntime.reloadServer();
+            CarPackEvents.CommonEvents.syncAll(player.server);
+            success(player, uploadId, "Installed " + target.getFileName());
         } catch (Exception exception) {
             abort(upload);
             fail(player, uploadId, exception.getMessage());
@@ -107,12 +112,15 @@ public final class CarPackUploadService {
 
     private static void validateMetadata(BeginCarPackUploadPacket request) throws IOException {
         if (!request.packName().matches("[a-z0-9_.-]{1,96}")) throw new IOException("Invalid pack name");
-        if (!request.namespace().equals(VehicleEditorDraft.GENERATED_NAMESPACE)) throw new IOException("Invalid generated namespace");
+        if (!request.namespace().equals(VehicleEditorDraft.GENERATED_NAMESPACE))
+            throw new IOException("Invalid generated namespace");
         if (!request.componentPath().matches(VehicleEditorDraft.GENERATED_COMPONENT_PREFIX + "[0-9a-f]{32}")) {
             throw new IOException("Invalid generated component id");
         }
-        if (!request.target().equals("frame") && !request.target().equals("wheel") && !request.target().equals("engine")) throw new IOException("Invalid component target");
-        if (request.archiveSize() <= 0 || request.archiveSize() > MAX_UPLOAD_SIZE) throw new IOException("Upload size is outside the allowed range");
+        if (!request.target().equals("frame") && !request.target().equals("wheel") && !request.target().equals("engine"))
+            throw new IOException("Invalid component target");
+        if (request.archiveSize() <= 0 || request.archiveSize() > MAX_UPLOAD_SIZE)
+            throw new IOException("Upload size is outside the allowed range");
         if (!request.sha256().matches("[0-9a-f]{64}")) throw new IOException("Invalid SHA-256");
     }
 
@@ -127,7 +135,7 @@ public final class CarPackUploadService {
                 ZipEntry entry = entries.nextElement();
                 if (entry.isDirectory()) continue;
                 String name = entry.getName();
-                if (!name.equals("pack.mcmeta") && !name.equals(CarPackArchiveStore.RIAUTO_METADATA_FILE)
+                if (!name.equals(CarPackArchiveStore.RIAUTO_METADATA_FILE)
                         && !name.startsWith(namespacePrefix) && !name.startsWith(dataPrefix)) {
                     throw new IOException("Archive contains content outside its declared namespace: " + name);
                 }
@@ -199,12 +207,24 @@ public final class CarPackUploadService {
 
     private static void abort(Upload upload) {
         UPLOADS.remove(upload.request.uploadId());
-        try { upload.output.close(); } catch (IOException ignored) {}
-        try { Files.deleteIfExists(upload.temporary); } catch (IOException ignored) {}
+        try {
+            upload.output.close();
+        } catch (IOException ignored) {
+        }
+        try {
+            Files.deleteIfExists(upload.temporary);
+        } catch (IOException ignored) {
+        }
     }
 
-    private static void success(ServerPlayer player, UUID uploadId, String detail) { send(player, new CarPackUploadResultPacket(uploadId, true, detail)); }
-    private static void fail(ServerPlayer player, UUID uploadId, String detail) { send(player, new CarPackUploadResultPacket(uploadId, false, detail == null ? "Upload failed" : detail)); }
+    private static void success(ServerPlayer player, UUID uploadId, String detail) {
+        send(player, new CarPackUploadResultPacket(uploadId, true, detail));
+    }
+
+    private static void fail(ServerPlayer player, UUID uploadId, String detail) {
+        send(player, new CarPackUploadResultPacket(uploadId, false, detail == null ? "Upload failed" : detail));
+    }
+
     private static void send(ServerPlayer player, Object packet) {
         RIAutomobilityNetwork.CHANNEL.sendTo(packet, player.connection.connection, NetworkDirection.PLAY_TO_CLIENT);
     }

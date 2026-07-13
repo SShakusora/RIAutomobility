@@ -83,19 +83,19 @@ The mod ships with a variety of pre-made vehicles and components:
 
 #### For Custom Content (Car Packs)
 
-1. Use the in-game Vehicle Import Table to import a `.bbmodel` project with embedded PNG textures and export a `.riauto` file, or create a ZIP-compatible archive containing `riauto.json`, `pack.mcmeta`, `data/`, and `assets/`, then give it the `.riauto` extension
+1. Use the in-game Vehicle Import Table to import a `.bbmodel` project with embedded PNG textures and export a `.riauto` file, or create a ZIP-compatible archive containing `riauto.json` plus the RIAutomobility-only component/model/texture paths described below
 2. Place the `.riauto` file directly in Minecraft's `riautomobility/` folder
 3. Launch the game, or run `/riautomobility carpacks reload`
 
-Car packs are enabled automatically on both the data and resource sides. Move a pack into `riautomobility/disabled/` to disable it. Dedicated servers only need to install packs in the server `riautomobility/` folder: joining clients automatically download missing or changed packs, verify their SHA-256 digests, and cache them under `riautomobility/cache/packs/`. Matching manually installed client packs are reused without downloading. Legacy folder and `.zip` packs remain readable for migration, but newly exported and published packs use `.riauto`.
+Car packs are loaded by RIAutomobility's private runtime and never enter Minecraft's datapack or resource-pack repositories. Import, synchronization, and `/riautomobility carpacks reload` are silent and do not show the resource reload overlay. Dedicated servers only need `.riauto` files in the server `riautomobility/` folder; joining clients automatically download and verify them.
 
 The Vehicle Import Table accepts only native Blockbench `.bbmodel` projects. All model textures must be embedded as PNG data in the project and are applied automatically. JsonEM and GeckoLib remain supported for manually authored car packs, but cannot be imported through the table.
 
 ### Car Pack Guide
 
-> **Tip:** `/riautomobility carpacks reload` rescans both definitions and client resources, so manual resource-pack selection and `F3 + T` are not required.
+> **Tip:** `/riautomobility carpacks reload` atomically rebuilds only RIAutomobility components and assets. It does not run a Minecraft datapack/resource-pack refresh.
 
-Custom components use standard data and resource layouts inside one car pack:
+Custom components use a restricted RIAuto runtime layout. `pack.mcmeta`, recipes, tags, loot tables, advancements, functions, and other vanilla datapack/resource-pack content are rejected.
 
 `riauto.json` is the format manifest. Format version `1` declares a pack id, display name, and the frame/wheel component ids contained by the archive.
 
@@ -112,12 +112,6 @@ data/<namespace>/riautomobility/wheels/<id>.json
 data/<namespace>/riautomobility/engines/<id>.json
 ```
 
-Optional Automobility recipes:
-```
-data/automobility/recipes/frame/<recipe>.json
-data/automobility/recipes/wheel/<recipe>.json
-```
-
 #### Asset Paths
 
 **JsonEM models:**
@@ -131,12 +125,6 @@ assets/<namespace>/models/entity/automobile/wheel/<name>/main.json
 assets/<namespace>/geo/...
 assets/<namespace>/animations/...
 assets/<namespace>/textures/...
-```
-
-**Translations:**
-```
-assets/<namespace>/lang/en_us.json
-assets/<namespace>/lang/zh_cn.json
 ```
 
 #### Frame JSON Format
@@ -336,7 +324,7 @@ It contains:
 - A `JsonEM` frame and wheel example
 - A `GeckoLib` frame and wheel example
 - A native Blockbench `.bbmodel` frame and wheel example
-- Matching recipes, translations, and resource-pack model files
+- Matching RIAuto-only model and animation files
 
 
 ### Notes for Pack Authors
@@ -345,7 +333,7 @@ It contains:
 - Missing-resource placeholders use a barrier texture for easy identification.
 - `JsonEM` components need valid `assets/<namespace>/models/entity/.../main.json` files.
 - `GeckoLib` components need valid `geo`, `animation`, and texture resources.
-- `BBModel` components need a valid `.bbmodel`; external texture paths must resolve inside a resource pack unless overridden by `model.textures`.
+- `BBModel` components need a valid `.bbmodel`; external texture paths must resolve inside the RIAuto asset overlay unless overridden by `model.textures`.
 - Tooltips warn the player when required car-pack assets are missing.
 - Custom models apply automatically after joining the world — no `F3 + T` needed.
 
@@ -427,19 +415,19 @@ It contains:
 
 #### 自定义内容（车包）
 
-1. 使用游戏内的车辆导入台导入包含内嵌 PNG 纹理的 `.bbmodel` 工程并导出 `.riauto`，或创建一个包含 `riauto.json`、`pack.mcmeta`、`data/` 和 `assets/` 的 ZIP 兼容归档并将扩展名设为 `.riauto`
+1. 使用游戏内的车辆导入台导入包含内嵌 PNG 纹理的 `.bbmodel` 工程并导出 `.riauto`，或创建一个包含 `riauto.json` 以及下述 RIAutomobility 私有组件、模型和贴图路径的 ZIP 兼容归档
 2. 将 `.riauto` 文件直接放入 Minecraft 的 `riautomobility/` 文件夹
 3. 启动游戏，或执行 `/riautomobility carpacks reload`
 
-车包的数据和资源部分都会自动启用。要停用车包，将其移入 `riautomobility/disabled/`。专用服务器只需在服务端的 `riautomobility/` 目录安装车包；客户端加入时会自动下载缺失或已更新的车包、校验 SHA-256，并缓存到 `riautomobility/cache/packs/`。内容一致的客户端本地车包会直接复用，无需重复下载。旧文件夹和 `.zip` 在迁移期仍可读取，但新导出和发布的车包统一使用 `.riauto`。
+车包由 RIAutomobility 私有运行时加载，不会进入 Minecraft 的数据包或资源包仓库。导入、同步以及 `/riautomobility carpacks reload` 都是静默的，不会显示资源刷新界面。专用服务器只需把 `.riauto` 文件放入服务端 `riautomobility/` 目录，客户端会自动下载并校验。
 
 车辆导入台现在只接受原生 Blockbench `.bbmodel` 工程。工程中的所有纹理都必须以内嵌 PNG 数据保存，导入后会自动应用。JsonEM 和 GeckoLib 仍可用于手工编写的车包，但不能再通过导入台导入。
 
 ### 车包教程
 
-> **提示：** `/riautomobility carpacks reload` 会同时重新扫描定义与客户端资源，无需手动选择资源或按 `F3 + T`。
+> **提示：** `/riautomobility carpacks reload` 只会原子重建 RIAutomobility 自有组件和资源，不会触发 Minecraft 数据包/资源包刷新。
 
-自定义车辆组件在同一个车包中使用标准的数据与资源目录：
+自定义车辆组件使用受限的 RIAuto 私有目录。`pack.mcmeta`、配方、标签、战利品表、进度、函数以及其他原版数据包/资源包内容都会被拒绝。
 
 `riauto.json` 是格式清单。格式版本 `1` 声明车包 id、显示名称，以及归档内包含的车架和车轮组件 id。
 
@@ -456,12 +444,6 @@ data/<命名空间>/riautomobility/wheels/<id>.json
 data/<命名空间>/riautomobility/engines/<id>.json
 ```
 
-可选的 Automobility 配方：
-```
-data/automobility/recipes/frame/<配方>.json
-data/automobility/recipes/wheel/<配方>.json
-```
-
 #### 资源路径
 
 **JsonEM 模型：**
@@ -475,12 +457,6 @@ assets/<命名空间>/models/entity/automobile/wheel/<名称>/main.json
 assets/<命名空间>/geo/...
 assets/<命名空间>/animations/...
 assets/<命名空间>/textures/...
-```
-
-**翻译文件：**
-```
-assets/<命名空间>/lang/en_us.json
-assets/<命名空间>/lang/zh_cn.json
 ```
 
 #### Frame JSON 格式
@@ -680,7 +656,7 @@ assets/<命名空间>/lang/zh_cn.json
 - 一套 `JsonEM` 车架与车轮示例
 - 一套 `GeckoLib` 车架与车轮示例
 - 一套原生 Blockbench `.bbmodel` 车架与车轮示例
-- 对应配方、翻译文件和车包模型
+- 对应的 RIAuto 私有模型与动画文件
 
 ### 给内容作者的提示
 
@@ -688,7 +664,7 @@ assets/<命名空间>/lang/zh_cn.json
 - 缺失资源时，占位模型使用屏障贴图，方便在物品栏中识别。
 - `JsonEM` 组件需要正确的 `assets/<命名空间>/models/entity/.../main.json`。
 - `GeckoLib` 组件需要正确的 `geo`、`animation` 和贴图资源。
-- `BBModel` 组件需要正确的 `.bbmodel`；外部贴图必须能从资源包解析，或由 `model.textures` 显式覆盖。
+- `BBModel` 组件需要正确的 `.bbmodel`；外部贴图必须能从 RIAuto 资源覆盖层解析，或由 `model.textures` 显式覆盖。
 - 当资源缺失时，tooltip 会提示玩家缺少对应车包资源。
 - 自定义模型在进入世界后自动生效，通常不需要按 `F3 + T`。
 

@@ -5,11 +5,10 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.CarPackTransferFailedPacket;
 import com.sshakusora.riautomobility.network.packet.SyncCustomComponentsPacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.packs.PackType;
-import net.minecraftforge.event.AddPackFindersEvent;
-import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.OnDatapackSyncEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.NetworkDirection;
@@ -19,22 +18,17 @@ import org.slf4j.Logger;
 public final class CarPackEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private CarPackEvents() {}
-
-    @SubscribeEvent
-    public static void addPackFinders(AddPackFindersEvent event) {
-        if (event.getPackType() == PackType.SERVER_DATA || event.getPackType() == PackType.CLIENT_RESOURCES) {
-            event.addRepositorySource(new CarPackRepositorySource(event.getPackType()));
-        }
+    private CarPackEvents() {
     }
 
     @Mod.EventBusSubscriber(modid = RIAutomobility.MODID)
     public static final class CommonEvents {
-        private CommonEvents() {}
+        private CommonEvents() {
+        }
 
         @SubscribeEvent
-        public static void addReloadListener(AddReloadListenerEvent event) {
-            event.addListener(new CarPackComponentDataLoader());
+        public static void loadCarPacks(ServerStartedEvent event) {
+            CarPackRuntime.reloadServer();
         }
 
         @SubscribeEvent
@@ -63,6 +57,11 @@ public final class CarPackEvents {
             for (var player : event.getPlayerList().getPlayers()) {
                 send(packet, player);
             }
+        }
+
+        public static void syncAll(MinecraftServer server) {
+            SyncCustomComponentsPacket packet = SyncCustomComponentsPacket.create();
+            server.getPlayerList().getPlayers().forEach(player -> send(packet, player));
         }
 
         private static void send(Object packet, ServerPlayer player) {

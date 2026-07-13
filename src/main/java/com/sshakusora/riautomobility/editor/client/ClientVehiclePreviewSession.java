@@ -1,9 +1,9 @@
 package com.sshakusora.riautomobility.editor.client;
 
 import com.sshakusora.riautomobility.carpack.CarPackManager;
+import com.sshakusora.riautomobility.carpack.client.ClientCarPackResources;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
@@ -28,7 +28,8 @@ final class ClientVehiclePreviewSession {
         }
         Path oldArchive = this.archive;
         unregisterModels();
-        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) draft.setPreviewReady(target, false);
+        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values())
+            draft.setPreviewReady(target, false);
 
         Path directory = CarPackManager.getRootDirectory().resolve("cache").resolve("editor");
         Files.createDirectories(directory);
@@ -45,14 +46,15 @@ final class ClientVehiclePreviewSession {
         }
 
         CarPackManager.setClientPreviewPack(this.archive);
-        return Minecraft.getInstance().reloadResourcePacks().thenRun(() -> {
-            if (requestGeneration != this.generation) return;
+        ClientCarPackResources.refreshDiscoveredPacks();
+        if (requestGeneration == this.generation) {
             for (VehicleEditorDraft.Target target : this.registrations.keySet()) {
                 draft.setPreviewReady(target, target == importedTarget || previouslyReady.getOrDefault(target, false));
             }
             draft.showPart(importedTarget);
-            RIAutomobileModels.rebuildDynamicModelsNow();
-        }).whenComplete((unused, error) -> deleteQuietly(oldArchive));
+        }
+        deleteQuietly(oldArchive);
+        return CompletableFuture.completedFuture(null);
     }
 
     void close() {
@@ -61,7 +63,8 @@ final class ClientVehiclePreviewSession {
         Path oldArchive = this.archive;
         this.archive = null;
         unregisterModels();
-        if (oldArchive != null) Minecraft.getInstance().reloadResourcePacks().whenComplete((unused, error) -> deleteQuietly(oldArchive));
+        ClientCarPackResources.refreshDiscoveredPacks();
+        deleteQuietly(oldArchive);
     }
 
     private void unregisterModels() {
@@ -73,8 +76,12 @@ final class ClientVehiclePreviewSession {
 
     private static void deleteQuietly(Path archive) {
         if (archive == null) return;
-        try { Files.deleteIfExists(archive); } catch (IOException ignored) {}
+        try {
+            Files.deleteIfExists(archive);
+        } catch (IOException ignored) {
+        }
     }
 
-    private record Registration(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {}
+    private record Registration(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
+    }
 }

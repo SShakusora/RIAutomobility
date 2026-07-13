@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.editor.client;
 
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -63,7 +64,7 @@ class VehiclePackBuilderTest {
     @Test
     void firstPersonEyeUsesSelectedSeatAndPlayerEyeHeight() {
         var eye = VehicleEditorDraft.firstPersonEyePosition(
-                new net.minecraft.world.phys.Vec3(0.25D, 0.5D, -0.75D), 4.0F, -0.35D, 1.62F);
+                new Vec3(0.25D, 0.5D, -0.75D), 4.0F, -0.35D, 1.62F);
 
         assertEquals(0.25D, eye.x);
         assertEquals(2.02D, eye.y, 1.0E-6D);
@@ -72,7 +73,7 @@ class VehiclePackBuilderTest {
 
     @Test
     void passengerAndCameraShareTheSameEntityPosition() {
-        var seat = new net.minecraft.world.phys.Vec3(-0.4D, 0.25D, 0.8D);
+        var seat = new Vec3(-0.4D, 0.25D, 0.8D);
         var passenger = VehicleEditorDraft.passengerPosition(seat, 6.0F, -0.35D);
         var eye = VehicleEditorDraft.firstPersonEyePosition(seat, 6.0F, -0.35D, 1.62F);
 

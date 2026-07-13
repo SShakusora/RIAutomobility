@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class RIAutomobilityRegistryUtil {
-    private RIAutomobilityRegistryUtil() {}
+    private RIAutomobilityRegistryUtil() {
+    }
 
     public static <V extends SimpleMapContentRegistry.Identifiable> V registerOrReplace(SimpleMapContentRegistry<V> registry, V entry) {
         SimpleMapContentRegistryAccessor<V> accessor = (SimpleMapContentRegistryAccessor<V>) registry;
@@ -37,5 +38,11 @@ public final class RIAutomobilityRegistryUtil {
                 entries.remove(id);
             }
         }
+    }
+
+    public static <V extends SimpleMapContentRegistry.Identifiable> void remove(SimpleMapContentRegistry<V> registry, ResourceLocation id) {
+        SimpleMapContentRegistryAccessor<V> accessor = (SimpleMapContentRegistryAccessor<V>) registry;
+        accessor.riautomobility$getEntries().remove(id);
+        accessor.riautomobility$getOrderedKeys().remove(id);
     }
 }

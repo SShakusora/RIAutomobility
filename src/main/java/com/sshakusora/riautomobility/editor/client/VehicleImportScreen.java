@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -368,7 +369,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         String chosen = TinyFileDialogs.tinyfd_openFileDialog("选择含内嵌 PNG 纹理的 BBModel", "", null, "*.bbmodel", false);
         if (chosen == null) return;
         Path selected = Path.of(chosen);
-        if (!selected.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".bbmodel")) { status = "只支持 .bbmodel 文件"; return; }
+        if (!selected.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".bbmodel")) { status = "只支持 .bbmodel 文件"; return; }
         draft.setModelFile(draft.target, selected);
         loadPreview();
     }
@@ -790,6 +791,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && selectionType != null) { closeSelection(); return true; }
+        // Printable characters are delivered through charTyped after keyPressed. EditBox therefore
+        // does not consume the physical E key here, which otherwise lets AbstractContainerScreen
+        // interpret it as the inventory shortcut and close the editor before the character arrives.
+        if (getFocused() instanceof EditBox
+                && minecraft != null
+                && minecraft.options.keyInventory.matches(keyCode, scanCode)) {
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
     @Override public void removed() { previewSession.close(); super.removed(); }

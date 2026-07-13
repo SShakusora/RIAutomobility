@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
+import com.sshakusora.riautomobility.carpack.client.ClientCarPackResources;
 import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -22,15 +23,18 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, value = Dist.CLIENT)
 public final class ClientCarPackSynchronizer {
@@ -54,7 +58,8 @@ public final class ClientCarPackSynchronizer {
         TIMEOUT_CHECKER.scheduleAtFixedRate(ClientCarPackSynchronizer::checkTimeout, 15, 15, TimeUnit.SECONDS);
     }
 
-    private ClientCarPackSynchronizer() {}
+    private ClientCarPackSynchronizer() {
+    }
 
     public static void begin(
             Map<ResourceLocation, FrameSpec> frames,
@@ -148,7 +153,7 @@ public final class ClientCarPackSynchronizer {
             }
             CarPackArchiveStore.validateArchive(transfer.temporary);
             moveAtomically(transfer.temporary, transfer.target);
-            Files.setLastModifiedTime(transfer.target, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis()));
+            Files.setLastModifiedTime(transfer.target, FileTime.fromMillis(System.currentTimeMillis()));
             current.resolved.put(transfer.manifest.id(), CarPackManager.cachedCarPack(transfer.manifest, transfer.target));
             current.missing.remove(transfer.manifest.id());
             if (current.missing.isEmpty()) {
@@ -172,6 +177,9 @@ public final class ClientCarPackSynchronizer {
         Session previous = session;
         session = null;
         CarPackManager.clearClientResourcePacks();
+        ClientCarPackResources.uninstall();
+        Minecraft minecraft = Minecraft.getInstance();
+        SyncCustomComponentsClientHandler.applyComponents(minecraft, Map.of(), Map.of(), Map.of());
         CACHE_IO.execute(() -> cleanup(previous));
     }
 
@@ -235,14 +243,14 @@ public final class ClientCarPackSynchronizer {
     private static void pruneCache(Session current) {
         Set<String> retained = current.manifest.stream()
                 .map(entry -> entry.archiveDigest() + CarPackManager.CAR_PACK_EXTENSION)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         try (var files = Files.list(CarPackManager.getClientPackCacheDirectory())) {
             List<Path> cached = files.filter(Files::isRegularFile)
                     .filter(path -> {
                         String name = path.getFileName().toString();
                         return name.endsWith(CarPackManager.CAR_PACK_EXTENSION) || name.endsWith(".zip");
                     })
-                    .sorted(java.util.Comparator.comparingLong(ClientCarPackSynchronizer::lastModified))
+                    .sorted(Comparator.comparingLong(ClientCarPackSynchronizer::lastModified))
                     .toList();
             long total = 0;
             for (Path file : cached) {
@@ -311,26 +319,17 @@ public final class ClientCarPackSynchronizer {
                 return;
             }
             CarPackManager.setClientResourcePacks(selected);
-            minecraft.getResourcePackRepository().reload();
-            minecraft.reloadResourcePacks().whenComplete((unused, error) -> minecraft.execute(() -> {
-                if (!isCurrent(current)) {
-                    return;
-                }
-                if (error != null) {
-                    fail(current, "Unable to reload downloaded car pack resources", error);
-                    return;
-                }
-                try {
-                    SyncCustomComponentsClientHandler.applyComponents(minecraft, current.frames, current.wheels, current.engines);
-                    RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackSyncStatusPacket(
-                            true,
-                            current.manifest.size() + " car pack(s) ready"
-                    ));
-                    session = null;
-                } catch (RuntimeException exception) {
-                    fail(current, "Unable to apply synchronized car components", exception);
-                }
-            }));
+            try {
+                ClientCarPackResources.install(selected);
+                SyncCustomComponentsClientHandler.applyComponents(minecraft, current.frames, current.wheels, current.engines);
+                RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackSyncStatusPacket(
+                        true,
+                        current.manifest.size() + " car pack(s) ready"
+                ));
+                session = null;
+            } catch (RuntimeException exception) {
+                fail(current, "Unable to apply synchronized car components", exception);
+            }
         });
     }
 
@@ -426,7 +425,7 @@ public final class ClientCarPackSynchronizer {
     private static void moveAtomically(Path source, Path target) throws IOException {
         try {
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (java.nio.file.AtomicMoveNotSupportedException exception) {
+        } catch (AtomicMoveNotSupportedException exception) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }

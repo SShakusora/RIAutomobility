@@ -10,33 +10,29 @@ import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
-import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.util.profiling.ProfilerFiller;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@MethodsReturnNonnullByDefault
-@ParametersAreNonnullByDefault
-public final class CarPackComponentDataLoader extends SimplePreparableReloadListener<CarPackComponentDataLoader.LoadedContent> {
+public final class CarPackComponentDataLoader {
     private static final Gson GSON = new GsonBuilder().create();
 
-    @Override
-    protected LoadedContent prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
+    private CarPackComponentDataLoader() {
+    }
+
+    public static LoadedContent load(ResourceManager resourceManager) {
         return new LoadedContent(loadFrames(resourceManager), loadWheels(resourceManager), loadEngines(resourceManager));
     }
 
-    @Override
-    protected void apply(LoadedContent content, ResourceManager resourceManager, ProfilerFiller profiler) {
+    public static void apply(LoadedContent content) {
+        RIAutomobilityComponentManager.clearCustomComponents();
         RIAutomobileFrame.reload();
         RIAutomobileWheel.reload();
         RIAutomobilityComponentManager.applyCustomComponents(content.frames(), content.wheels(), content.engines());
@@ -103,5 +99,6 @@ public final class CarPackComponentDataLoader extends SimplePreparableReloadList
     }
 
     public record LoadedContent(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
-                                Map<ResourceLocation, EngineSpec> engines) {}
+                                Map<ResourceLocation, EngineSpec> engines) {
+    }
 }
