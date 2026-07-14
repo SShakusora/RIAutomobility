@@ -26,37 +26,13 @@ public final class RIAutomobilityCreativeTabs {
             .displayItems((params, output) -> {
                 output.accept(VehicleImportRegistries.VEHICLE_IMPORT_TABLE_ITEM.get());
                 AutomobileFrame.REGISTRY.forEach(frame -> {
-                    if (isBuiltInRIAComponent(frame) && !frame.isEmpty() && isVisible(frame)) {
+                    if (isBuiltInRIAComponent(frame) && !frame.isEmpty()) {
                         output.accept(AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(frame));
                     }
                 });
                 AutomobileWheel.REGISTRY.forEach(wheel -> {
-                    if (isBuiltInRIAComponent(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
+                    if (isBuiltInRIAComponent(wheel) && !wheel.isEmpty()) {
                         output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
-                    }
-                });
-            })
-            .build());
-
-    public static final RegistryObject<CreativeModeTab> CUSTOM_COMPONENTS = TABS.register("custom_components", () -> CreativeModeTab.builder()
-            .title(Component.translatable("itemGroup.riautomobility.custom_components"))
-            .icon(() -> AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(RIAutomobileFrame.DMC12))
-            .withTabsBefore(COMPONENTS.getKey())
-            .withTabFactory(CustomComponentsTab::new)
-            .displayItems((params, output) -> {
-                AutomobileFrame.REGISTRY.forEach(frame -> {
-                    if (RIAutomobilityComponentManager.isManagedFrame(frame) && !frame.isEmpty() && isVisible(frame)) {
-                        output.accept(AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(frame));
-                    }
-                });
-                AutomobileWheel.REGISTRY.forEach(wheel -> {
-                    if (RIAutomobilityComponentManager.isManagedWheel(wheel) && !wheel.isEmpty() && isVisible(wheel)) {
-                        output.accept(AutomobilityItems.AUTOMOBILE_WHEEL.require().createStack(wheel));
-                    }
-                });
-                AutomobileEngine.REGISTRY.forEach(engine -> {
-                    if (RIAutomobilityComponentManager.isManagedEngine(engine) && !engine.isEmpty() && isVisible(engine)) {
-                        output.accept(AutomobilityItems.AUTOMOBILE_ENGINE.require().createStack(engine));
                     }
                 });
             })
@@ -78,38 +54,13 @@ public final class RIAutomobilityCreativeTabs {
     }
 
     private static boolean isBuiltInRIAComponent(AutomobileComponent<?> component) {
-        return component.getId().getNamespace().equals(RIAutomobility.MODID);
+        return component.getId().getNamespace().equals(RIAutomobility.MODID)
+                && !isManagedComponent(component);
     }
 
-    private static boolean isVisible(AutomobileFrame frame) {
-        var spec = RIAutomobilityComponentManager.getCustomFrames().get(frame.getId());
-        return spec == null || spec.showInCreativeTab();
-    }
-
-    private static boolean isVisible(AutomobileWheel wheel) {
-        var spec = RIAutomobilityComponentManager.getCustomWheels().get(wheel.getId());
-        return spec == null || spec.showInCreativeTab();
-    }
-
-    private static boolean isVisible(AutomobileEngine engine) {
-        var spec = RIAutomobilityComponentManager.getCustomEngines().get(engine.getId());
-        return spec == null || spec.showInCreativeTab();
-    }
-
-    private static boolean hasVisibleCustomComponents() {
-        return RIAutomobilityComponentManager.getCustomFrameSpecs().stream().anyMatch(spec -> spec.showInCreativeTab())
-                || RIAutomobilityComponentManager.getCustomWheelSpecs().stream().anyMatch(spec -> spec.showInCreativeTab())
-                || RIAutomobilityComponentManager.getCustomEngineSpecs().stream().anyMatch(spec -> spec.showInCreativeTab());
-    }
-
-    private static final class CustomComponentsTab extends CreativeModeTab {
-        private CustomComponentsTab(Builder builder) {
-            super(builder);
-        }
-
-        @Override
-        public boolean shouldDisplay() {
-            return hasVisibleCustomComponents() && super.shouldDisplay();
-        }
+    private static boolean isManagedComponent(AutomobileComponent<?> component) {
+        return component instanceof AutomobileFrame frame && RIAutomobilityComponentManager.isManagedFrame(frame)
+                || component instanceof AutomobileWheel wheel && RIAutomobilityComponentManager.isManagedWheel(wheel)
+                || component instanceof AutomobileEngine engine && RIAutomobilityComponentManager.isManagedEngine(engine);
     }
 }

@@ -1,6 +1,8 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -50,6 +52,25 @@ class VehiclePackBuilderTest {
     }
 
     @Test
+    void exportFileNameUsesDisplayNameAndAddsCollisionSuffix() throws IOException {
+        String fileStem = VehicleImportScreen.exportFileStem("测试车辆");
+        assertEquals("测试车辆", fileStem);
+        assertEquals("测试车辆.riauto",
+                VehicleImportScreen.nextAvailableExportPath(temporaryDirectory, fileStem).getFileName().toString());
+
+        Files.createFile(temporaryDirectory.resolve("测试车辆.riauto"));
+        Files.createFile(temporaryDirectory.resolve("测试车辆 (1).riauto"));
+        assertEquals("测试车辆 (2).riauto",
+                VehicleImportScreen.nextAvailableExportPath(temporaryDirectory, fileStem).getFileName().toString());
+    }
+
+    @Test
+    void exportFileNameReplacesCharactersUnsupportedByFileManagers() {
+        assertEquals("My_Car_Test", VehicleImportScreen.exportFileStem(" My/Car:Test. "));
+        assertEquals("_CON", VehicleImportScreen.exportFileStem("CON"));
+    }
+
+    @Test
     void convertsLegacySeatHeightPixelsIntoSeatYBlocks() {
         assertEquals(0.0D, VehicleEditorDraft.normalizedSeatYOffset(4.0F));
         assertEquals(0.5D, VehicleEditorDraft.normalizedSeatYOffset(12.0F));
@@ -86,9 +107,50 @@ class VehiclePackBuilderTest {
     }
 
     @Test
-    void frameItemScaleMatchesAutomobilityRendererFormula() {
-        assertEquals(1.0F / (28.0F / 16.0F * 0.77F), VehicleEditorDraft.frameItemScale(28.0F));
-        assertTrue(VehicleEditorDraft.frameItemScale(16.0F) > VehicleEditorDraft.frameItemScale(32.0F));
+    void automaticThirdPersonCameraUsesModelDiagonalAndKeepsVanillaMinimum() {
+        Vec3 small = VehicleEditorDraft.automaticThirdPersonCameraOffset(16.0F, 16.0F, 16.0F);
+        Vec3 large = VehicleEditorDraft.automaticThirdPersonCameraOffset(48.0F, 32.0F, 96.0F);
+
+        assertEquals(Vec3.ZERO, small);
+        assertTrue(large.x < 0.0D);
+        assertEquals(0.0D, large.y);
+        assertEquals(0.0D, large.z);
+    }
+
+    @Test
+    void automaticWheelSizeUsesThinXAxisAsWheelWidth() {
+        VehicleEditorDraft.AutomaticWheelModelSize size = VehicleEditorDraft.automaticWheelModelSize(
+                new BbModelBounds.Size(4.3F, 10.3F, 10.3F));
+
+        assertEquals(5.15F, size.radiusPx(), 0.001F);
+        assertEquals(4.3F, size.widthPx(), 0.001F);
+        assertEquals(0.0F, size.rotationY(), 0.001F);
+    }
+
+    @Test
+    void automaticWheelSizeRotatesAThinZAxisOntoTheWheelAxle() {
+        VehicleEditorDraft.AutomaticWheelModelSize size = VehicleEditorDraft.automaticWheelModelSize(
+                new BbModelBounds.Size(12.0F, 10.0F, 3.0F));
+
+        assertEquals(6.0F, size.radiusPx(), 0.001F);
+        assertEquals(3.0F, size.widthPx(), 0.001F);
+        assertEquals(-90.0F, size.rotationY(), 0.001F);
+    }
+
+    @Test
+    void parsesAttachmentResourceListsAndRemovesDuplicates() {
+        assertEquals(List.of(
+                        new ResourceLocation("automobility", "trailer"),
+                        new ResourceLocation("riautomobility", "cargo_rack")),
+                VehicleEditorDraft.parseResourceLocations(
+                        "automobility:trailer, riautomobility:cargo_rack; automobility:trailer"));
+        assertEquals(List.of(), VehicleEditorDraft.parseResourceLocations("  "));
+    }
+
+    @Test
+    void rejectsInvalidAttachmentResourceIds() {
+        assertThrows(IllegalArgumentException.class,
+                () -> VehicleEditorDraft.parseResourceLocations("automobility:valid, INVALID ID"));
     }
 
     @Test

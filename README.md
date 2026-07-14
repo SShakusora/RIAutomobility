@@ -38,9 +38,7 @@ Whether you want to drive new vehicles out of the box or design your own through
 - **New Vehicle Components** — Multiple custom frames and wheels built on top of Automobility
 - **Multi-Seat Vehicles** — Custom seat layouts for larger or special vehicles
 - **Custom Hitboxes & Camera** — Fine-tuned collision and camera definitions for RIA vehicles
-- **Organized Creative Tabs** — Built-in and car-pack components are neatly separated:
-  - `RIAutomobility` — built-in frames and wheels
-  - `RIAutomobility: Custom` — car-pack-defined components
+- **Creative Tab** — Built-in frames and wheels are available in `RIAutomobility`
 - **Unified Car Packs** — Define custom `Frame` and `Wheel` components and ship their assets together
 - **Three Rendering Pipelines** — Supports `JsonEM`, `GeckoLib`, and native Blockbench `.bbmodel` projects
 - **Safe Fallbacks** — Missing resources render as a placeholder with tooltip warnings instead of crashing
@@ -188,7 +186,7 @@ Example frame definition:
 | `camera_positions` | Camera offsets in block coordinates |
 | `hitboxes` | Custom hitbox definitions |
 | `front_attachment_enabled` / `rear_attachment_enabled` | Allow attachments |
-| `show_in_creative_tab` | Show in the RIA creative tab |
+| `show_in_creative_tab` | Legacy compatibility field; custom components are not added to creative tabs |
 
 **Wheel Base Formats:**
 
@@ -242,13 +240,13 @@ Example wheel definition:
 | `grip` | Grip value |
 | `radius` / `width` | Model dimensions in pixels |
 | `model` | Rendering definition |
-| `show_in_creative_tab` | Show in the RIA creative tab |
+| `show_in_creative_tab` | Legacy compatibility field; custom components are not added to creative tabs |
 
 <!-- TODO: Replace with actual screenshot -->
 <div align="center">
   <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="Car Pack Frame And Wheel Example" width="600">
   <br>
-  <em>Figure 1: Custom frame and wheel defined by a car pack, shown in the creative tab</em>
+  <em>Figure 1: Custom frame and wheel defined by a car pack</em>
 </div>
 
 #### Model Definition Types
@@ -370,9 +368,7 @@ It contains:
 - **全新车辆部件** — 为 Automobility 添加了多种自定义车架和车轮
 - **多座位载具** — 为大型或特殊车型提供自定义座位布局
 - **自定义碰撞箱与摄像机** — 为 RIA 车辆提供精细调整的碰撞箱和摄像机定义
-- **分类创造标签页** — 内置组件与车包组件分类管理：
-  - `飞天奇匠` — 内置车架与车轮
-  - `飞天奇匠：自定义` — 车包定义的组件
+- **创造模式标签页** — 内置车架与车轮显示在 `飞天奇匠` 中
 - **统一车包** — 在同一个车包中定义自定义 `Frame` / `Wheel` 并附带全部资源
 - **三种渲染管线** — 同时支持 `JsonEM`、`GeckoLib` 与 Blockbench `.bbmodel` 工程模型
 - **安全降级** — 资源缺失时使用占位模型并提示，不会导致崩溃
@@ -520,7 +516,7 @@ assets/<命名空间>/textures/...
 | `camera_positions` | 摄像机偏移，单位方块 |
 | `hitboxes` | 自定义碰撞箱定义 |
 | `front_attachment_enabled` / `rear_attachment_enabled` | 是否允许挂件 |
-| `show_in_creative_tab` | 是否在 RIA 创造标签页显示 |
+| `show_in_creative_tab` | 兼容旧车包的保留字段；自定义组件不会加入创造标签页 |
 
 **wheel_base 写法：**
 
@@ -574,13 +570,13 @@ assets/<命名空间>/textures/...
 | `grip` | 抓地力 |
 | `radius` / `width` | 模型尺寸，单位像素 |
 | `model` | 渲染定义 |
-| `show_in_creative_tab` | 是否在 RIA 创造标签页显示 |
+| `show_in_creative_tab` | 兼容旧车包的保留字段；自定义组件不会加入创造标签页 |
 
 <!-- TODO: 替换为实际截图 -->
 <div align="center">
   <img src="ScreenShots/datapack_frame_and_wheel_example.png" alt="车包车架和车轮示例" width="600">
   <br>
-  <em>图 1：通过车包定义的自定义车架和车轮在创造标签页中的展示</em>
+  <em>图 1：通过车包定义的自定义车架和车轮</em>
 </div>
 
 #### 模型定义类型

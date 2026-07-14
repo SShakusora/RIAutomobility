@@ -29,10 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -61,6 +58,15 @@ public final class ClientCarPackSynchronizer {
     private ClientCarPackSynchronizer() {
     }
 
+    public static void runWhenReady(Runnable action) {
+        Session current = session;
+        if (current == null) {
+            Minecraft.getInstance().execute(action);
+            return;
+        }
+        current.ready.thenRunAsync(action, Minecraft.getInstance()::execute);
+    }
+
     public static void begin(
             Map<ResourceLocation, FrameSpec> frames,
             Map<ResourceLocation, WheelSpec> wheels,
@@ -77,6 +83,9 @@ public final class ClientCarPackSynchronizer {
         }
         Session previous = session;
         session = next;
+        if (previous != null) {
+            previous.ready.completeExceptionally(new IllegalStateException("Car pack synchronization was superseded"));
+        }
         CACHE_IO.execute(() -> {
             cleanup(previous);
             try {
@@ -176,6 +185,9 @@ public final class ClientCarPackSynchronizer {
         GENERATION.incrementAndGet();
         Session previous = session;
         session = null;
+        if (previous != null) {
+            previous.ready.completeExceptionally(new IllegalStateException("Client disconnected"));
+        }
         CarPackManager.clearClientResourcePacks();
         ClientCarPackResources.uninstall();
         Minecraft minecraft = Minecraft.getInstance();
@@ -320,12 +332,13 @@ public final class ClientCarPackSynchronizer {
             }
             CarPackManager.setClientResourcePacks(selected);
             try {
-                ClientCarPackResources.install(selected);
+                ClientCarPackResources.install(CarPackManager.discoverClientResourcePacks());
                 SyncCustomComponentsClientHandler.applyComponents(minecraft, current.frames, current.wheels, current.engines);
                 RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackSyncStatusPacket(
                         true,
                         current.manifest.size() + " car pack(s) ready"
                 ));
+                current.ready.complete(null);
                 session = null;
             } catch (RuntimeException exception) {
                 fail(current, "Unable to apply synchronized car components", exception);
@@ -369,6 +382,7 @@ public final class ClientCarPackSynchronizer {
             return;
         }
         current.failed = true;
+        current.ready.completeExceptionally(error == null ? new IllegalStateException(reason) : error);
         if (error == null) {
             LOGGER.error("RIAutomobility car pack synchronization failed: {}", reason);
         } else {
@@ -447,6 +461,7 @@ public final class ClientCarPackSynchronizer {
         private final Map<String, CarPackManager.CarPack> resolved = new LinkedHashMap<>();
         private final Map<String, CarPackManifestEntry> missing = new LinkedHashMap<>();
         private final Map<String, Transfer> transfers = new HashMap<>();
+        private final CompletableFuture<Void> ready = new CompletableFuture<>();
         private boolean finishing;
         private boolean failed;
         private long lastActivityNanos = System.nanoTime();

@@ -101,7 +101,10 @@ public final class CarPackManager {
     public static List<CarPack> discoverClientResourcePacks() {
         List<CarPack> packs = clientResourcePacks;
         List<CarPack> resolved = packs == null ? discoverCarPacks() : packs;
-        CarPack preview = clientPreviewPack;
+        return appendClientPreview(resolved, clientPreviewPack);
+    }
+
+    static List<CarPack> appendClientPreview(List<CarPack> resolved, CarPack preview) {
         if (preview == null) {
             return resolved;
         }

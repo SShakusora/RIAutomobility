@@ -37,7 +37,6 @@ public class CameraMixin {
             y:up and down
             z:left and right
              */
-            //TODO: add camera position feature and fix sound
             camera.move(cameraPos.x, cameraPos.y, cameraPos.z - pos.pos.x);
             Vec3 targetPos = camera.getPosition();
             Vec3 eyePos = entity.getEyePosition(partialTick);

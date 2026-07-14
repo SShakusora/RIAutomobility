@@ -132,11 +132,35 @@ public class RIAutomobileModels {
 
     public static void registerTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         clearMissingComponent(componentId);
+        if (modelSpec.isBbModel()) {
+            try {
+                BbModelRepository.registerTemporary(modelSpec);
+                AutomobileModels.register(modelSpec.modelId(), ctx -> new DynamicBbModel(
+                        componentId,
+                        modelSpec,
+                        createPlaceholderModel(ctx),
+                        RIAutomobileModels::markMissingComponent
+                ));
+            } catch (RuntimeException exception) {
+                markMissingComponent(componentId);
+                LOGGER.error("Failed to register temporary Blockbench automobile model {} using {}",
+                        modelSpec.modelId(), modelSpec.bbModel(), exception);
+                AutomobileModels.register(modelSpec.modelId(), RIAutomobileModels::createPlaceholderModel);
+            }
+            return;
+        }
         registerDynamicModel(componentId, modelSpec);
     }
 
     public static void unregisterTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
-        unregisterDynamicModel(componentId, modelSpec);
+        AutomobileModelsAccessor.riautomobility$getModelProviders().remove(modelSpec.modelId());
+        AutomobileModelsAccessor.riautomobility$getModels().remove(modelSpec.modelId());
+        if (modelSpec.isBbModel()) {
+            BbModelRepository.unregisterTemporary(modelSpec);
+        } else if (!modelSpec.isGeckoLib() && modelSpec.layerLocation() != null) {
+            DynamicJsonModelLoader.unregister(new ModelLayerLocation(modelSpec.layerLocation(), "main"));
+        }
+        clearMissingComponent(componentId);
     }
 
     private static void unregisterDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {

@@ -8,16 +8,21 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public record ExportVehicleComponentItemPacket(int containerId, String target, ResourceLocation componentId) {
+public record ExportVehicleComponentItemPacket(int containerId, String target, ResourceLocation componentId,
+                                               String displayName) {
+    private static final int MAX_DISPLAY_NAME_LENGTH = 80;
+
     public static void encode(ExportVehicleComponentItemPacket message, FriendlyByteBuf buffer) {
         buffer.writeVarInt(message.containerId);
         buffer.writeUtf(message.target, 16);
         buffer.writeResourceLocation(message.componentId);
+        buffer.writeUtf(message.displayName, MAX_DISPLAY_NAME_LENGTH);
     }
 
     public static ExportVehicleComponentItemPacket decode(FriendlyByteBuf buffer) {
         return new ExportVehicleComponentItemPacket(
-                buffer.readVarInt(), buffer.readUtf(16), buffer.readResourceLocation());
+                buffer.readVarInt(), buffer.readUtf(16), buffer.readResourceLocation(),
+                buffer.readUtf(MAX_DISPLAY_NAME_LENGTH));
     }
 
     public static void handle(ExportVehicleComponentItemPacket message,
@@ -28,7 +33,7 @@ public record ExportVehicleComponentItemPacket(int containerId, String target, R
             context.enqueueWork(() -> {
                 if (player.containerMenu instanceof VehicleImportMenu menu
                         && menu.containerId == message.containerId) {
-                    menu.exportItem(message.target, message.componentId);
+                    menu.exportItem(message.target, message.componentId, message.displayName);
                 }
             });
         }

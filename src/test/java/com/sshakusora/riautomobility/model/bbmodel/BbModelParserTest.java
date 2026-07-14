@@ -1,18 +1,20 @@
 package com.sshakusora.riautomobility.model.bbmodel;
 
-import JsonPrimitive;
-import List;
-import Vector2f;
-import Vector3f;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import net.minecraft.resources.ResourceLocation;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -111,6 +113,70 @@ class BbModelParserTest {
 
         assertEquals(3, ((BbModelData.GroupNode) frame.roots().get(0)).children().size());
         assertEquals(1, wheel.roots().size());
+        assertEquals(44.0F, BbModelBounds.maxDimensionPx(frame), 0.001F);
+    }
+
+    @Test
+    void modelBoundsApplyHierarchyScaleAndIgnoreHiddenGeometry() {
+        BbModelData.CubeFace face = new BbModelData.CubeFace(
+                new float[]{0, 0, 1, 1}, 0, BbModelData.TextureReference.none(), true);
+        BbModelData.ElementNode visible = new BbModelData.ElementNode(
+                "visible", "Visible", new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1), true,
+                new BbModelData.Cube(
+                        new Vector3f(-5, 0, -20), new Vector3f(5, 8, 20),
+                        0.0F, false, Map.of("north", face, "south", face)));
+        BbModelData.ElementNode hidden = new BbModelData.ElementNode(
+                "hidden", "Hidden", new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1), false,
+                new BbModelData.Cube(
+                        new Vector3f(-100, -100, -100), new Vector3f(100, 100, 100),
+                        0.0F, false, Map.of("north", face)));
+        BbModelData.GroupNode root = new BbModelData.GroupNode(
+                "root", "Root", new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1.5F), true,
+                List.of(visible, hidden));
+        BbModelData.Document document = new BbModelData.Document(
+                "5.0", "modded_entity", 16, 16, List.of(), List.of(root), List.of());
+
+        BbModelBounds.Measurement measurement = BbModelBounds.measure(document);
+        assertEquals(60.0F, measurement.size().maxDimensionPx(), 0.001F);
+        assertEquals(measurement.frameItemProjectedSpanPx() * 0.44F / 0.77F,
+                measurement.frameItemLengthPx(), 0.001F);
+        assertTrue(measurement.frameItemLengthPx() < measurement.size().maxDimensionPx());
+    }
+
+    @Test
+    void modelBoundsOnlyIncludeRenderedCubeFaces() {
+        BbModelData.CubeFace face = new BbModelData.CubeFace(
+                new float[]{0, 0, 1, 1}, 0, BbModelData.TextureReference.none(), true);
+        BbModelData.ElementNode surface = new BbModelData.ElementNode(
+                "surface", "Surface", new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1), true,
+                new BbModelData.Cube(
+                        new Vector3f(-5, 0, -100), new Vector3f(5, 8, 100),
+                        0.0F, false, Map.of("north", face)));
+        BbModelData.Document document = new BbModelData.Document(
+                "5.0", "modded_entity", 16, 16, List.of(), List.of(surface), List.of());
+
+        assertEquals(10.0F, BbModelBounds.maxDimensionPx(document), 0.001F);
+    }
+
+    @Test
+    void customModelRefreshRetainsTemporaryPreviewModels() {
+        FrameSpec.ModelSpec persistent = FrameSpec.ModelSpec.fromJson(JsonParser.parseString("""
+                {"type":"bbmodel","model_id":"test:persistent","bbmodel":"test:models/persistent.bbmodel"}
+                """).getAsJsonObject());
+        FrameSpec.ModelSpec preview = FrameSpec.ModelSpec.fromJson(JsonParser.parseString("""
+                {"type":"bbmodel","model_id":"test:preview","bbmodel":"test:models/preview.bbmodel"}
+                """).getAsJsonObject());
+        BbModelRepository.register(persistent);
+        BbModelRepository.registerTemporary(preview);
+        try {
+            BbModelRepository.retain(Set.of(persistent.bbModel()));
+
+            assertTrue(BbModelRepository.isRegistered(persistent));
+            assertTrue(BbModelRepository.isRegistered(preview));
+        } finally {
+            BbModelRepository.unregister(persistent);
+            BbModelRepository.unregisterTemporary(preview);
+        }
     }
 
     @Test

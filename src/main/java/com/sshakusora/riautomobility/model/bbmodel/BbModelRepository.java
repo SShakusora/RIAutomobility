@@ -23,6 +23,7 @@ public final class BbModelRepository {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new Gson();
     private static final Map<ResourceLocation, List<FrameSpec.ModelSpec>> REGISTERED = new LinkedHashMap<>();
+    private static final Set<RegistrationKey> TEMPORARY = new HashSet<>();
     private static volatile Map<ResourceLocation, BbModelData.Document> MODELS = Map.of();
     private static volatile Map<String, ResourceLocation> EMBEDDED_TEXTURES = Map.of();
     private static volatile Map<ResourceLocation, PixelShape> TEXTURE_SHAPES = Map.of();
@@ -47,8 +48,24 @@ public final class BbModelRepository {
         if (specs.isEmpty()) REGISTERED.remove(spec.bbModel());
     }
 
+    public static synchronized void registerTemporary(FrameSpec.ModelSpec spec) {
+        register(spec);
+        TEMPORARY.add(RegistrationKey.of(spec));
+    }
+
+    public static synchronized void unregisterTemporary(FrameSpec.ModelSpec spec) {
+        TEMPORARY.remove(RegistrationKey.of(spec));
+        unregister(spec);
+    }
+
     public static synchronized void retain(Set<ResourceLocation> modelResources) {
-        REGISTERED.keySet().retainAll(modelResources);
+        REGISTERED.keySet().removeIf(resource -> !modelResources.contains(resource)
+                && TEMPORARY.stream().noneMatch(key -> key.resource().equals(resource)));
+    }
+
+    static synchronized boolean isRegistered(FrameSpec.ModelSpec spec) {
+        List<FrameSpec.ModelSpec> specs = REGISTERED.get(spec.bbModel());
+        return specs != null && specs.stream().anyMatch(existing -> existing.modelId().equals(spec.modelId()));
     }
 
     public static void reload(ResourceManager manager) {
@@ -278,6 +295,12 @@ public final class BbModelRepository {
     }
 
     public record ResolvedTexture(ResourceLocation location, int uvWidth, int uvHeight, String renderMode) {}
+
+    private record RegistrationKey(ResourceLocation resource, ResourceLocation modelId) {
+        static RegistrationKey of(FrameSpec.ModelSpec spec) {
+            return new RegistrationKey(spec.bbModel(), spec.modelId());
+        }
+    }
 
     public record PixelShape(int width, int height, boolean[] opaque) {
         public boolean opaque(int x, int y) {

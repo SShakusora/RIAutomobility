@@ -26,7 +26,7 @@ RIAutomobility mounts `.riauto` files through its private runtime without a Mine
 - `examplepack:example_buggy_bbmodel` frame
 - `examplepack:example_buggy_bbmodel` wheel
 
-All six components will appear in the `RIAutomobility: Custom` creative tab.
+These custom components are not added to a creative tab.
 
 ### Important Paths
 
@@ -98,7 +98,7 @@ RIAutomobility 通过私有运行时挂载 `.riauto`，不会触发 Minecraft �
 - `examplepack:example_buggy_bbmodel` 车架
 - `examplepack:example_buggy_bbmodel` 车轮
 
-这六个组件都会显示在 `RIAutomobility: Custom` 创造模式标签页中。
+这些自定义组件不会加入创造模式标签页。
 
 ### 重要路径
 

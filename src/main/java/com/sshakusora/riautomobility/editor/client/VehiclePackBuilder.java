@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.editor.client;
 
 import com.google.gson.*;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
 
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -23,11 +25,11 @@ public final class VehiclePackBuilder {
     }
 
     public static Path build(VehicleEditorDraft draft, Path destination, boolean preview) throws IOException {
+        validateSources(draft);
         String validation = draft.validationError();
         if (!validation.isBlank()) {
             throw new IOException(validation);
         }
-        validateSources(draft);
         Files.createDirectories(destination.getParent());
 
         String namespace = preview ? VehicleEditorDraft.PREVIEW_NAMESPACE : draft.namespace();
@@ -76,19 +78,33 @@ public final class VehiclePackBuilder {
             if (draft.modelFile(target) != null) modelFiles.put(target, draft.modelFile(target));
             previewKeys.put(target, draft.previewKey(target));
         }
-        return buildPreview(modelFiles, previewKeys, destination);
+        return buildPreview(modelFiles, previewKeys, destination, (target, document) -> {
+            if (target == VehicleEditorDraft.Target.FRAME) {
+                draft.applyAutomaticFrameModelSize(BbModelBounds.measure(document));
+            } else if (target == VehicleEditorDraft.Target.WHEEL) {
+                draft.applyAutomaticWheelModelSize(BbModelBounds.measure(document));
+            }
+        });
     }
 
     static Path buildPreview(Map<VehicleEditorDraft.Target, Path> modelFiles,
-                             Map<VehicleEditorDraft.Target, String> previewKeys,
-                             Path destination) throws IOException {
+                              Map<VehicleEditorDraft.Target, String> previewKeys,
+                              Path destination) throws IOException {
+        return buildPreview(modelFiles, previewKeys, destination, (target, document) -> {});
+    }
+
+    private static Path buildPreview(Map<VehicleEditorDraft.Target, Path> modelFiles,
+                                     Map<VehicleEditorDraft.Target, String> previewKeys,
+                                     Path destination,
+                                     BiConsumer<VehicleEditorDraft.Target, BbModelData.Document> modelConsumer) throws IOException {
         Files.createDirectories(destination.getParent());
         Map<String, byte[]> entries = new LinkedHashMap<>();
         int modelCount = 0;
         for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
             Path modelFile = modelFiles.get(target);
             if (modelFile == null) continue;
-            validateSource(modelFile);
+            BbModelData.Document document = validateSource(modelFile);
+            modelConsumer.accept(target, document);
             String componentPath = previewKeys.get(target);
             if (componentPath == null || !componentPath.matches("[a-z0-9/._-]+")) {
                 throw new IOException("Invalid preview component path for " + target.path);
@@ -103,10 +119,15 @@ public final class VehiclePackBuilder {
     }
 
     private static void validateSources(VehicleEditorDraft draft) throws IOException {
-        validateSource(draft.modelFile());
+        BbModelData.Document document = validateSource(draft.modelFile());
+        if (draft.target == VehicleEditorDraft.Target.FRAME) {
+            draft.applyAutomaticFrameModelSize(BbModelBounds.measure(document));
+        } else if (draft.target == VehicleEditorDraft.Target.WHEEL) {
+            draft.applyAutomaticWheelModelSize(BbModelBounds.measure(document));
+        }
     }
 
-    private static void validateSource(Path source) throws IOException {
+    private static BbModelData.Document validateSource(Path source) throws IOException {
         byte[] model = readLimited(source);
         JsonObject json;
         try {
@@ -115,7 +136,9 @@ public final class VehiclePackBuilder {
             throw new IOException("Model is not a valid JSON object", exception);
         }
         try {
-            validateEmbeddedTextures(BbModelParser.parse(json));
+            BbModelData.Document document = BbModelParser.parse(json);
+            validateEmbeddedTextures(document);
+            return document;
         } catch (RuntimeException exception) {
             throw new IOException("Invalid BBModel: " + exception.getMessage(), exception);
         }

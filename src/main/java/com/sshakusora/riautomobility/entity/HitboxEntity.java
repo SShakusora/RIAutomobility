@@ -182,8 +182,7 @@ public class HitboxEntity extends Entity{
     protected AABB makeBoundingBox() {
         EntityDimensions dimensions = this.size != null ? this.size : EntityDimensions.scalable(1.0f, 0.66f);
         AABB box = dimensions.makeBoundingBox(this.getX(), this.getY(), this.getZ());
-        double maxInset = Math.min(box.getXsize(), box.getZsize()) * 0.35D - 1.0E-4D;
-        double inset = Math.min(0.125D, maxInset);
+        double inset = horizontalCollisionInset(Math.min(box.getXsize(), box.getZsize()));
 
         if (inset <= 0.0D) {
             return box;
@@ -197,6 +196,11 @@ public class HitboxEntity extends Entity{
                 box.maxY,
                 box.maxZ - inset
         );
+    }
+
+    public static double horizontalCollisionInset(double width) {
+        double maxInset = width * 0.35D - 1.0E-4D;
+        return Math.max(0.0D, Math.min(0.125D, maxInset));
     }
 
     @Override
