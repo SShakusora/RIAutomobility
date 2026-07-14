@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
@@ -34,10 +35,8 @@ final class VehicleAttachmentIconList extends AbstractWidget {
     }
 
     @Override protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        int border = active ? 0xFF5B626D : 0xFF454A51;
-        int background = active ? 0xFF11151A : 0xFF171A1E;
-        graphics.fill(getX(), getY(), getX() + width, getY() + height, border);
-        graphics.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, background);
+        VehicleGuiTextures.blitNineSliced(graphics, VehicleImportGuiAtlas.Sprite.ATTACHMENT_LIST,
+                getX(), getY(), width, height);
 
         int iconBottom = getY() + (hasOverflow() ? height - SCROLLBAR_HEIGHT : height - 1);
         graphics.enableScissor(getX() + 1, getY() + 1, getX() + width - 1, iconBottom);
@@ -55,9 +54,10 @@ final class VehicleAttachmentIconList extends AbstractWidget {
             int trackWidth = width - CONTENT_PADDING * 2;
             int thumbWidth = thumbWidth(trackWidth);
             int thumbX = trackX + (int)Math.round(scroll / maxScroll() * (trackWidth - thumbWidth));
-            graphics.fill(trackX, trackY, trackX + trackWidth, getY() + height - 1, 0xFF30353B);
-            graphics.fill(thumbX, trackY, thumbX + thumbWidth, getY() + height - 1,
-                    active ? 0xFFAEB7C2 : 0xFF6B7077);
+            VehicleGuiTextures.blit(graphics, VehicleImportGuiAtlas.Sprite.SCROLL_TRACK_HORIZONTAL,
+                    trackX, trackY, trackWidth, SCROLLBAR_HEIGHT - 1);
+            VehicleGuiTextures.blit(graphics, VehicleImportGuiAtlas.Sprite.SCROLL_THUMB_HORIZONTAL,
+                    thumbX, trackY, thumbWidth, SCROLLBAR_HEIGHT - 1);
         }
     }
 

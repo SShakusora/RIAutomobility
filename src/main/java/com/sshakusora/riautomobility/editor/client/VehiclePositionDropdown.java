@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -87,8 +88,8 @@ final class VehiclePositionDropdown {
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, 400.0F);
         graphics.enableScissor(x, y, x + width, y + animatedHeight);
-        graphics.fill(x, y, x + width, y + height, 0xFF69717C);
-        graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF15191E);
+        VehicleGuiTextures.blitNineSliced(graphics, VehicleImportGuiAtlas.Sprite.DROPDOWN,
+                x, y, width, height);
 
         graphics.enableScissor(x + 1, y + 1, contentRight, contentBottom);
         int firstIndex = (int)Math.floor(displayedScroll);
@@ -99,11 +100,13 @@ final class VehiclePositionDropdown {
             int rowY = y + 1 + row * ROW_HEIGHT - (int)Math.round(fractionalScroll * ROW_HEIGHT);
             boolean hovered = mouseX >= x + 1 && mouseX < contentRight
                     && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
-            int color = index == selectedIndex
-                    ? (hovered ? 0xFF4B9C68 : 0xFF34754D)
-                    : (hovered ? 0xFF353B43 : 0xFF20252B);
-            graphics.fill(x + 1, rowY, contentRight, rowY + ROW_HEIGHT, color);
-            graphics.fill(x + 1, rowY, contentRight, rowY + 1, 0xFF454C55);
+            VehicleImportGuiAtlas.Sprite rowSprite = index == selectedIndex
+                    ? (hovered ? VehicleImportGuiAtlas.Sprite.ROW_SELECTED_HOVERED
+                    : VehicleImportGuiAtlas.Sprite.ROW_SELECTED)
+                    : (hovered ? VehicleImportGuiAtlas.Sprite.ROW_HOVERED
+                    : VehicleImportGuiAtlas.Sprite.ROW_NORMAL);
+            VehicleGuiTextures.blitNineSliced(graphics, rowSprite,
+                    x + 1, rowY, contentRight - x - 1, ROW_HEIGHT);
             Component label = optionLabel.apply(index);
             graphics.drawString(font, font.plainSubstrByWidth(label.getString(), contentRight - x - 8),
                     x + 4, rowY + 6, 0xFFE6E9ED, false);
@@ -122,8 +125,10 @@ final class VehiclePositionDropdown {
         int thumbHeight = thumbHeight(trackHeight);
         int thumbY = trackY + (int)Math.round(displayedScroll / maxScrollIndex()
                 * (trackHeight - thumbHeight));
-        graphics.fill(trackX, trackY, headerX + width - 1, trackY + trackHeight, 0xFF30353B);
-        graphics.fill(trackX + 1, thumbY, headerX + width - 2, thumbY + thumbHeight, 0xFFAEB7C2);
+        VehicleGuiTextures.blit(graphics, VehicleImportGuiAtlas.Sprite.SCROLL_TRACK_VERTICAL,
+                trackX, trackY, SCROLLBAR_WIDTH - 1, trackHeight);
+        VehicleGuiTextures.blit(graphics, VehicleImportGuiAtlas.Sprite.SCROLL_THUMB_VERTICAL,
+                trackX + 1, thumbY, SCROLLBAR_WIDTH - 3, thumbHeight);
     }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {

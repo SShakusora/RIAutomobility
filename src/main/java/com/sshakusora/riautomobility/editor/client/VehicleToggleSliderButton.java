@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -50,17 +51,10 @@ final class VehicleToggleSliderButton extends AbstractButton {
                 getX(), getY(), trackX - 4, getY() + height, textColor);
 
         int trackY = getY() + (height - TRACK_HEIGHT) / 2;
-        int border = isHoveredOrFocused() ? 0xFFAEB7C2 : 0xFF737A84;
-        int background = enabled ? 0xFF3E8E5A : 0xFF30343A;
-        graphics.fill(trackX, trackY, trackX + TRACK_WIDTH, trackY + TRACK_HEIGHT, border);
-        graphics.fill(trackX + 1, trackY + 1, trackX + TRACK_WIDTH - 1,
-                trackY + TRACK_HEIGHT - 1, background);
-
-        int knobSize = TRACK_HEIGHT - 4;
-        int knobX = enabled ? trackX + TRACK_WIDTH - knobSize - 2 : trackX + 2;
-        int knobY = trackY + 2;
-        graphics.fill(knobX, knobY, knobX + knobSize, knobY + knobSize,
-                active ? 0xFFF1F3F5 : 0xFFB0B3B7);
+        VehicleGuiTextures.blit(graphics, !active
+                        ? VehicleImportGuiAtlas.Sprite.TOGGLE_DISABLED
+                        : enabled ? VehicleImportGuiAtlas.Sprite.TOGGLE_ON : VehicleImportGuiAtlas.Sprite.TOGGLE_OFF,
+                trackX, trackY, TRACK_WIDTH, TRACK_HEIGHT);
     }
 
     @Override protected void updateWidgetNarration(NarrationElementOutput output) {

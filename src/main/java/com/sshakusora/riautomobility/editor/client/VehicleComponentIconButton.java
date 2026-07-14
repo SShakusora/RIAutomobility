@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
@@ -29,10 +30,14 @@ final class VehicleComponentIconButton extends AbstractButton {
     }
 
     @Override protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        int border = selected ? 0xFF62C778 : (isHoveredOrFocused() ? 0xFFAEB7C2 : 0xFF5A6068);
-        int background = isHoveredOrFocused() ? 0xFF454B53 : 0xFF30343A;
-        graphics.fill(getX(), getY(), getX() + width, getY() + height, border);
-        graphics.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, background);
+        VehicleImportGuiAtlas.Sprite sprite = !active
+                ? VehicleImportGuiAtlas.Sprite.ICON_DISABLED
+                : selected
+                ? VehicleImportGuiAtlas.Sprite.ICON_SELECTED
+                : isHoveredOrFocused()
+                ? VehicleImportGuiAtlas.Sprite.ICON_HOVERED
+                : VehicleImportGuiAtlas.Sprite.ICON_NORMAL;
+        VehicleGuiTextures.blit(graphics, sprite, getX(), getY(), width, height);
         graphics.renderItem(stack, getX() + 4, getY() + 4);
     }
 

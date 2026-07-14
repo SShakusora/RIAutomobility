@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.editor.client;
 
 import com.sshakusora.riautomobility.carpack.CarPackManager;
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import com.sshakusora.riautomobility.editor.VehicleImportMenu;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.ExportVehicleComponentItemPacket;
@@ -94,8 +95,9 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         int x = leftPos + 5;
         int y = topPos + 24;
         for (Page value : Page.values()) {
-            Button tab = Button.builder(VehicleImportText.component(value.label), b -> { page = value; setTargetForPage(); resetWidgets(); })
-                    .bounds(x, y, TAB_WIDTH - 10, 32).build();
+            Button tab = texturedButton(VehicleImportText.component(value.label),
+                    b -> { page = value; setTargetForPage(); resetWidgets(); },
+                    x, y, TAB_WIDTH - 10, 32);
             tab.active = page != value;
             addRenderableWidget(tab);
             y += 36;
@@ -109,7 +111,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         }
         addExportItemControl();
         int px = previewX0() + 6;
-        addRenderableWidget(Button.builder(VehicleImportText.component("button.reset_view"), b -> resetView()).bounds(px, topPos + 26, 72, 18).build());
+        addRenderableWidget(texturedButton(VehicleImportText.component("button.reset_view"),
+                b -> resetView(), px, topPos + 26, 72, 18));
         disableUnavailablePartControls(panelX);
     }
 
@@ -155,12 +158,12 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         int tabX = x;
         for (FrameTab value : FrameTab.values()) {
             int width = value == FrameTab.values()[FrameTab.values().length - 1] ? x + PARAM_WIDTH - tabX : tabWidth;
-            Button tab = Button.builder(VehicleImportText.component(value.label), b -> {
+            Button tab = texturedButton(VehicleImportText.component(value.label), b -> {
                 frameTab = value;
                 draft.target = VehicleEditorDraft.Target.FRAME;
                 showFrameTabParts();
                 resetWidgets();
-            }).bounds(tabX, y, width, 20).build();
+            }, tabX, y, width, 20);
             tab.active = frameTab != value
                     && value.isAvailable(draft);
             addRenderableWidget(tab);
@@ -234,11 +237,11 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         for (WheelTab value : WheelTab.values()) {
             int width = value == WheelTab.values()[WheelTab.values().length - 1]
                     ? x + PARAM_WIDTH - tabX : tabWidth;
-            Button tab = Button.builder(VehicleImportText.component(value.label), b -> {
+            Button tab = texturedButton(VehicleImportText.component(value.label), b -> {
                 wheelTab = value;
                 draft.target = VehicleEditorDraft.Target.WHEEL;
                 resetWidgets();
-            }).bounds(tabX, y, width, 20).build();
+            }, tabX, y, width, 20);
             tab.active = wheelTab != value;
             addRenderableWidget(tab);
             availableWithoutPreview.add(tab);
@@ -272,21 +275,25 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private void addComponentButtons(int x, int y, SelectionType type) {
         int gap = 4;
         int third = (PARAM_WIDTH - gap * 2) / 3;
-        Button select = Button.builder(VehicleImportText.component("button.select_preview"), b -> openSelection(type)).bounds(x, y, third, 20).build();
-        Button importModel = Button.builder(VehicleImportText.component("button.import_model"), b -> chooseModel()).bounds(x + third + gap, y, third, 20).build();
+        Button select = texturedButton(VehicleImportText.component("button.select_preview"),
+                b -> openSelection(type), x, y, third, 20);
+        Button importModel = texturedButton(VehicleImportText.component("button.import_model"),
+                b -> chooseModel(), x + third + gap, y, third, 20);
         addRenderableWidget(select);
         addRenderableWidget(importModel);
         availableWithoutPreview.add(select);
         availableWithoutPreview.add(importModel);
-        addRenderableWidget(Button.builder(VehicleImportText.component("button.export_pack"), b -> exportPack()).bounds(x + (third + gap) * 2, y, PARAM_WIDTH - (third + gap) * 2, 20).build());
+        addRenderableWidget(texturedButton(VehicleImportText.component("button.export_pack"),
+                b -> exportPack(), x + (third + gap) * 2, y,
+                PARAM_WIDTH - (third + gap) * 2, 20));
     }
 
     private void addExportItemControl() {
         int buttonWidth = 58;
         int x = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 8 - buttonWidth / 2;
         int y = topPos + VehicleImportMenu.INVENTORY_Y;
-        exportItemButton = Button.builder(VehicleImportText.component("button.export_item"), b -> exportItem())
-                .bounds(x, y, buttonWidth, 20).build();
+        exportItemButton = texturedButton(VehicleImportText.component("button.export_item"),
+                b -> exportItem(), x, y, buttonWidth, 20);
         exportItemButton.active = !exportingItem;
         addRenderableWidget(exportItemButton);
     }
@@ -302,11 +309,11 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         vectorFields(x, y, seat, v -> draft.seats.set(seatIndex, v)); y += CONTROL_ROW_STEP * 3;
         labels.add(new FieldLabel("label.preview_view", x, y + 6, FIELD_LABEL_WIDTH));
         addParameterTooltip(x, y, PARAM_WIDTH, VehicleImportText.component("tooltip.preview_view"));
-        addRenderableWidget(Button.builder(VehicleImportText.component(seatFirstPerson ? "option.first_person" : "option.external"), button -> {
+        addRenderableWidget(texturedButton(VehicleImportText.component(seatFirstPerson ? "option.first_person" : "option.external"), button -> {
             seatFirstPerson = !seatFirstPerson;
             previewRenderer.resetView(true);
             button.setMessage(VehicleImportText.component(seatFirstPerson ? "option.first_person" : "option.external"));
-        }).bounds(x + 70, y, PARAM_WIDTH - 70, 20).build());
+        }, x + 70, y, PARAM_WIDTH - 70, 20));
     }
 
     private void addAttachmentControls(int x, int y) {
@@ -369,27 +376,27 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 : VehicleImportText.component("header.additional_hitbox", hitboxIndex + 1, draft.hitboxes.size());
         int headerWidth = PARAM_WIDTH - 48;
         addParameterTooltip(x, y, PARAM_WIDTH, VehicleImportText.component("tooltip.collision"));
-        addRenderableWidget(Button.builder(name, button -> togglePositionDropdown(
+        addRenderableWidget(texturedButton(name, button -> togglePositionDropdown(
                 VehiclePositionDropdown.Type.COLLISION, x, y, headerWidth, draft.hitboxes.size() + 1,
                 hitboxIndex + 1, this::collisionDropdownLabel, selected -> {
                     closePositionDropdown(() -> {
                         hitboxIndex = selected - 1;
                         resetWidgets();
                     });
-                })).bounds(x, y, headerWidth, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), button -> {
+                }), x, y, headerWidth, 20));
+        addRenderableWidget(texturedButton(Component.literal("+"), button -> {
             positionDropdown = null;
             draft.hitboxes.add(new VehicleEditorDraft.HitboxPoint(
                     Vec3.ZERO, draft.widthBlocks, draft.heightBlocks, false));
             hitboxIndex = draft.hitboxes.size() - 1;
             resetWidgets();
-        }).bounds(x + PARAM_WIDTH - 44, y, 20, 20).build());
-        Button remove = Button.builder(Component.literal("-"), button -> {
+        }, x + PARAM_WIDTH - 44, y, 20, 20));
+        Button remove = texturedButton(Component.literal("-"), button -> {
             positionDropdown = null;
             draft.hitboxes.remove(hitboxIndex);
             hitboxIndex = draft.hitboxes.isEmpty() ? -1 : Math.min(hitboxIndex, draft.hitboxes.size() - 1);
             resetWidgets();
-        }).bounds(x + PARAM_WIDTH - 20, y, 20, 20).build();
+        }, x + PARAM_WIDTH - 20, y, 20, 20);
         remove.active = hitboxIndex >= 0;
         addRenderableWidget(remove);
     }
@@ -399,23 +406,23 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                                Consumer<Integer> select, Runnable add, Runnable remove) {
         int headerWidth = PARAM_WIDTH - 48;
         addParameterTooltip(x, y, PARAM_WIDTH, VehicleImportText.component("tooltip." + type.name().toLowerCase(Locale.ROOT)));
-        addRenderableWidget(Button.builder(VehicleImportText.component(name, index + 1, size), b ->
+        addRenderableWidget(texturedButton(VehicleImportText.component(name, index + 1, size), b ->
                 togglePositionDropdown(type, x, y, headerWidth, size, index, optionLabel, selected -> {
                     closePositionDropdown(() -> {
                         select.accept(selected);
                         resetWidgets();
                     });
-                })).bounds(x, y, headerWidth, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> {
+                }), x, y, headerWidth, 20));
+        addRenderableWidget(texturedButton(Component.literal("+"), b -> {
             positionDropdown = null;
             add.run();
             resetWidgets();
-        }).bounds(x + PARAM_WIDTH - 44, y, 20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> {
+        }, x + PARAM_WIDTH - 44, y, 20, 20));
+        addRenderableWidget(texturedButton(Component.literal("-"), b -> {
             positionDropdown = null;
             remove.run();
             resetWidgets();
-        }).bounds(x + PARAM_WIDTH - 20, y, 20, 20).build());
+        }, x + PARAM_WIDTH - 20, y, 20, 20));
     }
 
     private void togglePositionDropdown(VehiclePositionDropdown.Type type, int x, int y, int width,
@@ -525,7 +532,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         labels.add(new FieldLabel(label, x, y + 6, FIELD_LABEL_WIDTH));
         addParameterTooltip(x, y, PARAM_WIDTH, VehicleImportTooltips.text(label.substring("label.".length())));
         int fieldX = x + 70;
-        EditBox field = new EditBox(font, fieldX, y, PARAM_WIDTH - 70, 20, VehicleImportText.component(label));
+        EditBox field = new VehicleEditBox(font, fieldX, y, PARAM_WIDTH - 70, 20,
+                VehicleImportText.component(label));
         field.setMaxLength(1024); field.setValue(value); field.setResponder(setter); addRenderableWidget(field);
     }
 
@@ -547,8 +555,9 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 });
         attachmentIconLists.add(iconList);
         addRenderableWidget(iconList);
-        addRenderableWidget(Button.builder(VehicleImportText.component("button.select_list"), b -> openAttachmentSelection(type))
-                .bounds(x + PARAM_WIDTH - buttonWidth, y, buttonWidth, 20).build());
+        addRenderableWidget(texturedButton(VehicleImportText.component("button.select_list"),
+                b -> openAttachmentSelection(type),
+                x + PARAM_WIDTH - buttonWidth, y, buttonWidth, 20));
     }
 
     private List<ItemStack> attachmentListStacks(SelectionType type, String value) {
@@ -572,7 +581,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         addParameterTooltip(x, y, Math.min(PARAM_WIDTH, 70 + fieldWidth),
                 VehicleImportTooltips.number(label.substring("label.".length()), page == Page.WHEEL, frameTab == FrameTab.SEATS));
         int fieldX = x + 70;
-        EditBox field = new EditBox(font, fieldX + NUMBER_ARROW_WIDTH, y,
+        EditBox field = new VehicleEditBox(font, fieldX + NUMBER_ARROW_WIDTH, y,
                 fieldWidth - NUMBER_ARROW_WIDTH * 2, 20, VehicleImportText.component(label));
         field.setValue(Float.toString(getter.get()));
         field.setResponder(value -> { try { setter.accept(Float.parseFloat(value)); status = ""; } catch (NumberFormatException e) { status = VehicleImportText.string("status.invalid_number"); } });
@@ -736,7 +745,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void addSelectionControls() {
-        addRenderableWidget(Button.builder(VehicleImportText.component("button.back"), b -> closeSelection()).bounds(leftPos + 8, topPos + 24, 54, 20).build());
+        addRenderableWidget(texturedButton(VehicleImportText.component("button.back"),
+                b -> closeSelection(), leftPos + 8, topPos + 24, 54, 20));
         int selectionsPerPage = selectionsPerPage();
         int count = selectionCount(); int pageCount = Math.max(1, (count + selectionsPerPage - 1) / selectionsPerPage);
         selectionPage = Math.max(0, Math.min(selectionPage, pageCount - 1));
@@ -753,13 +763,15 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             selectionButtons.add(entry); addRenderableWidget(entry);
         }
         int navY = selectionNavY();
-        Button prev = Button.builder(Component.literal("<"), b -> { selectionPage--; resetWidgets(); }).bounds(leftPos + imageWidth / 2 - 66, navY, 28, 20).build(); prev.active = selectionPage > 0; addRenderableWidget(prev);
-        Button next = Button.builder(Component.literal(">"), b -> { selectionPage++; resetWidgets(); }).bounds(leftPos + imageWidth / 2 + 38, navY, 28, 20).build(); next.active = selectionPage + 1 < pageCount; addRenderableWidget(next);
+        Button prev = texturedButton(Component.literal("<"), b -> { selectionPage--; resetWidgets(); },
+                leftPos + imageWidth / 2 - 66, navY, 28, 20); prev.active = selectionPage > 0; addRenderableWidget(prev);
+        Button next = texturedButton(Component.literal(">"), b -> { selectionPage++; resetWidgets(); },
+                leftPos + imageWidth / 2 + 38, navY, 28, 20); next.active = selectionPage + 1 < pageCount; addRenderableWidget(next);
         if (selectionType.isAttachmentList()) {
-            addRenderableWidget(Button.builder(VehicleImportText.component("button.select_all"), b -> selectAllAttachments())
-                    .bounds(leftPos + 8, navY, 54, 20).build());
-            addRenderableWidget(Button.builder(VehicleImportText.component("button.clear"), b -> clearAttachmentSelection())
-                    .bounds(leftPos + 66, navY, 54, 20).build());
+            addRenderableWidget(texturedButton(VehicleImportText.component("button.select_all"),
+                    b -> selectAllAttachments(), leftPos + 8, navY, 54, 20));
+            addRenderableWidget(texturedButton(VehicleImportText.component("button.clear"),
+                    b -> clearAttachmentSelection(), leftPos + 66, navY, 54, 20));
         }
     }
 
@@ -833,14 +845,18 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     @Override protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xF0181B20);
+        VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SCREEN,
+                leftPos, topPos, imageWidth, imageHeight);
         if (selectionType != null) {
-            g.fill(leftPos + 5, topPos + 22, leftPos + imageWidth - 5,
-                    topPos + imageHeight - 5, 0xFF22262C);
+            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SELECTION,
+                    leftPos + 5, topPos + 22, imageWidth - 10, imageHeight - 27);
         } else {
-            g.fill(leftPos + 4, topPos + 22, leftPos + TAB_WIDTH, topPos + imageHeight - 5, 0xFF262A31);
-            g.fill(leftPos + TAB_WIDTH + 4, topPos + 22, leftPos + TAB_WIDTH + PARAM_WIDTH + 12, topPos + imageHeight - 5, 0xFF20242A);
-            g.fill(previewX0(), topPos + 22, leftPos + imageWidth - 5, topPos + imageHeight - 5, 0xFF0E1115);
+            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SIDEBAR,
+                    leftPos + 4, topPos + 22, TAB_WIDTH - 4, imageHeight - 27);
+            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.CONTROLS,
+                    leftPos + TAB_WIDTH + 4, topPos + 22, PARAM_WIDTH + 8, imageHeight - 27);
+            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.PREVIEW,
+                    previewX0(), topPos + 22, leftPos + imageWidth - 5 - previewX0(), imageHeight - 27);
             if (hasCurrentPartPreview()) renderVehicle(g, partialTick);
         }
         if (selectionType == null) renderInventoryBackground(g);
@@ -851,7 +867,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         int panelY0 = topPos + VehicleImportMenu.INVENTORY_Y - 17;
         int panelX1 = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 23;
         int panelY1 = topPos + VehicleImportMenu.INVENTORY_Y + 77;
-        g.fill(panelX0, panelY0, panelX1, panelY1, 0xFF20242A);
+        VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.INVENTORY,
+                panelX0, panelY0, panelX1 - panelX0, panelY1 - panelY0);
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 renderSlotBackground(g, VehicleImportMenu.INVENTORY_X + column * 18,
@@ -868,8 +885,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private void renderSlotBackground(GuiGraphics g, int relativeX, int relativeY, boolean output) {
         int x = leftPos + relativeX;
         int y = topPos + relativeY;
-        g.fill(x - 1, y - 1, x + 17, y + 17, output ? 0xFF91B568 : 0xFF5B626D);
-        g.fill(x, y, x + 16, y + 16, 0xFF11151A);
+        VehicleGuiTextures.blit(g, output ? VehicleImportGuiAtlas.Sprite.SLOT_OUTPUT
+                : VehicleImportGuiAtlas.Sprite.SLOT_NORMAL, x - 1, y - 1, 18, 18);
     }
 
     private void renderVehicle(GuiGraphics graphics, float partialTick) {
@@ -1014,6 +1031,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
     @Override public void removed() { previewSession.close(); super.removed(); }
+    private static VehicleTexturedButton texturedButton(Component message, Button.OnPress onPress,
+                                                        int x, int y, int width, int height) {
+        return new VehicleTexturedButton(x, y, width, height, message, onPress);
+    }
     private void resetWidgets() { clearWidgets(); init(); }
     private static String rootMessage(Throwable error) { Throwable current = error; while (current.getCause() != null) current = current.getCause(); return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage(); }
 

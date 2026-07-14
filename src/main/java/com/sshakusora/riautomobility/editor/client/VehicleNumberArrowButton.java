@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -22,12 +23,14 @@ final class VehicleNumberArrowButton extends AbstractButton {
 
     @Override protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         boolean fine = Screen.hasShiftDown();
-        int background = fine
-                ? (isHoveredOrFocused() ? 0xFF657A46 : 0xFF4C5D35)
-                : (isHoveredOrFocused() ? 0xFF454B53 : 0xFF30343A);
-        int border = fine ? 0xFFA7D46F : 0xFF737A84;
-        graphics.fill(getX(), getY(), getX() + width, getY() + height, border);
-        graphics.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, background);
+        VehicleImportGuiAtlas.Sprite sprite = !active
+                ? VehicleImportGuiAtlas.Sprite.BUTTON_DISABLED
+                : fine
+                ? VehicleImportGuiAtlas.Sprite.BUTTON_FINE
+                : isHoveredOrFocused()
+                ? VehicleImportGuiAtlas.Sprite.BUTTON_HOVERED
+                : VehicleImportGuiAtlas.Sprite.BUTTON_NORMAL;
+        VehicleGuiTextures.blitNineSliced(graphics, sprite, getX(), getY(), width, height);
         graphics.drawCenteredString(Minecraft.getInstance().font, getMessage(),
                 getX() + width / 2, getY() + (height - 8) / 2, active ? 0xFFFFFF : 0xA0A0A0);
     }

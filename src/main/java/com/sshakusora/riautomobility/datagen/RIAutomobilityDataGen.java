@@ -15,5 +15,6 @@ public final class RIAutomobilityDataGen {
         PackOutput output = event.getGenerator().getPackOutput();
         event.getGenerator().addProvider(event.includeClient(), new RIAutomobilityLangProvider.EnUs(output));
         event.getGenerator().addProvider(event.includeClient(), new RIAutomobilityLangProvider.ZhCn(output));
+        event.getGenerator().addProvider(event.includeClient(), new VehicleImportGuiTemplateProvider(output));
     }
 }
