@@ -20,6 +20,7 @@ import io.github.foundationgames.automobility.automobile.render.BaseModel;
 import io.github.foundationgames.automobility.automobile.render.ExhaustFumesModel;
 import io.github.foundationgames.automobility.automobile.render.wheel.WheelContextReceiver;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.PlayerModel;
@@ -35,6 +36,9 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 final class VehiclePreviewRenderer {
     enum View {
         FRAME,
@@ -48,6 +52,15 @@ final class VehiclePreviewRenderer {
     }
 
     private static final float COMPONENT_PREVIEW_SCALE = 2.5F;
+    private static final int ORBIT_GIZMO_SIZE = 64;
+    private static final float ORBIT_GIZMO_AXIS_RADIUS = 22.0F;
+    private static final float ORBIT_GIZMO_MARKER_RADIUS = 4.5F;
+    private static final float ORBIT_GIZMO_DEPTH_SCALE = 0.16F;
+    private static final float ORBIT_GIZMO_LABEL_SCALE = 0.65F;
+    private static final int ORBIT_GIZMO_X_COLOR = 0xFD3043;
+    private static final int ORBIT_GIZMO_Y_COLOR = 0x26EC45;
+    private static final int ORBIT_GIZMO_Z_COLOR = 0x2D5EE8;
+    private static final int ORBIT_GIZMO_LABEL_COLOR = 0xFF111418;
     private static final WheelBase.WheelPos SINGLE_WHEEL_PREVIEW_POSITION = new WheelBase.WheelPos(
             0.0F, 0.0F, 1.0F, 0.0F, WheelBase.WheelEnd.FRONT, WheelBase.WheelSide.LEFT);
 
@@ -176,7 +189,122 @@ final class VehiclePreviewRenderer {
         pose.popPose();
         Lighting.setupFor3DItems();
         RenderSystem.disableDepthTest();
+        clearPreviewDepth();
+        renderOrbitGizmo(graphics, x1, y1);
+        graphics.flush();
         graphics.disableScissor();
+    }
+
+    private static void clearPreviewDepth() {
+        // glClear respects the active preview scissor, so later GUI layers are not tested
+        // against depth values left behind by the vehicle without disturbing other panels.
+        RenderSystem.depthMask(true);
+        RenderSystem.clear(256, Minecraft.ON_OSX);
+    }
+
+    private void renderOrbitGizmo(GuiGraphics graphics, int previewRight, int previewBottom) {
+        float centerX = previewRight - ORBIT_GIZMO_SIZE * 0.5F;
+        float centerY = previewBottom - ORBIT_GIZMO_SIZE * 0.5F;
+        AxisProjection[] axes = orbitGizmoAxes();
+
+        GizmoLayer[] layers = new GizmoLayer[axes.length * 3];
+        for (int index = 0; index < axes.length; index++) {
+            AxisProjection axis = axes[index];
+            layers[index * 3] = new GizmoLayer(axis, 1.0F, true, null);
+            layers[index * 3 + 1] = new GizmoLayer(axis, 1.0F, false, axis.label);
+            layers[index * 3 + 2] = new GizmoLayer(axis, -1.0F, false, null);
+        }
+        Arrays.sort(layers, Comparator.comparingDouble(GizmoLayer::depth));
+        for (GizmoLayer layer : layers) {
+            if (layer.line) {
+                drawLine(graphics, centerX, centerY,
+                        centerX + ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenX,
+                        centerY + ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenY,
+                        axisColor(layer.axis.color, 0.70F, 0xB8));
+            } else {
+                float depth = layer.depth();
+                int x = Math.round(centerX + layer.sign * ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenX);
+                int y = Math.round(centerY + layer.sign * ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenY);
+                int radius = Math.max(1, Math.round(ORBIT_GIZMO_MARKER_RADIUS
+                        * (1.0F + ORBIT_GIZMO_DEPTH_SCALE * depth)));
+                float brightness = depth < 0.0F ? 0.70F : 1.0F;
+                drawCircle(graphics, x, y, radius, axisColor(layer.axis.color, brightness, 0xFF));
+                if (layer.label != null) {
+                    drawOrbitGizmoLabel(graphics, layer.label, x, y);
+                }
+            }
+            // Each layer is submitted separately because fonts and solid shapes use
+            // different RenderTypes that would otherwise lose this painter order.
+            graphics.flush();
+        }
+    }
+
+    private static void drawOrbitGizmoLabel(GuiGraphics graphics, String label, int x, int y) {
+        PoseStack pose = graphics.pose();
+        Font font = Minecraft.getInstance().font;
+        pose.pushPose();
+        pose.translate(x, y, 0.0F);
+        pose.scale(ORBIT_GIZMO_LABEL_SCALE, ORBIT_GIZMO_LABEL_SCALE, 1.0F);
+        graphics.drawString(font, label, -font.width(label) / 2,
+                -font.lineHeight / 2, ORBIT_GIZMO_LABEL_COLOR, false);
+        pose.popPose();
+    }
+
+    private AxisProjection[] orbitGizmoAxes() {
+        float pitch = (float) Math.toRadians(rotationX);
+        float yaw = (float) Math.toRadians(rotationY);
+        float sinPitch = (float) Math.sin(pitch);
+        float cosPitch = (float) Math.cos(pitch);
+        float sinYaw = (float) Math.sin(yaw);
+        float cosYaw = (float) Math.cos(yaw);
+
+        // These are the normalized X/Y/Z columns of the same rotation used by the vehicle pose.
+        return new AxisProjection[]{
+                new AxisProjection(cosYaw, -sinPitch * sinYaw, -cosPitch * sinYaw,
+                        ORBIT_GIZMO_X_COLOR, "X"),
+                new AxisProjection(0.0F, -cosPitch, sinPitch,
+                        ORBIT_GIZMO_Y_COLOR, "Y"),
+                new AxisProjection(sinYaw, sinPitch * cosYaw, cosPitch * cosYaw,
+                        ORBIT_GIZMO_Z_COLOR, "Z")
+        };
+    }
+
+    private static void drawLine(GuiGraphics graphics, float x0, float y0, float x1, float y1, int color) {
+        float dx = x1 - x0;
+        float dy = y1 - y0;
+        int steps = Math.max(1, (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
+        for (int step = 0; step <= steps; step++) {
+            float progress = step / (float) steps;
+            int x = Math.round(x0 + dx * progress);
+            int y = Math.round(y0 + dy * progress);
+            graphics.fill(x - 1, y - 1, x + 1, y + 1, color);
+        }
+    }
+
+    private static void drawCircle(GuiGraphics graphics, int centerX, int centerY, int radius, int color) {
+        int radiusSquared = radius * radius;
+        for (int y = -radius; y <= radius; y++) {
+            int halfWidth = (int) Math.sqrt(radiusSquared - y * y);
+            graphics.fill(centerX - halfWidth, centerY + y,
+                    centerX + halfWidth + 1, centerY + y + 1, color);
+        }
+    }
+
+    private static int axisColor(int rgb, float brightness, int alpha) {
+        int red = Math.round(((rgb >> 16) & 0xFF) * brightness);
+        int green = Math.round(((rgb >> 8) & 0xFF) * brightness);
+        int blue = Math.round((rgb & 0xFF) * brightness);
+        return alpha << 24 | red << 16 | green << 8 | blue;
+    }
+
+    private record AxisProjection(float screenX, float screenY, float depth,
+                                  int color, String label) {
+    }
+
+    private record GizmoLayer(AxisProjection axis, float sign, boolean line, String label) {
+        private float depth() {
+            return axis.depth * (line ? 0.5F : sign);
+        }
     }
 
     private void renderFirstPersonVehicle(GuiGraphics graphics, float partialTick,
@@ -242,12 +370,14 @@ final class VehiclePreviewRenderer {
             RenderSystem.applyModelViewMatrix();
             Lighting.setupFor3DItems();
             RenderSystem.disableDepthTest();
+            clearPreviewDepth();
             graphics.disableScissor();
         }
         int centerX = (x0 + x1) / 2;
         int centerY = (y0 + y1) / 2;
         graphics.fill(centerX - 4, centerY, centerX + 5, centerY + 1, 0xCCFFFFFF);
         graphics.fill(centerX, centerY - 4, centerX + 1, centerY + 5, 0xCCFFFFFF);
+        graphics.flush();
     }
 
     private OutlineBufferSource preparePreviewOutline() {
