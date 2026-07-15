@@ -729,7 +729,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
             Path selectedPath = Path.of(selected).toAbsolutePath().normalize();
             Path directory = selectedPath.getParent() == null ? defaultDirectory : selectedPath.getParent();
-            Path archive = VehiclePackBuilder.build(draft, nextAvailableExportPath(directory, fileStem), false);
+            Path archive = VehiclePackBuilder.build(draft, nextAvailableExportPath(directory, fileStem),
+                    false, exportAuthor());
             status = VehicleImportText.string("status.exported", archive.getFileName());
         } catch (IOException e) { status = VehicleImportText.string("status.export_failed", e.getMessage()); }
     }
@@ -776,6 +777,13 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         VehicleEditorDraft.Target exportedTarget = draft.target;
         var componentId = draft.componentId();
         String exportedDisplayName = draft.displayName();
+        String exportedAuthor;
+        try {
+            exportedAuthor = exportAuthor();
+        } catch (IOException exception) {
+            status = VehicleImportText.string("status.item_export_failed", exception.getMessage());
+            return;
+        }
         int containerId = menu.containerId;
         exportingItem = true;
         if (exportItemButton != null) exportItemButton.active = false;
@@ -783,7 +791,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         try {
             Path directory = CarPackManager.getRootDirectory().resolve("exports");
             Path archive = VehiclePackBuilder.build(draft,
-                    directory.resolve(draft.packName() + CarPackManager.CAR_PACK_EXTENSION), false);
+                    directory.resolve(draft.packName() + CarPackManager.CAR_PACK_EXTENSION), false, exportedAuthor);
             ClientCarPackUploader.upload(archive, draft, result -> Minecraft.getInstance().execute(() -> {
                 if (!result.successful()) {
                     exportingItem = false;
@@ -797,7 +805,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                     if (exportItemButton != null) exportItemButton.active = true;
                     if (Minecraft.getInstance().screen != this || menu.containerId != containerId) return;
                     RIAutomobilityNetwork.CHANNEL.sendToServer(new ExportVehicleComponentItemPacket(
-                            containerId, exportedTarget.path, componentId, exportedDisplayName));
+                            containerId, exportedTarget.path, componentId, exportedDisplayName, exportedAuthor));
                     status = VehicleImportText.string("status.item_exported");
                 });
             }));
@@ -806,6 +814,20 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             if (exportItemButton != null) exportItemButton.active = true;
             status = VehicleImportText.string("status.item_export_failed", exception.getMessage());
         }
+    }
+
+    private static String currentPlayerName() throws IOException {
+        var player = Minecraft.getInstance().player;
+        if (player == null) throw new IOException("Current player is unavailable");
+        return player.getGameProfile().getName();
+    }
+
+    private String exportAuthor() throws IOException {
+        return resolveExportAuthor(draft.author(), currentPlayerName());
+    }
+
+    static String resolveExportAuthor(String importedAuthor, String currentPlayerName) {
+        return importedAuthor == null || importedAuthor.isBlank() ? currentPlayerName : importedAuthor;
     }
 
     private void openSelection(SelectionType type) {

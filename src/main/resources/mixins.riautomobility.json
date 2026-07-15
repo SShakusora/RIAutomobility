@@ -8,7 +8,6 @@
   ],
   "client": [
     "AutoMechanicTableScreenMixin",
-    "AutomobileComponentItemTooltipMixin",
     "AutomobileHudMixin",
     "AutomobileRendererMixin",
     "AutomobilityClientMixin",

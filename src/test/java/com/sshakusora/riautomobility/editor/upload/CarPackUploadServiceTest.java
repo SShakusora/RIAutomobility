@@ -1,16 +1,30 @@
 package com.sshakusora.riautomobility.editor.upload;
 
+import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
+import com.sshakusora.riautomobility.network.packet.BeginCarPackUploadPacket;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class CarPackUploadServiceTest {
+    private static final String COMPONENT_PATH = "auto_" + "a".repeat(32);
+    private static final String EXPORTING_PLAYER_NAME = "TestPlayer";
+    private static final byte[] PNG = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
     @TempDir
     Path temporaryDirectory;
 
@@ -75,8 +89,66 @@ class CarPackUploadServiceTest {
         assertEquals("new", Files.readString(source));
     }
 
+    @Test
+    void acceptsV2EditorArchiveWithExternalTexture() throws IOException {
+        Path archive = editorArchive(true);
+
+        CarPackArchiveStore.validateRiautoArchive(archive);
+        assertDoesNotThrow(() -> CarPackUploadService.validateEditorArchive(archive, uploadRequest(archive)));
+    }
+
+    @Test
+    void rejectsV2EditorArchiveWithMissingExternalTexture() throws IOException {
+        Path archive = editorArchive(false);
+
+        CarPackArchiveStore.validateRiautoArchive(archive);
+        IOException error = assertThrows(IOException.class,
+                () -> CarPackUploadService.validateEditorArchive(archive, uploadRequest(archive)));
+        assertTrue(error.getMessage().contains("missing external texture"));
+    }
+
     private Path write(String name, String contents) throws IOException {
         return Files.writeString(temporaryDirectory.resolve(name), contents);
+    }
+
+    private Path editorArchive(boolean includeTexture) throws IOException {
+        String id = "riautomobility:" + COMPONENT_PATH;
+        String modelResource = "riautomobility:models/entity/automobile/wheel/" + COMPONENT_PATH + ".bbmodel";
+        String textureResource = "riautomobility:textures/entity/automobile/wheel/" + COMPONENT_PATH + "/texture.png";
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("riauto.json", ("{\"format\":2,\"id\":\"" + id + "\",\"name\":\"Wheel\","
+                + "\"author\":\"" + EXPORTING_PLAYER_NAME + "\","
+                + "\"components\":{\"frames\":[],\"wheels\":[\"" + id + "\"],\"engines\":[]}}")
+                .getBytes(StandardCharsets.UTF_8));
+        entries.put("data/riautomobility/riautomobility/wheels/" + COMPONENT_PATH + ".json",
+                ("{\"size\":0.6,\"grip\":0.5,\"radius\":3,\"width\":3,\"model\":{"
+                        + "\"type\":\"bbmodel\",\"texture\":\"" + textureResource + "\","
+                        + "\"model_id\":\"riautomobility:riautomobility/wheel/" + COMPONENT_PATH + "\","
+                        + "\"bbmodel\":\"" + modelResource + "\"}}")
+                        .getBytes(StandardCharsets.UTF_8));
+        entries.put("assets/riautomobility/models/entity/automobile/wheel/" + COMPONENT_PATH + ".bbmodel",
+                ("{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
+                        + "\"textures\":[{\"name\":\"wheel.png\",\"relative_path\":\""
+                        + textureResource + "\"}],\"elements\":[],\"outliner\":[]}")
+                        .getBytes(StandardCharsets.UTF_8));
+        if (includeTexture) {
+            entries.put("assets/riautomobility/textures/entity/automobile/wheel/"
+                    + COMPONENT_PATH + "/texture.png", PNG);
+        }
+        Path archive = temporaryDirectory.resolve("editor-" + includeTexture + ".riauto");
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive))) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return archive;
+    }
+
+    private static BeginCarPackUploadPacket uploadRequest(Path archive) throws IOException {
+        return new BeginCarPackUploadPacket(UUID.randomUUID(), "test", "riautomobility", COMPONENT_PATH,
+                "wheel", false, Files.size(archive), "0".repeat(64));
     }
 
     private void assertNoBackupFiles() throws IOException {

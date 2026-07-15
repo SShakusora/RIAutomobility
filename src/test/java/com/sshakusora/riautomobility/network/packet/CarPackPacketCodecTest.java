@@ -131,4 +131,18 @@ class CarPackPacketCodecTest {
             resultBuffer.release();
         }
     }
+
+    @Test
+    void exportedComponentItemPacketPreservesSourceAuthor() {
+        ExportVehicleComponentItemPacket expected = new ExportVehicleComponentItemPacket(
+                7, "frame", new ResourceLocation("riautomobility", "auto_" + "a".repeat(32)),
+                "Imported Frame", "OriginalPlayer");
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            ExportVehicleComponentItemPacket.encode(expected, buffer);
+            assertEquals(expected, ExportVehicleComponentItemPacket.decode(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
 }

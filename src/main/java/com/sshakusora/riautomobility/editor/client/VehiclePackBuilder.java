@@ -26,16 +26,17 @@ public final class VehiclePackBuilder {
     private VehiclePackBuilder() {
     }
 
-    public static Path build(VehicleEditorDraft draft, Path destination, boolean preview) throws IOException {
-        BbModelData.Document document = validateSources(draft);
+    public static Path build(VehicleEditorDraft draft, Path destination, boolean preview, String author) throws IOException {
+        author = validateAuthor(author);
+        String namespace = preview ? VehicleEditorDraft.PREVIEW_NAMESPACE : draft.namespace();
+        String componentPath = preview ? draft.previewKey(draft.target) : draft.componentPath();
+        ValidatedModel model = validateSources(draft, namespace, componentPath);
         String validation = draft.validationError();
         if (!validation.isBlank()) {
             throw new IOException(validation);
         }
         Files.createDirectories(destination.getParent());
 
-        String namespace = preview ? VehicleEditorDraft.PREVIEW_NAMESPACE : draft.namespace();
-        String componentPath = preview ? draft.previewKey(draft.target) : draft.componentPath();
         String kind = draft.target.path;
         Map<String, byte[]> entries = new LinkedHashMap<>();
         JsonObject metadata = new JsonObject();
@@ -43,6 +44,7 @@ public final class VehiclePackBuilder {
         String declaredComponentId = namespace + ":" + componentPath;
         metadata.addProperty("id", declaredComponentId);
         metadata.addProperty("name", draft.displayName());
+        metadata.addProperty("author", author);
         JsonObject components = new JsonObject();
         var frames = new JsonArray();
         var wheels = new JsonArray();
@@ -63,13 +65,9 @@ public final class VehiclePackBuilder {
             case WHEEL -> draft.wheelSpec(preview).toJson();
             case ENGINE -> draft.engineSpec(preview).toJson();
         };
+        addV2ModelEntries(entries, component, model.exported(), namespace, kind, componentPath);
         entries.put("data/" + namespace + "/riautomobility/" + draft.target.path + "s/"
                 + componentPath + ".json", GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
-
-        entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + ".bbmodel",
-                readLimited(draft.modelFile()));
-        entries.put("assets/" + namespace + "/textures/entity/automobile/" + kind + "/" + componentPath + ".png",
-                defaultEmbeddedTexture(document));
 
         writeArchive(destination, entries);
         return destination;
@@ -124,18 +122,34 @@ public final class VehiclePackBuilder {
         return destination;
     }
 
-    private static BbModelData.Document validateSources(VehicleEditorDraft draft) throws IOException {
-        BbModelData.Document document = validateSource(draft.modelFile());
+    private static ValidatedModel validateSources(VehicleEditorDraft draft, String namespace,
+                                                  String componentPath) throws IOException {
+        byte[] sourceBytes = readLimited(draft.modelFile());
+        BbModelData.Document document = validateSource(sourceBytes);
         if (draft.target == VehicleEditorDraft.Target.FRAME) {
             draft.applyAutomaticFrameModelSize(BbModelBounds.measure(document));
         } else if (draft.target == VehicleEditorDraft.Target.WHEEL) {
             draft.applyAutomaticWheelModelSize(BbModelBounds.measure(document));
         }
-        return document;
+        String textureBasePath = "textures/entity/automobile/" + draft.target.path + "/" + componentPath;
+        BbModelRuntimeSanitizer.ExportedModel exported = BbModelRuntimeSanitizer.externalize(
+                sourceBytes, namespace, textureBasePath);
+        BbModelData.Document runtimeDocument = parseSource(exported.modelBytes());
+        BbModelParser.requireExternalPngTextures(runtimeDocument);
+        return new ValidatedModel(exported);
     }
 
     static BbModelData.Document validateSource(Path source) throws IOException {
-        byte[] model = readLimited(source);
+        return validateSource(readLimited(source));
+    }
+
+    static BbModelData.Document validateSource(byte[] model) throws IOException {
+        BbModelData.Document document = parseSource(model);
+        validateEmbeddedTextures(document);
+        return document;
+    }
+
+    private static BbModelData.Document parseSource(byte[] model) throws IOException {
         JsonObject json;
         try {
             json = JsonParser.parseString(new String(model, StandardCharsets.UTF_8)).getAsJsonObject();
@@ -143,9 +157,7 @@ public final class VehiclePackBuilder {
             throw new IOException("Model is not a valid JSON object", exception);
         }
         try {
-            BbModelData.Document document = BbModelParser.parse(json);
-            validateEmbeddedTextures(document);
-            return document;
+            return BbModelParser.parse(json);
         } catch (RuntimeException exception) {
             throw new IOException("Invalid BBModel: " + exception.getMessage(), exception);
         }
@@ -174,6 +186,25 @@ public final class VehiclePackBuilder {
         }
     }
 
+    static void addV2ModelEntries(Map<String, byte[]> entries, JsonObject component,
+                                  BbModelRuntimeSanitizer.ExportedModel model, String namespace,
+                                  String kind, String componentPath) {
+        component.getAsJsonObject("model").addProperty("texture", model.defaultTexture());
+        entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/"
+                + componentPath + ".bbmodel", model.modelBytes());
+        entries.putAll(model.textureEntries());
+    }
+
+    private static String validateAuthor(String author) throws IOException {
+        if (author == null) throw new IOException("Exporting player name is unavailable");
+        author = author.strip();
+        if (author.isBlank() || author.length() > CarPackArchiveStore.MAX_AUTHOR_LENGTH
+                || author.chars().anyMatch(Character::isISOControl)) {
+            throw new IOException("Invalid exporting player name");
+        }
+        return author;
+    }
+
     private static byte[] readLimited(Path path) throws IOException {
         if (path == null || !Files.isRegularFile(path)) {
             throw new IOException("Source file does not exist: " + path);
@@ -185,7 +216,7 @@ public final class VehiclePackBuilder {
         return Files.readAllBytes(path);
     }
 
-    private static void writeArchive(Path destination, Map<String, byte[]> entries) throws IOException {
+    static void writeArchive(Path destination, Map<String, byte[]> entries) throws IOException {
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(destination), StandardCharsets.UTF_8)) {
             for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
                 ZipEntry zipEntry = new ZipEntry(entry.getKey());
@@ -195,5 +226,8 @@ public final class VehiclePackBuilder {
                 zip.closeEntry();
             }
         }
+    }
+
+    private record ValidatedModel(BbModelRuntimeSanitizer.ExportedModel exported) {
     }
 }

@@ -87,7 +87,7 @@ The mod ships with a variety of pre-made vehicles and components:
 
 Car packs are loaded by RIAutomobility's private runtime and never enter Minecraft's datapack or resource-pack repositories. Import, synchronization, and `/riautomobility carpacks reload` are silent and do not show the resource reload overlay. Dedicated servers only need `.riauto` files in the server `riautomobility/` folder; joining clients automatically download and verify them.
 
-The Vehicle Import Table accepts native Blockbench `.bbmodel` projects and single-component `.riauto` files. RIAuto import reads the file's sole component type and switches to the matching frame, wheel, or engine page automatically. All model textures must be embedded as PNG data in the project and are applied automatically. JsonEM and GeckoLib remain supported for manually authored component files, but cannot be edited through the table.
+The Vehicle Import Table accepts native Blockbench `.bbmodel` projects and single-component `.riauto` files. RIAuto import reads the file's sole component type and switches to the matching frame, wheel, or engine page automatically. Source-project textures must be embedded PNG data. RIAuto v2 export stores every unique PNG once as a content-addressed asset and replaces BBModel Base64 data with resource ids. A BBModel's first RIAuto export records the exporting Minecraft player as its author, never the Blockbench project `credit`; later RIAuto imports and item exports preserve that original author as informational attribution. Reference images and editor history/state are removed, while geometry, animation data, and unknown extension fields are preserved. Importing the RIAuto reconstructs a temporary editable BBModel; the original project is never modified. JsonEM and GeckoLib remain supported for manually authored component files, but cannot be edited through the table.
 
 ### Car Pack Guide
 
@@ -95,7 +95,7 @@ The Vehicle Import Table accepts native Blockbench `.bbmodel` projects and singl
 
 Custom components use a restricted RIAuto runtime layout. `pack.mcmeta`, recipes, tags, loot tables, advancements, functions, and other vanilla datapack/resource-pack content are rejected.
 
-`riauto.json` is the format manifest. Format version `1` declares a file id, display name, and exactly one frame, wheel, or engine component. The `frames`, `wheels`, and `engines` arrays must contain exactly one id in total. The archive must contain exactly one matching component definition file; undeclared component definitions are rejected.
+`riauto.json` is the format manifest. Only format version `2` is accepted. It declares a file id, display name, optional `author`, and exactly one frame, wheel, or engine component. The `frames`, `wheels`, and `engines` arrays must contain exactly one id in total. The archive must contain exactly one matching component definition file; undeclared component definitions are rejected. BBModel textures use explicit PNG resource ids instead of embedded Base64 data.
 
 Component resource ids must be globally unique across installed RIAuto files, including across frame, wheel, and engine types. Files exported from the Vehicle Import Table generate a separate id for each page automatically.
 
@@ -113,6 +113,14 @@ data/<namespace>/riautomobility/engines/<id>.json
 ```
 
 #### Asset Paths
+
+**BBModel v2 models:**
+```
+assets/<namespace>/models/entity/automobile/<frame|wheel|engine>/<id>.bbmodel
+assets/<namespace>/textures/entity/automobile/<frame|wheel|engine>/<id>/<sha256>.png
+```
+
+Each BBModel texture stores the matching `<namespace>:textures/.../<sha256>.png` id in `relative_path` and does not contain `source`. Identical PNG data is stored only once.
 
 **JsonEM models:**
 ```
@@ -415,7 +423,7 @@ Each frame and wheel is stored in its own RIAuto source directory. The set cover
 
 车包由 RIAutomobility 私有运行时加载，不会进入 Minecraft 的数据包或资源包仓库。导入、同步以及 `/riautomobility carpacks reload` 都是静默的，不会显示资源刷新界面。专用服务器只需把 `.riauto` 文件放入服务端 `riautomobility/` 目录，客户端会自动下载并校验。
 
-车辆导入台支持原生 Blockbench `.bbmodel` 工程和单组件 `.riauto` 文件。导入 RIAuto 时会读取文件中唯一组件的类型，并自动切换到对应的车架、车轮或引擎页面。工程中的所有纹理都必须以内嵌 PNG 数据保存，导入后会自动应用。JsonEM 和 GeckoLib 仍可用于手工编写组件文件，但不能通过导入台编辑。
+车辆导入台支持原生 Blockbench `.bbmodel` 工程和单组件 `.riauto` 文件。导入 RIAuto 时会读取文件中唯一组件的类型，并自动切换到对应的车架、车轮或引擎页面。源工程中的纹理必须是内嵌 PNG。RIAuto v2 导出会把每份不同的 PNG 作为内容寻址资源只保存一次，并将 BBModel 的 Base64 数据替换为资源 id；BBModel 首次导出为 RIAuto 时记录执行导出的 Minecraft 玩家为作者，不读取 Blockbench 工程的 `credit`。后续导入 RIAuto 或导出物品时会保留该原作者，作者仅作为署名信息显示。同时剔除参考图、编辑器历史/状态，保留几何体、动画数据和未知扩展字段。重新导入 RIAuto 时会生成临时的可编辑 BBModel，原始工程不会被修改。JsonEM 和 GeckoLib 仍可用于手工编写组件文件，但不能通过导入台编辑。
 
 ### 车包教程
 
@@ -423,7 +431,7 @@ Each frame and wheel is stored in its own RIAuto source directory. The set cover
 
 自定义车辆组件使用受限的 RIAuto 私有目录。`pack.mcmeta`、配方、标签、战利品表、进度、函数以及其他原版数据包/资源包内容都会被拒绝。
 
-`riauto.json` 是格式清单。格式版本 `1` 声明文件 id、显示名称，以及恰好一个车架、车轮或引擎组件。`frames`、`wheels`、`engines` 三个数组合计必须只有一个 id。归档中也必须恰好存在与之对应的一份组件定义；未声明的组件定义文件会被拒绝。
+`riauto.json` 是格式清单。当前只接受格式版本 `2`。它声明文件 id、显示名称、可选的 `author`，以及恰好一个车架、车轮或引擎组件。车辆导入台首次从 BBModel 导出时会写入当前 Minecraft 玩家名；再次导入 RIAuto 时会原样保留其中的作者署名，服务端不会将其与当前操作玩家进行身份比对。`frames`、`wheels`、`engines` 三个数组合计必须只有一个 id。归档中也必须恰好存在与之对应的一份组件定义；未声明的组件定义文件会被拒绝。BBModel 纹理使用明确的 PNG 资源 id，不再保存内嵌 Base64 数据。
 
 已安装 RIAuto 文件中的组件资源 id 必须全局唯一，车架、车轮和引擎之间也不能重名。车辆导入台会自动为每个页面的导出文件生成独立 id。
 
@@ -441,6 +449,14 @@ data/<命名空间>/riautomobility/engines/<id>.json
 ```
 
 #### 资源路径
+
+**BBModel v2 模型：**
+```
+assets/<命名空间>/models/entity/automobile/<frame|wheel|engine>/<id>.bbmodel
+assets/<命名空间>/textures/entity/automobile/<frame|wheel|engine>/<id>/<sha256>.png
+```
+
+BBModel 的每个纹理在 `relative_path` 中保存对应的 `<命名空间>:textures/.../<sha256>.png`，不再包含 `source`；内容相同的 PNG 只保存一次。
 
 **JsonEM 模型：**
 ```

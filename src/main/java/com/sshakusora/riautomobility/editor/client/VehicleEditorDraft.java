@@ -30,6 +30,7 @@ public final class VehicleEditorDraft {
 
     private final EnumMap<Target, Path> modelFiles = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> displayNames = new EnumMap<>(Target.class);
+    private final EnumMap<Target, String> authors = new EnumMap<>(Target.class);
     private final EnumMap<Target, Boolean> previewReady = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> previewKeys = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> componentPaths = new EnumMap<>(Target.class);
@@ -104,6 +105,7 @@ public final class VehicleEditorDraft {
     public VehicleEditorDraft(AutomobileFrame frame, AutomobileWheel wheel, AutomobileEngine engine) {
         for (Target value : Target.values()) {
             displayNames.put(value, VehicleImportText.string("default_name." + value.path));
+            authors.put(value, "");
             previewReady.put(value, false);
             previewKeys.put(value, UUID.randomUUID().toString().replace("-", ""));
             componentPaths.put(value, generateComponentPath());
@@ -125,12 +127,17 @@ public final class VehicleEditorDraft {
         displayNames.put(target, displayName);
     }
 
+    public String author() {
+        return authors.getOrDefault(target, "");
+    }
+
     public Path modelFile(Target part) {
         return modelFiles.get(part);
     }
 
     public void setModelFile(Target part, Path path) {
         modelFiles.put(part, path);
+        authors.put(part, "");
         previewReady.put(part, false);
         if (part == Target.FRAME) automaticFrameModelSize = true;
         if (part == Target.WHEEL) automaticWheelModelSize = true;
@@ -141,6 +148,10 @@ public final class VehicleEditorDraft {
         previewReady.put(part, false);
         if (part == Target.FRAME) automaticFrameModelSize = false;
         if (part == Target.WHEEL) automaticWheelModelSize = false;
+    }
+
+    void setImportedAuthor(Target part, String author) {
+        authors.put(part, author == null ? "" : author);
     }
 
     public boolean previewReady(Target part) {

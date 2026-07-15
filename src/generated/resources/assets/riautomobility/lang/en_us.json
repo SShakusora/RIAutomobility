@@ -185,6 +185,7 @@
   "message.riautomobility.carpacks.different": "Different: %s.",
   "message.riautomobility.carpacks.mismatch": "Car packs do not match the server.",
   "message.riautomobility.carpacks.missing": "Missing: %s.",
+  "tooltip.riautomobility.component_author": "Author: %s",
   "tooltip.riautomobility.missing_car_pack_resources": "Missing car-pack resources for this component",
   "wheel.riautomobility.dmc12": "DMC12",
   "wheel.riautomobility.standard_formula": "Standard Formula"

@@ -128,7 +128,7 @@ public final class CarPackUploadService {
         if (!request.sha256().matches("[0-9a-f]{64}")) throw new IOException("Invalid SHA-256");
     }
 
-    private static void validateEditorArchive(Path archive, BeginCarPackUploadPacket request) throws IOException {
+    static void validateEditorArchive(Path archive, BeginCarPackUploadPacket request) throws IOException {
         String namespacePrefix = "assets/" + request.namespace() + "/";
         String dataPrefix = "data/" + request.namespace() + "/";
         String expected = dataPrefix + "riautomobility/" + request.target() + "s/"
@@ -181,7 +181,20 @@ public final class CarPackUploadService {
             try (var reader = new InputStreamReader(zip.getInputStream(modelEntry), StandardCharsets.UTF_8)) {
                 modelJson = GsonHelper.parse(reader);
             }
-            BbModelParser.requireEmbeddedPngTextures(BbModelParser.parse(modelJson));
+            var document = BbModelParser.parse(modelJson);
+            for (BbModelParser.ExternalTexture texture : BbModelParser.requireExternalPngTextures(document)) {
+                String textureEntryName = "assets/" + texture.resource().getNamespace()
+                        + "/" + texture.resource().getPath();
+                ZipEntry textureEntry = zip.getEntry(textureEntryName);
+                if (textureEntry == null || textureEntry.isDirectory()) {
+                    throw new IOException("Archive is missing external texture " + texture.resource());
+                }
+                byte[] signature;
+                try (var input = zip.getInputStream(textureEntry)) {
+                    signature = input.readNBytes(8);
+                }
+                BbModelParser.requirePngTextureBytes(texture.name(), signature);
+            }
         } catch (RuntimeException exception) {
             throw new IOException("Vehicle Import Table archive is invalid: " + exception.getMessage(), exception);
         }

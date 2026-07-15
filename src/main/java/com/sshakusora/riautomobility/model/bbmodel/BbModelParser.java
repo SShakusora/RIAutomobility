@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -46,15 +47,40 @@ public final class BbModelParser {
                 throw new IllegalArgumentException("BBModel texture '" + texture.name()
                         + "' contains invalid Base64 data", exception);
             }
-            if (bytes.length < PNG_SIGNATURE.length) {
-                throw new IllegalArgumentException("BBModel texture '" + texture.name()
-                        + "' does not contain a valid PNG image");
+            requirePngTextureBytes(texture.name(), bytes);
+        }
+    }
+
+    public static List<ExternalTexture> requireExternalPngTextures(BbModelData.Document document) {
+        if (document.textures().isEmpty()) {
+            throw new IllegalArgumentException("BBModel must contain at least one external PNG texture");
+        }
+        List<ExternalTexture> textures = new ArrayList<>();
+        for (BbModelData.Texture texture : document.textures()) {
+            if (texture.source() != null && !texture.source().isBlank()) {
+                throw new IllegalArgumentException("RIAuto v2 BBModel texture '" + texture.name()
+                        + "' must not contain embedded image data");
             }
-            for (int index = 0; index < PNG_SIGNATURE.length; index++) {
-                if (bytes[index] != PNG_SIGNATURE[index]) {
-                    throw new IllegalArgumentException("BBModel texture '" + texture.name()
-                            + "' does not contain a valid PNG image");
-                }
+            String path = texture.relativePath().isBlank() ? texture.path() : texture.relativePath();
+            ResourceLocation resource = path.indexOf(':') > 0 ? ResourceLocation.tryParse(path) : null;
+            if (resource == null || !resource.getPath().endsWith(".png")) {
+                throw new IllegalArgumentException("RIAuto v2 BBModel texture '" + texture.name()
+                        + "' must reference an explicit PNG resource id");
+            }
+            textures.add(new ExternalTexture(texture.name(), resource));
+        }
+        return List.copyOf(textures);
+    }
+
+    public static void requirePngTextureBytes(String textureName, byte[] bytes) {
+        if (bytes.length < PNG_SIGNATURE.length) {
+            throw new IllegalArgumentException("BBModel texture '" + textureName
+                    + "' does not contain a valid PNG image");
+        }
+        for (int index = 0; index < PNG_SIGNATURE.length; index++) {
+            if (bytes[index] != PNG_SIGNATURE[index]) {
+                throw new IllegalArgumentException("BBModel texture '" + textureName
+                        + "' does not contain a valid PNG image");
             }
         }
     }
@@ -506,4 +532,6 @@ public final class BbModelParser {
     }
 
     public record Context(int textureWidth, int textureHeight, List<BbModelData.Texture> textures) {}
+
+    public record ExternalTexture(String name, ResourceLocation resource) {}
 }

@@ -1,5 +1,7 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.google.gson.JsonParser;
+import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import net.minecraft.resources.ResourceLocation;
@@ -79,6 +81,12 @@ class VehiclePackBuilderTest {
     void exportFileNameReplacesCharactersUnsupportedByFileManagers() {
         assertEquals("My_Car_Test", VehicleImportScreen.exportFileStem(" My/Car:Test. "));
         assertEquals("_CON", VehicleImportScreen.exportFileStem("CON"));
+    }
+
+    @Test
+    void importedRiautoAuthorSurvivesExportByAnotherPlayer() {
+        assertEquals("PlayerA", VehicleImportScreen.resolveExportAuthor("PlayerA", "PlayerB"));
+        assertEquals("PlayerB", VehicleImportScreen.resolveExportAuthor("", "PlayerB"));
     }
 
     @Test
@@ -199,6 +207,36 @@ class VehiclePackBuilderTest {
                     "assets/riautomobility_preview/textures/entity/automobile/frame/frame_preview.png")).readAllBytes());
             assertArrayEquals(embeddedPngBytes(), zip.getInputStream(zip.getEntry(
                     "assets/riautomobility_preview/textures/entity/automobile/wheel/wheel_preview.png")).readAllBytes());
+        }
+    }
+
+    @Test
+    void exportedRiautoV2StoresTheTextureOnlyAsAnExternalPng() throws IOException {
+        byte[] source = Files.readAllBytes(writeBbModel("v2-wheel.bbmodel"));
+        var exported = BbModelRuntimeSanitizer.externalize(source, "test",
+                "textures/entity/automobile/wheel/test-wheel");
+        var component = new com.google.gson.JsonObject();
+        component.add("model", new com.google.gson.JsonObject());
+        Map<String, byte[]> entries = new java.util.LinkedHashMap<>();
+        VehiclePackBuilder.addV2ModelEntries(
+                entries, component, exported, "test", "wheel", "test-wheel");
+        Path archive = temporaryDirectory.resolve("wheel-v2.riauto");
+        VehiclePackBuilder.writeArchive(archive, entries);
+
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            assertEquals(2, CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
+
+            var modelEntry = zip.stream().filter(entry -> entry.getName().endsWith(".bbmodel"))
+                    .findFirst().orElseThrow();
+            var model = JsonParser.parseReader(new java.io.InputStreamReader(
+                    zip.getInputStream(modelEntry), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            var texture = model.getAsJsonArray("textures").get(0).getAsJsonObject();
+            assertFalse(texture.has("source"));
+            String resource = texture.get("relative_path").getAsString();
+            assertEquals(resource, component.getAsJsonObject("model").get("texture").getAsString());
+            String[] resourceParts = resource.split(":", 2);
+            assertNotNull(zip.getEntry("assets/" + resourceParts[0] + "/" + resourceParts[1]));
+            assertEquals(1, zip.stream().filter(entry -> entry.getName().endsWith(".png")).count());
         }
     }
 

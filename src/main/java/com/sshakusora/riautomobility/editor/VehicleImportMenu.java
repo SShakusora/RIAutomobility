@@ -1,12 +1,12 @@
 package com.sshakusora.riautomobility.editor;
 
+import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.editor.client.VehicleEditorDraft;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.item.AutomobilityItems;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -78,13 +78,15 @@ public final class VehicleImportMenu extends AbstractContainerMenu {
         return !this.output.getItem(0).isEmpty();
     }
 
-    public void exportItem(String target, ResourceLocation componentId, String displayName) {
+    public void exportItem(String target, ResourceLocation componentId, String displayName, String author) {
         if (!this.canPublish || this.hasOutputItem()
                 || !VehicleEditorDraft.GENERATED_NAMESPACE.equals(componentId.getNamespace())
                 || !componentId.getPath().matches(VehicleEditorDraft.GENERATED_COMPONENT_PREFIX + "[0-9a-f]{32}")
                 || displayName == null || displayName.isBlank()
                 || displayName.length() > MAX_EXPORTED_NAME_LENGTH
-                || displayName.chars().anyMatch(Character::isISOControl)) {
+                || displayName.chars().anyMatch(Character::isISOControl)
+                || author == null || author.length() > CarPackArchiveStore.MAX_AUTHOR_LENGTH
+                || author.chars().anyMatch(Character::isISOControl)) {
             return;
         }
         ItemStack stack = switch (target) {
@@ -107,7 +109,8 @@ public final class VehicleImportMenu extends AbstractContainerMenu {
         };
         if (!stack.isEmpty()) {
             stack.setCount(1);
-            stack.setHoverName(Component.literal(displayName).withStyle(style -> style.withItalic(false)));
+            VehicleComponentItemData.setDisplayName(stack, displayName);
+            VehicleComponentItemData.setAuthor(stack, author.strip());
             this.output.setItem(0, stack);
             this.broadcastChanges();
         }

@@ -21,7 +21,8 @@ import java.util.zip.ZipOutputStream;
 
 public final class CarPackArchiveStore {
     public static final String RIAUTO_METADATA_FILE = "riauto.json";
-    public static final int RIAUTO_FORMAT_VERSION = 1;
+    public static final int RIAUTO_FORMAT_VERSION = 2;
+    public static final int MAX_AUTHOR_LENGTH = 256;
     public static final int MAX_ENTRIES = 8192;
     public static final long MAX_UNCOMPRESSED_SIZE = 1024L * 1024L * 1024L;
     public static final long MAX_ENTRY_SIZE = 256L * 1024L * 1024L;
@@ -112,6 +113,20 @@ public final class CarPackArchiveStore {
                 throw new IOException("RIAuto metadata must declare exactly one component");
             }
             return declared.get(0);
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
+        }
+    }
+
+    public static String readAuthor(Path archive) throws IOException {
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
+            if (metadataEntry == null || metadataEntry.isDirectory()) {
+                throw new IOException("RIAuto archive does not contain a root " + RIAUTO_METADATA_FILE);
+            }
+            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
+                return metadataAuthor(JsonParser.parseReader(reader).getAsJsonObject());
+            }
         } catch (RuntimeException exception) {
             throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
@@ -222,8 +237,8 @@ public final class CarPackArchiveStore {
     }
 
     private static void validateRiautoMetadata(JsonObject metadata) throws IOException {
-        if (!metadata.has("format") || !metadata.get("format").isJsonPrimitive()
-                || metadata.get("format").getAsInt() != RIAUTO_FORMAT_VERSION) {
+        int format = readFormatVersion(metadata);
+        if (format != RIAUTO_FORMAT_VERSION) {
             throw new IOException("Unsupported RIAuto format version");
         }
         validateResourceLocation(requireString(metadata, "id"), "id");
@@ -231,6 +246,7 @@ public final class CarPackArchiveStore {
         if (name.isBlank() || name.length() > 80) {
             throw new IOException("RIAuto name must contain 1-80 characters");
         }
+        metadataAuthor(metadata);
         JsonObject components = metadata.has("components") && metadata.get("components").isJsonObject()
                 ? metadata.getAsJsonObject("components") : null;
         if (components == null) {
@@ -240,6 +256,33 @@ public final class CarPackArchiveStore {
                 + (components.has("engines") ? validateComponentIds(components, "engines") : 0);
         if (componentCount != 1) {
             throw new IOException("RIAuto metadata must declare exactly one frame, wheel, or engine component");
+        }
+    }
+
+    private static String metadataAuthor(JsonObject metadata) throws IOException {
+        if (!metadata.has("author")) return "";
+        if (!metadata.get("author").isJsonPrimitive()
+                || !metadata.getAsJsonPrimitive("author").isString()) {
+            throw new IOException("RIAuto metadata field 'author' must be a string");
+        }
+        String author = metadata.get("author").getAsString().strip();
+        if (author.isBlank() || author.length() > MAX_AUTHOR_LENGTH
+                || author.chars().anyMatch(Character::isISOControl)) {
+            throw new IOException("RIAuto author must contain 1-" + MAX_AUTHOR_LENGTH
+                    + " characters without control characters");
+        }
+        return author;
+    }
+
+    private static int readFormatVersion(JsonObject metadata) throws IOException {
+        if (!metadata.has("format") || !metadata.get("format").isJsonPrimitive()
+                || !metadata.getAsJsonPrimitive("format").isNumber()) {
+            throw new IOException("RIAuto metadata field 'format' must be a number");
+        }
+        try {
+            return metadata.getAsJsonPrimitive("format").getAsBigDecimal().intValueExact();
+        } catch (ArithmeticException | NumberFormatException exception) {
+            throw new IOException("RIAuto metadata field 'format' must be an integer", exception);
         }
     }
 

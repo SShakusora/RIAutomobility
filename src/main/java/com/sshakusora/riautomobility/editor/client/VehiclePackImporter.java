@@ -1,11 +1,12 @@
 package com.sshakusora.riautomobility.editor.client;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
 import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
@@ -13,11 +14,16 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 final class VehiclePackImporter {
+    private static final Gson GSON = new Gson();
+    private static final String EMBEDDED_PNG_PREFIX = "data:image/png;base64,";
+
     private VehiclePackImporter() {
     }
 
@@ -48,9 +54,15 @@ final class VehiclePackImporter {
                 if (modelBytes.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
                     throw new IOException("BBModel exceeds " + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes");
                 }
+                modelBytes = embedExternalTextures(zip, modelBytes);
+                if (modelBytes.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
+                    throw new IOException("Editable BBModel exceeds "
+                            + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes after restoring textures");
+                }
                 Files.write(extracted, modelBytes);
                 VehiclePackBuilder.validateSource(extracted);
-                return candidate.imported(metadata.get("name").getAsString(), extracted);
+                String author = metadata.has("author") ? metadata.get("author").getAsString().strip() : "";
+                return candidate.imported(metadata.get("name").getAsString(), author, extracted);
             } catch (IOException | RuntimeException exception) {
                 Files.deleteIfExists(extracted);
                 if (exception instanceof IOException ioException) throw ioException;
@@ -59,6 +71,57 @@ final class VehiclePackImporter {
         } catch (RuntimeException exception) {
             throw new IOException("Invalid RIAuto file: " + exception.getMessage(), exception);
         }
+    }
+
+    private static byte[] embedExternalTextures(ZipFile zip, byte[] modelBytes) throws IOException {
+        JsonObject model;
+        BbModelData.Document document;
+        try {
+            model = JsonParser.parseString(new String(modelBytes, StandardCharsets.UTF_8)).getAsJsonObject();
+            document = BbModelParser.parse(model);
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid RIAuto v2 BBModel: " + exception.getMessage(), exception);
+        }
+
+        List<BbModelParser.ExternalTexture> textures;
+        try {
+            textures = BbModelParser.requireExternalPngTextures(document);
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid RIAuto v2 textures: " + exception.getMessage(), exception);
+        }
+        var textureJson = model.getAsJsonArray("textures");
+        long restoredSizeEstimate = modelBytes.length;
+        for (int index = 0; index < textures.size(); index++) {
+            BbModelParser.ExternalTexture texture = textures.get(index);
+            String entryName = "assets/" + texture.resource().getNamespace() + "/" + texture.resource().getPath();
+            ZipEntry entry = zip.getEntry(entryName);
+            if (entry == null || entry.isDirectory()) {
+                throw new IOException("RIAuto v2 is missing external texture " + texture.resource());
+            }
+            byte[] png;
+            try (var input = zip.getInputStream(entry)) {
+                png = input.readNBytes((int) VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + 1);
+            }
+            if (png.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
+                throw new IOException("RIAuto v2 texture exceeds " + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes");
+            }
+            restoredSizeEstimate += 4L * ((png.length + 2L) / 3L);
+            if (restoredSizeEstimate > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
+                throw new IOException("Editable BBModel exceeds "
+                        + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes after restoring textures");
+            }
+            try {
+                BbModelParser.requirePngTextureBytes(texture.name(), png);
+            } catch (IllegalArgumentException exception) {
+                throw new IOException(exception.getMessage(), exception);
+            }
+            JsonObject textureObject = textureJson.get(index).getAsJsonObject();
+            textureObject.remove("path");
+            textureObject.remove("relative_path");
+            textureObject.addProperty("source", EMBEDDED_PNG_PREFIX + Base64.getEncoder().encodeToString(png));
+            textureObject.addProperty("internal", true);
+        }
+        return GSON.toJson(model).getBytes(StandardCharsets.UTF_8);
     }
 
     private static Candidate readCandidate(ZipFile zip, CarPackArchiveStore.DeclaredComponent declared) throws IOException {
@@ -87,7 +150,7 @@ final class VehiclePackImporter {
         }
     }
 
-    record ImportedComponent(VehicleEditorDraft.Target target, String displayName, Path modelFile,
+    record ImportedComponent(VehicleEditorDraft.Target target, String displayName, String author, Path modelFile,
                              FrameSpec frame, WheelSpec wheel, EngineSpec engine) {
         void applyTo(VehicleEditorDraft draft) {
             switch (target) {
@@ -95,6 +158,7 @@ final class VehiclePackImporter {
                 case WHEEL -> draft.importWheel(wheel, displayName, modelFile);
                 case ENGINE -> draft.importEngine(engine, displayName, modelFile);
             }
+            draft.setImportedAuthor(target, author);
         }
     }
 
@@ -109,10 +173,10 @@ final class VehiclePackImporter {
             return engine.model();
         }
 
-        ImportedComponent imported(String displayName, Path modelFile) {
+        ImportedComponent imported(String displayName, String author, Path modelFile) {
             VehicleEditorDraft.Target target = frame != null ? VehicleEditorDraft.Target.FRAME
                     : wheel != null ? VehicleEditorDraft.Target.WHEEL : VehicleEditorDraft.Target.ENGINE;
-            return new ImportedComponent(target, displayName, modelFile, frame, wheel, engine);
+            return new ImportedComponent(target, displayName, author, modelFile, frame, wheel, engine);
         }
     }
 }

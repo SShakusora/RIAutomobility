@@ -1,5 +1,7 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -9,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Base64;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -32,9 +35,12 @@ class VehiclePackImporterTest {
 
         assertEquals(VehicleEditorDraft.Target.FRAME, imported.target());
         assertEquals("Imported Vehicle", imported.displayName());
+        assertEquals("OriginalPlayer", imported.author());
         assertEquals(1.25F, imported.frame().weight());
         assertTrue(Files.isRegularFile(imported.modelFile()));
-        assertEquals(bbModel(), Files.readString(imported.modelFile()));
+        JsonObject importedModel = JsonParser.parseString(Files.readString(imported.modelFile())).getAsJsonObject();
+        assertEquals(EMBEDDED_PNG, importedModel.getAsJsonArray("textures").get(0)
+                .getAsJsonObject().get("source").getAsString());
     }
 
     @Test
@@ -78,20 +84,92 @@ class VehiclePackImporterTest {
         assertTrue(exception.getMessage().contains("exactly one"));
     }
 
+    @Test
+    void restoresExternalV2TexturesForEditing() throws IOException {
+        Path archive = v2Archive(true);
+
+        var imported = VehiclePackImporter.importComponent(
+                archive, temporaryDirectory.resolve("v2-imports"));
+
+        String importedModel = Files.readString(imported.modelFile());
+        var texture = com.google.gson.JsonParser.parseString(importedModel).getAsJsonObject()
+                .getAsJsonArray("textures").get(0).getAsJsonObject();
+        assertEquals(EMBEDDED_PNG, texture.get("source").getAsString());
+        assertTrue(texture.get("internal").getAsBoolean());
+        assertFalse(texture.has("relative_path"));
+    }
+
+    @Test
+    void rejectsV2ModelsWhoseExternalTextureIsMissing() throws IOException {
+        Path archive = v2Archive(false);
+
+        IOException exception = assertThrows(IOException.class, () -> VehiclePackImporter.importComponent(
+                archive, temporaryDirectory.resolve("missing-v2-imports")));
+
+        assertTrue(exception.getMessage().contains("missing external texture"));
+    }
+
     private Path archive(Map<String, String> frameComponents, Map<String, String> bbModels) throws IOException {
         String frameIds = frameComponents.keySet().stream().map(id -> "\"" + id + "\"")
                 .reduce((left, right) -> left + "," + right).orElse("");
-        Map<String, String> entries = new LinkedHashMap<>();
-        entries.put("riauto.json", "{\"format\":1,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
-                + "\"components\":{\"frames\":[" + frameIds + "],\"wheels\":[],\"engines\":[]}}");
-        frameComponents.forEach((id, json) -> entries.put(componentEntry(id), json));
-        bbModels.forEach((id, model) -> entries.put(modelEntry(id), model));
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("riauto.json", ("{\"format\":2,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
+                + "\"author\":\"OriginalPlayer\","
+                + "\"components\":{\"frames\":[" + frameIds + "],\"wheels\":[],\"engines\":[]}}")
+                .getBytes(StandardCharsets.UTF_8));
+        frameComponents.forEach((id, json) -> entries.put(componentEntry(id), json.getBytes(StandardCharsets.UTF_8)));
+        bbModels.forEach((id, modelJson) -> addExternalModel(entries, id, modelJson));
 
         Path archive = temporaryDirectory.resolve("test-" + frameComponents.size() + "-" + bbModels.size() + ".riauto");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive), StandardCharsets.UTF_8)) {
-            for (Map.Entry<String, String> entry : entries.entrySet()) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
                 zip.putNextEntry(new ZipEntry(entry.getKey()));
-                zip.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return archive;
+    }
+
+    private static void addExternalModel(Map<String, byte[]> entries, String id, String modelJson) {
+        String[] parts = id.split(":", 2);
+        JsonObject model = JsonParser.parseString(modelJson).getAsJsonObject();
+        var textures = model.getAsJsonArray("textures");
+        for (int index = 0; index < textures.size(); index++) {
+            JsonObject texture = textures.get(index).getAsJsonObject();
+            byte[] png = Base64.getDecoder().decode(
+                    texture.remove("source").getAsString().substring("data:image/png;base64,".length()));
+            String texturePath = "textures/entity/automobile/frame/" + parts[1] + "/texture-" + index + ".png";
+            texture.addProperty("relative_path", parts[0] + ":" + texturePath);
+            entries.put("assets/" + parts[0] + "/" + texturePath, png);
+        }
+        entries.put(modelEntry(id), model.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private Path v2Archive(boolean includeTexture) throws IOException {
+        String textureResource = "sample:textures/entity/automobile/frame/frame/texture.png";
+        String model = "{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
+                + "\"textures\":[{\"uuid\":\"body\",\"name\":\"body.png\",\"relative_path\":\""
+                + textureResource + "\"}],\"elements\":[],\"outliner\":[]}";
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("riauto.json", ("{\"format\":2,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
+                + "\"author\":\"OriginalPlayer\","
+                + "\"components\":{\"frames\":[\"sample:frame\"],\"wheels\":[],\"engines\":[]}}")
+                .getBytes(StandardCharsets.UTF_8));
+        entries.put(componentEntry("sample:frame"),
+                frameJson("sample:models/entity/automobile/frame/frame.bbmodel", 1.25F)
+                        .getBytes(StandardCharsets.UTF_8));
+        entries.put(modelEntry("sample:frame"), model.getBytes(StandardCharsets.UTF_8));
+        if (includeTexture) {
+            entries.put("assets/sample/textures/entity/automobile/frame/frame/texture.png",
+                    Base64.getDecoder().decode(EMBEDDED_PNG.substring("data:image/png;base64,".length())));
+        }
+
+        Path archive = temporaryDirectory.resolve("v2-" + includeTexture + ".riauto");
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive), StandardCharsets.UTF_8)) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
                 zip.closeEntry();
             }
         }

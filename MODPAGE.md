@@ -97,8 +97,8 @@ Whether you are a modeling beginner or veteran, RIAutomobility has the right too
 Want to add exclusive vehicles for your modpack or server? RIAutomobility makes it simple:
 
 1. Write one frame, wheel, or engine definition under the component source's `data/` directory
-2. Put that component's models and textures under its `assets/` directory
-3. Add a `riauto.json` manifest that declares exactly that one component
+2. Put that component's models and textures under its `assets/` directory; the first BBModel export records the exporting Minecraft player as author, while later RIAuto and item exports preserve that informational attribution
+3. Add a format-2 `riauto.json` manifest that declares exactly that one component; BBModel PNG textures are stored once as external assets
 4. ZIP the contents, rename the archive to `.riauto`, and place it in the game directory's `riautomobility/` folder
 
 For detailed JSON format documentation, field explanations, and a complete example, please refer to the [README](https://github.com/your-username/RIAutomobility#car-pack-guide) in the GitHub repository.
@@ -207,8 +207,8 @@ RIAutomobility 为车辆添加了真正的多座位支持。你可以邀请好�
 想要为自己的整合包或服务器添加专属载具？RIAutomobility 让这一切变得简单：
 
 1. 在组件源码的 `data/` 目录中编写一个车架、车轮或引擎定义
-2. 在其 `assets/` 目录中放入该组件的模型和贴图文件
-3. 添加只声明这一个组件的 `riauto.json` 清单
+2. 在其 `assets/` 目录中放入该组件的模型和贴图文件；BBModel 首次导出时记录当前 Minecraft 玩家，后续 RIAuto 和物品导出保留这项署名信息
+3. 添加只声明这一个组件的格式 2 `riauto.json` 清单；BBModel PNG 纹理只作为外置资源保存一次
 4. 压缩目录内容并将归档改名为 `.riauto`，再放入游戏目录的 `riautomobility/` 文件夹
 
 详细的 JSON 格式说明、字段解释和完整示例，请参阅 GitHub 仓库中的 [README](https://github.com/your-username/RIAutomobility#车包教程)。

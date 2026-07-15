@@ -83,6 +83,7 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("key.riautomobility.boarding_as_passenger", "Board / Switch Seat");
             add("itemGroup.riautomobility.components", "RIAutomobility");
             add("tooltip.riautomobility.missing_car_pack_resources", "Missing car-pack resources for this component");
+            add("tooltip.riautomobility.component_author", "Author: %s");
             add("entity.riautomobility.riautomobile", "RIAutomobile");
             add("entity.riautomobility.hitbox", "RIAutomobile");
             add("container.riautomobility.hitbox", "Box");
@@ -136,6 +137,7 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("key.riautomobility.boarding_as_passenger", "上车 / 切换座位");
             add("itemGroup.riautomobility.components", "飞天奇匠");
             add("tooltip.riautomobility.missing_car_pack_resources", "该组件缺少对应车包资源");
+            add("tooltip.riautomobility.component_author", "作者：%s");
             add("entity.riautomobility.riautomobile", "机动车");
             add("entity.riautomobility.hitbox", "机动车");
             add("container.riautomobility.hitbox", "后备箱");
