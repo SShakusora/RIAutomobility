@@ -9,16 +9,37 @@ import software.bernie.geckolib.core.molang.expressions.MolangValue;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.DoubleSupplier;
 
 public final class BbAnimationPlayer {
     private static final Map<String, MolangValue> EXPRESSIONS = new ConcurrentHashMap<>();
+    private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
+    private static final QueryState QUERY_STATE = new QueryState();
+    private static final DoubleSupplier ANIMATION_TIME = () -> QUERY_STATE.animationTime;
+    private static final DoubleSupplier LIFE_TIME = () -> QUERY_STATE.lifeTime;
+    private static final DoubleSupplier ON_GROUND = () -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.automobileOnGround() ? 1 : 0;
+    private static final DoubleSupplier STEERING = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getSteering(QUERY_STATE.tickDelta);
+    private static final DoubleSupplier WHEEL_ANGLE = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getWheelAngle(QUERY_STATE.tickDelta);
+    private static final DoubleSupplier ENGINE_RUNNING = () -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.engineRunning() ? 1 : 0;
+    private static final DoubleSupplier TURBO_CHARGE = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getTurboCharge();
+    private static final DoubleSupplier BOOST_TIMER = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getBoostTimer();
+    private static final ThreadLocal<AnimationScratch> SAMPLE_SCRATCH = ThreadLocal.withInitial(AnimationScratch::new);
 
-    private BbAnimationPlayer() {}
+    private BbAnimationPlayer() {
+    }
 
     public static Map<String, Transform> sample(BbModelData.Document document, String requestedAnimation, BbRenderContext context) {
         if (document.animations().isEmpty()) {
             return Map.of();
         }
+        if (context != null) {
+            return context.animationSample(document, requestedAnimation);
+        }
+        return sampleUncached(document, requestedAnimation, null);
+    }
+
+    static Map<String, Transform> sampleUncached(BbModelData.Document document, String requestedAnimation,
+                                                  BbRenderContext context) {
         BbModelData.Animation animation = selectAnimation(document, requestedAnimation);
         if (animation == null) {
             return Map.of();
@@ -30,32 +51,48 @@ public final class BbAnimationPlayer {
         float time = animationTime(animation, absoluteTime);
         configureMolang(automobile, time, absoluteTime, tickDelta);
 
-        Map<String, MutableTransform> sampled = new HashMap<>();
+        List<PreparedAnimator> animators = prepared(animation);
+        Map<String, Transform> sampled = new HashMap<>(Math.max(4, animators.size() * 2));
+        for (PreparedAnimator animator : animators) {
+            Vector3f position = sampleChannel(animator.position(), time, new Vector3f());
+            Vector3f rotation = sampleChannel(animator.rotation(), time, new Vector3f());
+            Vector3f scale = sampleChannel(animator.scale(), time, new Vector3f(1, 1, 1));
+            sampled.put(animator.target(), new Transform(position, rotation, scale));
+        }
+        return Map.copyOf(sampled);
+    }
+
+    static void clearCache() {
+        synchronized (PREPARED) {
+            PREPARED.clear();
+        }
+    }
+
+    private static List<PreparedAnimator> prepared(BbModelData.Animation animation) {
+        synchronized (PREPARED) {
+            return PREPARED.computeIfAbsent(animation, BbAnimationPlayer::prepare);
+        }
+    }
+
+    private static List<PreparedAnimator> prepare(BbModelData.Animation animation) {
+        List<PreparedAnimator> prepared = new ArrayList<>();
         animation.animators().forEach((target, animator) -> {
-            if (!"bone".equals(animator.type()) && !animator.type().isBlank()) {
-                return;
-            }
-            MutableTransform transform = sampled.computeIfAbsent(target, ignored -> new MutableTransform());
+            if (!"bone".equals(animator.type()) && !animator.type().isBlank()) return;
             Map<String, List<BbModelData.Keyframe>> channels = new HashMap<>();
             for (BbModelData.Keyframe keyframe : animator.keyframes()) {
                 channels.computeIfAbsent(keyframe.channel(), ignored -> new ArrayList<>()).add(keyframe);
             }
-            channels.forEach((channel, keyframes) -> {
-                keyframes.sort(Comparator.comparingDouble(BbModelData.Keyframe::time));
-                Vector3f value = sampleChannel(keyframes, time, "scale".equals(channel) ? new Vector3f(1, 1, 1) : new Vector3f());
-                switch (channel) {
-                    case "position" -> transform.position.set(value);
-                    case "rotation" -> transform.rotation.set(value);
-                    case "scale" -> transform.scale.set(value);
-                    default -> {
-                    }
-                }
-            });
+            prepared.add(new PreparedAnimator(target,
+                    sorted(channels.get("position")),
+                    sorted(channels.get("rotation")),
+                    sorted(channels.get("scale"))));
         });
+        return List.copyOf(prepared);
+    }
 
-        Map<String, Transform> result = new HashMap<>();
-        sampled.forEach((uuid, transform) -> result.put(uuid, transform.freeze()));
-        return Map.copyOf(result);
+    private static List<BbModelData.Keyframe> sorted(List<BbModelData.Keyframe> keyframes) {
+        if (keyframes == null || keyframes.isEmpty()) return List.of();
+        return keyframes.stream().sorted(Comparator.comparingDouble(BbModelData.Keyframe::time)).toList();
     }
 
     private static BbModelData.Animation selectAnimation(BbModelData.Document document, String requested) {
@@ -81,27 +118,36 @@ public final class BbAnimationPlayer {
     }
 
     private static void configureMolang(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
+        QUERY_STATE.automobile = automobile;
+        QUERY_STATE.animationTime = animationTime;
+        QUERY_STATE.lifeTime = lifeTime;
+        QUERY_STATE.tickDelta = tickDelta;
         MolangParser parser = MolangParser.INSTANCE;
-        parser.setValue("query.anim_time", () -> animationTime);
-        parser.setValue("query.life_time", () -> lifeTime);
-        parser.setValue("query.is_on_ground", () -> automobile != null && automobile.automobileOnGround() ? 1 : 0);
-        parser.setValue("query.vehicle_steering", () -> automobile == null ? 0 : automobile.getSteering(tickDelta));
-        parser.setValue("query.vehicle_wheel_angle", () -> automobile == null ? 0 : automobile.getWheelAngle(tickDelta));
-        parser.setValue("query.vehicle_engine_running", () -> automobile != null && automobile.engineRunning() ? 1 : 0);
-        parser.setValue("query.vehicle_turbo_charge", () -> automobile == null ? 0 : automobile.getTurboCharge());
-        parser.setValue("query.vehicle_boost_timer", () -> automobile == null ? 0 : automobile.getBoostTimer());
+        parser.setValue("query.anim_time", ANIMATION_TIME);
+        parser.setValue("query.life_time", LIFE_TIME);
+        parser.setValue("query.is_on_ground", ON_GROUND);
+        parser.setValue("query.vehicle_steering", STEERING);
+        parser.setValue("query.vehicle_wheel_angle", WHEEL_ANGLE);
+        parser.setValue("query.vehicle_engine_running", ENGINE_RUNNING);
+        parser.setValue("query.vehicle_turbo_charge", TURBO_CHARGE);
+        parser.setValue("query.vehicle_boost_timer", BOOST_TIMER);
     }
 
     static Vector3f sampleChannel(List<BbModelData.Keyframe> keyframes, float time, Vector3f defaultValue) {
+        return sampleChannelInto(keyframes, time, defaultValue, SAMPLE_SCRATCH.get());
+    }
+
+    private static Vector3f sampleChannelInto(List<BbModelData.Keyframe> keyframes, float time,
+                                              Vector3f output, AnimationScratch scratch) {
         if (keyframes.isEmpty()) {
-            return defaultValue;
+            return output;
         }
         if (time <= keyframes.get(0).time()) {
-            return evaluate(keyframes.get(0), 0);
+            return evaluateInto(keyframes.get(0), 0, output);
         }
         if (time >= keyframes.get(keyframes.size() - 1).time()) {
             BbModelData.Keyframe last = keyframes.get(keyframes.size() - 1);
-            return evaluate(last, last.dataPoints().size() - 1);
+            return evaluateInto(last, last.dataPoints().size() - 1, output);
         }
 
         int nextIndex = 1;
@@ -113,25 +159,28 @@ public final class BbAnimationPlayer {
         BbModelData.Keyframe next = keyframes.get(nextIndex);
         float span = next.time() - previous.time();
         float delta = span <= 0 ? 0 : (time - previous.time()) / span;
-        Vector3f a = evaluate(previous, Math.min(1, previous.dataPoints().size() - 1));
-        Vector3f b = evaluate(next, 0);
+        Vector3f a = evaluateInto(previous, Math.min(1, previous.dataPoints().size() - 1), scratch.a);
+        Vector3f b = evaluateInto(next, 0, scratch.b);
         return switch (previous.interpolation().toLowerCase()) {
-            case "step" -> a;
-            case "catmullrom" -> catmullRom(
-                    previousIndex > 0 ? evaluate(keyframes.get(previousIndex - 1), Math.min(1, keyframes.get(previousIndex - 1).dataPoints().size() - 1)) : a,
-                    a,
-                    b,
-                    nextIndex + 1 < keyframes.size() ? evaluate(keyframes.get(nextIndex + 1), 0) : b,
-                    delta
-            );
-            case "bezier" -> bezier(previous, next, a, b, time);
-            default -> a.lerp(b, delta, new Vector3f());
+            case "step" -> output.set(a);
+            case "catmullrom" -> catmullRomInto(
+                    previousIndex > 0
+                            ? evaluateInto(keyframes.get(previousIndex - 1),
+                            Math.min(1, keyframes.get(previousIndex - 1).dataPoints().size() - 1), scratch.c)
+                            : a,
+                    a, b,
+                    nextIndex + 1 < keyframes.size()
+                            ? evaluateInto(keyframes.get(nextIndex + 1), 0, scratch.d)
+                            : b,
+                    delta, output);
+            case "bezier" -> bezierInto(previous, next, a, b, time, output);
+            default -> output.set(a).lerp(b, delta);
         };
     }
 
-    private static Vector3f evaluate(BbModelData.Keyframe keyframe, int pointIndex) {
+    private static Vector3f evaluateInto(BbModelData.Keyframe keyframe, int pointIndex, Vector3f output) {
         BbModelData.DataPoint point = keyframe.dataPoints().get(Math.max(0, Math.min(pointIndex, keyframe.dataPoints().size() - 1)));
-        return new Vector3f((float) evaluate(point.x()), (float) evaluate(point.y()), (float) evaluate(point.z()));
+        return output.set((float) evaluate(point.x()), (float) evaluate(point.y()), (float) evaluate(point.z()));
     }
 
     private static double evaluate(JsonElement value) {
@@ -156,18 +205,20 @@ public final class BbAnimationPlayer {
         }
     }
 
-    private static Vector3f catmullRom(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3, float t) {
+    private static Vector3f catmullRomInto(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3,
+                                          float t, Vector3f output) {
         float t2 = t * t;
         float t3 = t2 * t;
-        return new Vector3f(
+        return output.set(
                 0.5F * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
                 0.5F * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
                 0.5F * ((2 * p1.z) + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3)
         );
     }
 
-    private static Vector3f bezier(BbModelData.Keyframe previous, BbModelData.Keyframe next, Vector3f a, Vector3f b, float time) {
-        return new Vector3f(
+    private static Vector3f bezierInto(BbModelData.Keyframe previous, BbModelData.Keyframe next,
+                                       Vector3f a, Vector3f b, float time, Vector3f output) {
+        return output.set(
                 bezierAxis(previous, next, a.x, b.x, time, 0),
                 bezierAxis(previous, next, a.y, b.y, time, 1),
                 bezierAxis(previous, next, a.z, b.z, time, 2)
@@ -224,14 +275,24 @@ public final class BbAnimationPlayer {
         public static final Transform IDENTITY = new Transform(new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1));
     }
 
-    private static final class MutableTransform {
-        private final Vector3f position = new Vector3f();
-        private final Vector3f rotation = new Vector3f();
-        private final Vector3f scale = new Vector3f(1, 1, 1);
+    private record PreparedAnimator(String target,
+                                    List<BbModelData.Keyframe> position,
+                                    List<BbModelData.Keyframe> rotation,
+                                    List<BbModelData.Keyframe> scale) {
+    }
 
-        private Transform freeze() {
-            return new Transform(new Vector3f(position), new Vector3f(rotation), new Vector3f(scale));
-        }
+    private static final class QueryState {
+        private RenderableAutomobile automobile;
+        private float animationTime;
+        private float lifeTime;
+        private float tickDelta;
+    }
+
+    private static final class AnimationScratch {
+        private final Vector3f a = new Vector3f();
+        private final Vector3f b = new Vector3f();
+        private final Vector3f c = new Vector3f();
+        private final Vector3f d = new Vector3f();
     }
 
     private static final class InvalidMolangException extends RuntimeException {

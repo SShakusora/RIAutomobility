@@ -1,8 +1,8 @@
-// 1.20.1	2026-07-14T22:58:26.269272	Vehicle Import GUI artist template
+// 1.20.1	2026-07-15T12:02:53.5025944	Vehicle Import GUI artist template
 5482d18b89634d25346ff1a823812908dd4f2be8 ../../../art/vehicle_import_gui/README.md
 ff4bc081dc9bb79d706bc5ab9b2c35264389b4c3 ../../../art/vehicle_import_gui/vehicle_import.png.mcmeta
 8cd90f8a2485023a3e3e3425037efc0d4efc89bd ../../../art/vehicle_import_gui/vehicle_import_atlas.json
-56cd67d88b0faa1f644637ef0dcef87428b8ef08 ../../../art/vehicle_import_gui/vehicle_import_guide.png
+243d0289f36f4d569c735428518fe939d98b96cb ../../../art/vehicle_import_gui/vehicle_import_guide.png
 59b254603d4fc6db642fcb1521e9cafdb3e35a28 ../../../art/vehicle_import_gui/vehicle_import_template.png
 59b254603d4fc6db642fcb1521e9cafdb3e35a28 assets/riautomobility/textures/gui/vehicle_import_template.png
 ff4bc081dc9bb79d706bc5ab9b2c35264389b4c3 assets/riautomobility/textures/gui/vehicle_import_template.png.mcmeta

@@ -6,6 +6,7 @@ import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileModelsAccessor;
+import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.model.bbmodel.DynamicBbModel;
 import com.sshakusora.riautomobility.model.frame.DoubleMotorcarFrameModel;
@@ -279,6 +280,8 @@ public class RIAutomobileModels {
         if (renderContext == null) {
             return;
         }
+
+        BbInstancedRenderer.clearGpuResources();
 
         Map<ResourceLocation, Function<EntityRendererProvider.Context, Model>> providers = AutomobileModelsAccessor.riautomobility$getModelProviders();
         Map<ResourceLocation, Model> models = AutomobileModelsAccessor.riautomobility$getModels();

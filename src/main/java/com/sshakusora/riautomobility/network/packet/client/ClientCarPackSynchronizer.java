@@ -191,7 +191,10 @@ public final class ClientCarPackSynchronizer {
         CarPackManager.clearClientResourcePacks();
         ClientCarPackResources.uninstall();
         Minecraft minecraft = Minecraft.getInstance();
-        SyncCustomComponentsClientHandler.applyComponents(minecraft, Map.of(), Map.of(), Map.of());
+        // The integrated server shares these registries and may still be saving the world.
+        if (!minecraft.hasSingleplayerServer()) {
+            SyncCustomComponentsClientHandler.applyComponents(minecraft, Map.of(), Map.of(), Map.of());
+        }
         CACHE_IO.execute(() -> cleanup(previous));
     }
 

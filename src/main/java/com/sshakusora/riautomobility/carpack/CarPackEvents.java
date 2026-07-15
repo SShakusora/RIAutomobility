@@ -8,7 +8,7 @@ import com.sshakusora.riautomobility.network.packet.SyncCustomComponentsPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.NetworkDirection;
@@ -27,7 +27,7 @@ public final class CarPackEvents {
         }
 
         @SubscribeEvent
-        public static void loadCarPacks(ServerStartedEvent event) {
+        public static void loadCarPacks(ServerAboutToStartEvent event) {
             CarPackRuntime.reloadServer();
         }
 

@@ -29,7 +29,8 @@ public final class BbModelRepository {
     private static volatile Map<ResourceLocation, PixelShape> TEXTURE_SHAPES = Map.of();
     private static final List<ResourceLocation> DYNAMIC_TEXTURE_IDS = new ArrayList<>();
 
-    private BbModelRepository() {}
+    private BbModelRepository() {
+    }
 
     public static synchronized void register(FrameSpec.ModelSpec spec) {
         if (spec.bbModel() == null) {
@@ -69,6 +70,7 @@ public final class BbModelRepository {
     }
 
     public static void reload(ResourceManager manager) {
+        BbAnimationPlayer.clearCache();
         Map<ResourceLocation, List<FrameSpec.ModelSpec>> registered = new LinkedHashMap<>();
         synchronized (BbModelRepository.class) {
             REGISTERED.forEach((location, specs) -> registered.put(location, List.copyOf(specs)));
@@ -294,7 +296,8 @@ public final class BbModelRepository {
         }
     }
 
-    public record ResolvedTexture(ResourceLocation location, int uvWidth, int uvHeight, String renderMode) {}
+    public record ResolvedTexture(ResourceLocation location, int uvWidth, int uvHeight, String renderMode) {
+    }
 
     private record RegistrationKey(ResourceLocation resource, ResourceLocation modelId) {
         static RegistrationKey of(FrameSpec.ModelSpec spec) {

@@ -13,10 +13,7 @@ import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 
 import javax.imageio.ImageIO;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -73,7 +70,7 @@ public final class VehicleImportGuiTemplateProvider implements DataProvider {
                 VehicleImportGuiAtlas.SIZE, VehicleImportGuiAtlas.SIZE, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = image.createGraphics();
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-        graphics.setComposite(java.awt.AlphaComposite.Src);
+        graphics.setComposite(AlphaComposite.Src);
 
         panel(graphics, VehicleImportGuiAtlas.Sprite.SCREEN, 0xF0181B20);
         panel(graphics, VehicleImportGuiAtlas.Sprite.SIDEBAR, 0xFF262A31);

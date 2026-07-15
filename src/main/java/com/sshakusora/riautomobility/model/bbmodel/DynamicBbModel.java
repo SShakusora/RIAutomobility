@@ -9,12 +9,15 @@ import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import org.joml.*;
 import org.slf4j.Logger;
 
 import java.lang.Math;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -28,6 +31,13 @@ public final class DynamicBbModel extends Model {
     private final Model fallbackModel;
     private final ResourceLocation componentId;
     private final Consumer<ResourceLocation> missingCallback;
+    private final Quaternionf modelRotation;
+    private final RenderScratch renderScratch = new RenderScratch();
+    private BbModelData.Document compiledDocument;
+    private Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> compiledGeometry = Map.of();
+    private Map<BbModelData.Node, BbCompiledGeometry.NodeTransform> compiledTransforms = Map.of();
+    private BbCompiledGeometry.StaticGeometry staticGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
+    private boolean staticModel;
     private boolean loggedBroken;
 
     public DynamicBbModel(ResourceLocation componentId, FrameSpec.ModelSpec spec, Model fallbackModel, Consumer<ResourceLocation> missingCallback) {
@@ -37,6 +47,7 @@ public final class DynamicBbModel extends Model {
         this.fallbackModel = fallbackModel;
         this.componentId = componentId;
         this.missingCallback = missingCallback;
+        this.modelRotation = new Quaternionf().rotationY((float) Math.toRadians(spec.rotationY()));
     }
 
     @Override
@@ -49,18 +60,24 @@ public final class DynamicBbModel extends Model {
         }
 
         try {
+            prepareGeometry(document);
             BbRenderContext context = BbRenderContext.current();
+            if (this.staticModel) {
+                renderStatic(poseStack.last(), context, defaultConsumer, packedLight, packedOverlay,
+                        red, green, blue, alpha);
+                RIAutomobileModels.clearMissingComponent(this.componentId);
+                return;
+            }
             Map<String, BbAnimationPlayer.Transform> animations = BbAnimationPlayer.sample(document, this.spec.bbAnimation(), context);
-            poseStack.pushPose();
-            try {
-                if (this.spec.rotationY() != 0.0F) {
-                    poseStack.mulPose(new Quaternionf().rotationY((float) Math.toRadians(this.spec.rotationY())));
-                }
-                for (BbModelData.Node root : document.roots()) {
-                    renderNode(root, new Vector3f(), document, animations, context, poseStack, defaultConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-                }
-            } finally {
-                poseStack.popPose();
+            Matrix4f rootPose = this.renderScratch.pose(0).set(poseStack.last().pose());
+            Matrix3f rootNormal = this.renderScratch.normal(0).set(poseStack.last().normal());
+            if (this.spec.rotationY() != 0.0F) {
+                rootPose.rotate(this.modelRotation);
+                rootNormal.rotate(this.modelRotation);
+            }
+            for (BbModelData.Node root : document.roots()) {
+                renderNode(root, animations, context, rootPose, rootNormal, 1, defaultConsumer,
+                        packedLight, packedOverlay, red, green, blue, alpha);
             }
             RIAutomobileModels.clearMissingComponent(this.componentId);
         } catch (RuntimeException exception) {
@@ -69,174 +86,226 @@ public final class DynamicBbModel extends Model {
         }
     }
 
-    private void renderNode(BbModelData.Node node, Vector3f parentOrigin, BbModelData.Document document, Map<String, BbAnimationPlayer.Transform> animations, BbRenderContext context, PoseStack poseStack, VertexConsumer defaultConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-        if (!node.visible()) {
-            return;
-        }
+    private void renderNode(BbModelData.Node node, Map<String, BbAnimationPlayer.Transform> animations,
+                            BbRenderContext context, Matrix4f parentPose, Matrix3f parentNormal, int depth,
+                            VertexConsumer defaultConsumer,
+                            int light, int overlay, float red, float green, float blue, float alpha) {
+        if (!node.visible()) return;
         BbAnimationPlayer.Transform animation = animations.getOrDefault(node.uuid(), BbAnimationPlayer.Transform.IDENTITY);
-        poseStack.pushPose();
-        try {
-            Vector3f translation = BbCoordinateSystem.position(
-                    new Vector3f(node.origin()).sub(parentOrigin).add(animation.position())
-            ).mul(PIXEL);
-            poseStack.translate(translation.x, translation.y, translation.z);
-            Vector3f rotation = BbCoordinateSystem.rotation(
-                    new Vector3f(node.rotation()).add(animation.rotation())
-            );
-            poseStack.mulPose(new Quaternionf().rotationZYX(
+        BbCompiledGeometry.NodeTransform transform = this.compiledTransforms.get(node);
+        Matrix4f pose = this.renderScratch.pose(depth).set(parentPose);
+        Matrix3f normal = this.renderScratch.normal(depth).set(parentNormal);
+        float scaleX;
+        float scaleY;
+        float scaleZ;
+        if (animation == BbAnimationPlayer.Transform.IDENTITY) {
+            pose.translate(transform.translation()).rotate(transform.quaternion());
+            normal.rotate(transform.quaternion());
+            scaleX = transform.scale().x;
+            scaleY = transform.scale().y;
+            scaleZ = transform.scale().z;
+        } else {
+            Vector3f animatedPosition = animation.position();
+            Vector3f translation = this.renderScratch.translation
+                    .set(animatedPosition.x, -animatedPosition.y, animatedPosition.z)
+                    .mul(PIXEL).add(transform.translation());
+            Vector3f animatedRotation = animation.rotation();
+            Vector3f rotation = this.renderScratch.rotation
+                    .set(-animatedRotation.x, animatedRotation.y, -animatedRotation.z)
+                    .add(transform.rotation());
+            Quaternionf quaternion = this.renderScratch.quaternion.rotationZYX(
                     (float) Math.toRadians(rotation.z),
                     (float) Math.toRadians(rotation.y),
-                    (float) Math.toRadians(rotation.x)
-            ));
-            boolean textureMesh = node instanceof BbModelData.ElementNode element && element.geometry() instanceof BbModelData.TextureMesh;
-            poseStack.scale(
-                    (textureMesh ? 1.0F : node.scale().x) * animation.scale().x,
-                    (textureMesh ? 1.0F : node.scale().y) * animation.scale().y,
-                    (textureMesh ? 1.0F : node.scale().z) * animation.scale().z
-            );
+                    (float) Math.toRadians(rotation.x));
+            pose.translate(translation).rotate(quaternion);
+            normal.rotate(quaternion);
+            scaleX = transform.scale().x * animation.scale().x;
+            scaleY = transform.scale().y * animation.scale().y;
+            scaleZ = transform.scale().z * animation.scale().z;
+        }
+        pose.scale(scaleX, scaleY, scaleZ);
+        scaleNormal(normal, scaleX, scaleY, scaleZ);
 
-            if (node instanceof BbModelData.GroupNode group) {
-                for (BbModelData.Node child : group.children()) {
-                    renderNode(child, group.origin(), document, animations, context, poseStack, defaultConsumer, light, overlay, red, green, blue, alpha);
-                }
-            } else if (node instanceof BbModelData.ElementNode element) {
-                renderGeometry(element, document, context, poseStack, defaultConsumer, light, overlay, red, green, blue, alpha);
+        if (node instanceof BbModelData.GroupNode group) {
+            for (BbModelData.Node child : group.children()) {
+                renderNode(child, animations, context, pose, normal, depth + 1, defaultConsumer,
+                        light, overlay, red, green, blue, alpha);
             }
-        } finally {
-            poseStack.popPose();
+        } else if (node instanceof BbModelData.ElementNode element) {
+            renderGeometry(element, context, pose, normal, defaultConsumer,
+                    light, overlay, red, green, blue, alpha);
         }
     }
 
-    private void renderGeometry(BbModelData.ElementNode element, BbModelData.Document document, BbRenderContext context, PoseStack poseStack, VertexConsumer defaultConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-        if (element.geometry() instanceof BbModelData.Cube cube) {
-            renderCube(element, cube, document, context, poseStack, defaultConsumer, light, overlay, red, green, blue, alpha);
-        } else if (element.geometry() instanceof BbModelData.Mesh mesh) {
-            renderMesh(mesh, document, context, poseStack, defaultConsumer, light, overlay, red, green, blue, alpha);
-        } else if (element.geometry() instanceof BbModelData.TextureMesh mesh) {
-            renderTextureMesh(element, mesh, document, context, poseStack, defaultConsumer, light, overlay, red, green, blue, alpha);
+    private static void scaleNormal(Matrix3f normal, float scaleX, float scaleY, float scaleZ) {
+        if (scaleX == scaleY && scaleY == scaleZ) {
+            if (scaleX < 0.0F) normal.scale(-1.0F);
+            return;
+        }
+        float inverseX = 1.0F / scaleX;
+        float inverseY = 1.0F / scaleY;
+        float inverseZ = 1.0F / scaleZ;
+        float normalization = Mth.fastInvCubeRoot(inverseX * inverseY * inverseZ);
+        normal.scale(normalization * inverseX, normalization * inverseY, normalization * inverseZ);
+    }
+
+    private void renderGeometry(BbModelData.ElementNode element, BbRenderContext context,
+                                Matrix4f pose, Matrix3f normal, VertexConsumer defaultConsumer,
+                                int light, int overlay, float red, float green, float blue, float alpha) {
+        BbModelRepository.ResolvedTexture lastTexture = null;
+        VertexConsumer consumer = defaultConsumer;
+        for (BbCompiledGeometry.Quad quad : this.compiledGeometry.getOrDefault(element, List.of())) {
+            if (!quad.texture().equals(lastTexture)) {
+                lastTexture = quad.texture();
+                consumer = consumer(context, defaultConsumer, lastTexture);
+            }
+            emitCompiledQuad(pose, normal, consumer, quad, light, overlay, red, green, blue, alpha);
         }
     }
 
-    private void renderCube(BbModelData.ElementNode element, BbModelData.Cube cube, BbModelData.Document document, BbRenderContext context, PoseStack poseStack, VertexConsumer defaultConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-        Vector3f from = new Vector3f(cube.from()).sub(element.origin()).sub(cube.inflate(), cube.inflate(), cube.inflate()).mul(PIXEL);
-        Vector3f to = new Vector3f(cube.to()).sub(element.origin()).add(cube.inflate(), cube.inflate(), cube.inflate()).mul(PIXEL);
-        Map<String, Vector3f[]> vertices = Map.of(
-                "north", quad(v(to.x, to.y, from.z), v(to.x, from.y, from.z), v(from.x, from.y, from.z), v(from.x, to.y, from.z)),
-                "south", quad(v(from.x, to.y, to.z), v(from.x, from.y, to.z), v(to.x, from.y, to.z), v(to.x, to.y, to.z)),
-                "east", quad(v(to.x, to.y, to.z), v(to.x, from.y, to.z), v(to.x, from.y, from.z), v(to.x, to.y, from.z)),
-                "west", quad(v(from.x, to.y, from.z), v(from.x, from.y, from.z), v(from.x, from.y, to.z), v(from.x, to.y, to.z)),
-                "up", quad(v(from.x, to.y, from.z), v(from.x, to.y, to.z), v(to.x, to.y, to.z), v(to.x, to.y, from.z)),
-                "down", quad(v(from.x, from.y, to.z), v(from.x, from.y, from.z), v(to.x, from.y, from.z), v(to.x, from.y, to.z))
-        );
-        for (Map.Entry<String, BbModelData.CubeFace> entry : cube.faces().entrySet()) {
-            BbModelData.CubeFace face = entry.getValue();
-            if (!face.enabled() || !vertices.containsKey(entry.getKey())) {
-                continue;
-            }
-            BbModelRepository.ResolvedTexture texture = BbModelRepository.resolveTexture(this.modelResource, this.spec, document, face.texture());
-            VertexConsumer consumer = consumer(context, defaultConsumer, texture);
-            Vector2f[] uv = cubeUv(face, cube.mirrorUv(), texture.uvWidth(), texture.uvHeight());
-            emitBbQuad(poseStack.last(), consumer, vertices.get(entry.getKey()), uv, light, overlay, red, green, blue, alpha);
+    private void renderStatic(PoseStack.Pose pose, BbRenderContext context, VertexConsumer fallback,
+                              int light, int overlay, float red, float green, float blue, float alpha) {
+        int lod = lodLevel(pose.pose(), context);
+        if (BbInstancedRenderer.tryEnqueue(this, this.staticGeometry, pose, context, lod,
+                light, overlay, red, green, blue, alpha)) {
+            return;
+        }
+        for (BbCompiledGeometry.Batch batch : this.staticGeometry.batches()) {
+            VertexConsumer consumer = consumer(context, fallback, batch.texture());
+            emitPackedBatch(pose, consumer, batch, lod, light, overlay, red, green, blue, alpha);
         }
     }
 
-    private void renderMesh(BbModelData.Mesh mesh, BbModelData.Document document, BbRenderContext context, PoseStack poseStack, VertexConsumer defaultConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-        for (BbModelData.MeshFace face : mesh.faces()) {
-            if (face.vertices().size() < 3 || face.texture().disabled()) {
-                continue;
-            }
-            BbModelRepository.ResolvedTexture texture = BbModelRepository.resolveTexture(this.modelResource, this.spec, document, face.texture());
-            VertexConsumer consumer = consumer(context, defaultConsumer, texture);
-            List<Vector3f> points = new ArrayList<>();
-            List<Vector2f> uvs = new ArrayList<>();
-            for (String vertexId : face.vertices()) {
-                Vector3f point = mesh.vertices().get(vertexId);
-                if (point == null) {
-                    throw new BbModelFormatException("Mesh face references missing vertex " + vertexId);
-                }
-                points.add(new Vector3f(point).mul(PIXEL));
-                Vector2f uv = face.uv().getOrDefault(vertexId, new Vector2f());
-                uvs.add(new Vector2f(uv.x / texture.uvWidth(), uv.y / texture.uvHeight()));
-            }
-            if (points.size() == 4) {
-                emitBbQuad(poseStack.last(), consumer, points.toArray(Vector3f[]::new), uvs.toArray(Vector2f[]::new), light, overlay, red, green, blue, alpha);
-            } else {
-                for (int index = 1; index < points.size() - 1; index++) {
-                    emitTriangleAsQuad(poseStack.last(), consumer,
-                            points.get(0), points.get(index), points.get(index + 1),
-                            uvs.get(0), uvs.get(index), uvs.get(index + 1),
-                            light, overlay, red, green, blue, alpha);
-                }
-            }
-        }
+    private static int lodLevel(Matrix4f pose, BbRenderContext context) {
+        if (context == null || !(context.automobile() instanceof Entity)) return 0;
+        float distanceSquared = pose.m30() * pose.m30() + pose.m31() * pose.m31() + pose.m32() * pose.m32();
+        if (distanceSquared > 128.0F * 128.0F) return 3;
+        if (distanceSquared > 80.0F * 80.0F) return 2;
+        if (distanceSquared > 48.0F * 48.0F) return 1;
+        return 0;
     }
 
-    private void renderTextureMesh(BbModelData.ElementNode element, BbModelData.TextureMesh mesh, BbModelData.Document document, BbRenderContext context, PoseStack poseStack, VertexConsumer defaultConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-        BbModelData.TextureReference reference = mesh.textureName().isBlank()
-                ? BbModelData.TextureReference.none()
-                : new BbModelData.TextureReference(null, mesh.textureName(), false);
-        BbModelRepository.ResolvedTexture texture = BbModelRepository.resolveTexture(this.modelResource, this.spec, document, reference);
-        VertexConsumer consumer = consumer(context, defaultConsumer, texture);
-        BbModelRepository.PixelShape shape = BbModelRepository.getTextureShape(texture.location());
-        if (shape == null) {
-            shape = new BbModelRepository.PixelShape(1, 1, new boolean[]{true});
+    private void prepareGeometry(BbModelData.Document document) {
+        if (this.compiledDocument == document) return;
+        Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> geometry =
+                BbCompiledGeometry.compile(this.modelResource, this.spec, document);
+        this.staticModel = document.animations().isEmpty();
+        if (this.staticModel) {
+            this.staticGeometry = BbCompiledGeometry.compileStatic(this.spec, document, geometry);
+            this.compiledGeometry = Map.of();
+            this.compiledTransforms = Map.of();
+            LOGGER.debug("Compiled static BBModel {}: {} nodes, {} quads, {} batches ({} duplicates removed)",
+                    this.modelResource, this.staticGeometry.nodeCount(), this.staticGeometry.outputQuadCount(),
+                    this.staticGeometry.batches().size(),
+                    this.staticGeometry.inputQuadCount() - this.staticGeometry.outputQuadCount());
+        } else {
+            this.staticGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
+            this.compiledGeometry = geometry;
+            this.compiledTransforms = BbCompiledGeometry.compileTransforms(document);
         }
+        this.compiledDocument = document;
+    }
 
-        float pixelWidth = texture.uvWidth() / (float) shape.width();
-        float pixelHeight = texture.uvHeight() / (float) shape.height();
-        Vector2f[] fullUv = new Vector2f[]{new Vector2f(1, 1), new Vector2f(1, 0), new Vector2f(0, 0), new Vector2f(0, 1)};
-        emitBbQuad(poseStack.last(), consumer, quad(
-                textureMeshPoint(element, mesh, -texture.uvWidth(), 0, 0),
-                textureMeshPoint(element, mesh, -texture.uvWidth(), 0, texture.uvHeight()),
-                textureMeshPoint(element, mesh, 0, 0, texture.uvHeight()),
-                textureMeshPoint(element, mesh, 0, 0, 0)
-        ), fullUv, light, overlay, red, green, blue, alpha);
-        emitBbQuad(poseStack.last(), consumer, quad(
-                textureMeshPoint(element, mesh, 0, -1, 0),
-                textureMeshPoint(element, mesh, 0, -1, texture.uvHeight()),
-                textureMeshPoint(element, mesh, -texture.uvWidth(), -1, texture.uvHeight()),
-                textureMeshPoint(element, mesh, -texture.uvWidth(), -1, 0)
-        ), fullUv, light, overlay, red, green, blue, alpha);
-
-        for (int y = 0; y < shape.height(); y++) {
-            for (int x = 0; x < shape.width(); x++) {
-                if (!shape.opaque(x, y)) {
-                    continue;
-                }
-                float x0 = -texture.uvWidth() + x * pixelWidth;
-                float x1 = x0 + pixelWidth;
-                float y0 = 0;
-                float y1 = -1;
-                float z0 = y * pixelHeight;
-                float z1 = z0 + pixelHeight;
-                float u0 = x / (float) shape.width();
-                float u1 = (x + 1) / (float) shape.width();
-                float v0 = y / (float) shape.height();
-                float v1 = (y + 1) / (float) shape.height();
-                Vector2f[] uv = new Vector2f[]{new Vector2f(u0, v0), new Vector2f(u0, v1), new Vector2f(u1, v1), new Vector2f(u1, v0)};
-
-                if (!shape.opaque(x - 1, y)) {
-                    emitBbQuad(poseStack.last(), consumer, quad(textureMeshPoint(element, mesh, x0, y1, z0), textureMeshPoint(element, mesh, x0, y1, z1), textureMeshPoint(element, mesh, x0, y0, z1), textureMeshPoint(element, mesh, x0, y0, z0)), uv, light, overlay, red, green, blue, alpha);
-                }
-                if (!shape.opaque(x + 1, y)) {
-                    emitBbQuad(poseStack.last(), consumer, quad(textureMeshPoint(element, mesh, x1, y0, z0), textureMeshPoint(element, mesh, x1, y0, z1), textureMeshPoint(element, mesh, x1, y1, z1), textureMeshPoint(element, mesh, x1, y1, z0)), uv, light, overlay, red, green, blue, alpha);
-                }
-                if (!shape.opaque(x, y - 1)) {
-                    emitBbQuad(poseStack.last(), consumer, quad(textureMeshPoint(element, mesh, x0, y0, z0), textureMeshPoint(element, mesh, x1, y0, z0), textureMeshPoint(element, mesh, x1, y1, z0), textureMeshPoint(element, mesh, x0, y1, z0)), uv, light, overlay, red, green, blue, alpha);
-                }
-                if (!shape.opaque(x, y + 1)) {
-                    emitBbQuad(poseStack.last(), consumer, quad(textureMeshPoint(element, mesh, x0, y1, z1), textureMeshPoint(element, mesh, x1, y1, z1), textureMeshPoint(element, mesh, x1, y0, z1), textureMeshPoint(element, mesh, x0, y0, z1)), uv, light, overlay, red, green, blue, alpha);
-                }
+    private static void emitPackedBatch(PoseStack.Pose pose, VertexConsumer consumer,
+                                        BbCompiledGeometry.Batch batch, int lod,
+                                        int light, int overlay,
+                                        float red, float green, float blue, float alpha) {
+        Matrix4f matrix = pose.pose();
+        Matrix3f normalMatrix = pose.normal();
+        float[] data = batch.data();
+        byte[] detailLevels = batch.detailLevels();
+        for (int quadIndex = 0; quadIndex < detailLevels.length; quadIndex++) {
+            if (detailLevels[quadIndex] < lod) continue;
+            int cursor = quadIndex * BbCompiledGeometry.PACKED_QUAD_STRIDE;
+            float normalX = data[cursor++];
+            float normalY = data[cursor++];
+            float normalZ = data[cursor++];
+            float transformedNormalX = normalMatrix.m00() * normalX + normalMatrix.m10() * normalY + normalMatrix.m20() * normalZ;
+            float transformedNormalY = normalMatrix.m01() * normalX + normalMatrix.m11() * normalY + normalMatrix.m21() * normalZ;
+            float transformedNormalZ = normalMatrix.m02() * normalX + normalMatrix.m12() * normalY + normalMatrix.m22() * normalZ;
+            for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
+                float x = data[cursor++];
+                float y = data[cursor++];
+                float z = data[cursor++];
+                float u = data[cursor++];
+                float v = data[cursor++];
+                emitVertex(consumer, matrix, x, y, z, u, v, transformedNormalX, transformedNormalY,
+                        transformedNormalZ, light, overlay, red, green, blue, alpha);
             }
         }
     }
 
-    private static Vector3f textureMeshPoint(BbModelData.ElementNode element, BbModelData.TextureMesh mesh, float x, float y, float z) {
-        return new Vector3f(
-                x * element.scale().x + mesh.localPivot().x,
-                y * element.scale().y + mesh.localPivot().y,
-                z * element.scale().z + mesh.localPivot().z
-        ).mul(PIXEL);
+    private static void emitCompiledQuad(Matrix4f matrix, Matrix3f normalMatrix, VertexConsumer consumer,
+                                         BbCompiledGeometry.Quad quad,
+                                         int light, int overlay,
+                                         float red, float green, float blue, float alpha) {
+        float normalX = quad.normal().x;
+        float normalY = quad.normal().y;
+        float normalZ = quad.normal().z;
+        float transformedNormalX = normalMatrix.m00() * normalX + normalMatrix.m10() * normalY + normalMatrix.m20() * normalZ;
+        float transformedNormalY = normalMatrix.m01() * normalX + normalMatrix.m11() * normalY + normalMatrix.m21() * normalZ;
+        float transformedNormalZ = normalMatrix.m02() * normalX + normalMatrix.m12() * normalY + normalMatrix.m22() * normalZ;
+        for (int index = 0; index < 4; index++) {
+            Vector3f vertex = quad.vertices()[index];
+            Vector2f tex = quad.uvs()[index];
+            emitVertex(consumer, matrix, vertex.x, vertex.y, vertex.z, tex.x, tex.y,
+                    transformedNormalX, transformedNormalY, transformedNormalZ,
+                    light, overlay, red, green, blue, alpha);
+        }
+    }
+
+    private static void emitVertex(VertexConsumer consumer, Matrix4f matrix,
+                                   float x, float y, float z, float u, float v,
+                                   float normalX, float normalY, float normalZ,
+                                   int light, int overlay,
+                                   float red, float green, float blue, float alpha) {
+        float transformedX = matrix.m00() * x + matrix.m10() * y + matrix.m20() * z + matrix.m30();
+        float transformedY = matrix.m01() * x + matrix.m11() * y + matrix.m21() * z + matrix.m31();
+        float transformedZ = matrix.m02() * x + matrix.m12() * y + matrix.m22() * z + matrix.m32();
+        consumer.vertex(transformedX, transformedY, transformedZ, red, green, blue, alpha,
+                u, v, overlay, light, normalX, normalY, normalZ);
+    }
+
+    private static final class RenderScratch {
+        private Matrix4f[] poses = createPoses(16);
+        private Matrix3f[] normals = createNormals(16);
+        private final Vector3f translation = new Vector3f();
+        private final Vector3f rotation = new Vector3f();
+        private final Quaternionf quaternion = new Quaternionf();
+
+        Matrix4f pose(int depth) {
+            ensureCapacity(depth);
+            return poses[depth];
+        }
+
+        Matrix3f normal(int depth) {
+            ensureCapacity(depth);
+            return normals[depth];
+        }
+
+        private void ensureCapacity(int depth) {
+            if (depth < poses.length) return;
+            int previous = poses.length;
+            int capacity = Math.max(depth + 1, previous * 2);
+            poses = Arrays.copyOf(poses, capacity);
+            normals = Arrays.copyOf(normals, capacity);
+            for (int index = previous; index < capacity; index++) {
+                poses[index] = new Matrix4f();
+                normals[index] = new Matrix3f();
+            }
+        }
+
+        private static Matrix4f[] createPoses(int size) {
+            Matrix4f[] values = new Matrix4f[size];
+            for (int index = 0; index < size; index++) values[index] = new Matrix4f();
+            return values;
+        }
+
+        private static Matrix3f[] createNormals(int size) {
+            Matrix3f[] values = new Matrix3f[size];
+            for (int index = 0; index < size; index++) values[index] = new Matrix3f();
+            return values;
+        }
     }
 
     private VertexConsumer consumer(BbRenderContext context, VertexConsumer fallback, BbModelRepository.ResolvedTexture texture) {
@@ -246,53 +315,21 @@ public final class DynamicBbModel extends Model {
         return context.buffers().getBuffer(renderType(texture.location(), texture.renderMode(), this.spec.renderType()));
     }
 
-    private static Vector2f[] cubeUv(BbModelData.CubeFace face, boolean mirror, int width, int height) {
-        float[] raw = face.uv();
-        float u1 = raw[0] / width;
-        float v1 = raw[1] / height;
-        float u2 = raw[2] / width;
-        float v2 = raw[3] / height;
-        if (mirror) {
-            float swap = u1;
-            u1 = u2;
-            u2 = swap;
+    boolean supportsInstancedRendering() {
+        String configuredType = this.spec.renderType().toLowerCase(Locale.ROOT);
+        if (configuredType.contains("translucent")) return false;
+        for (BbCompiledGeometry.Batch batch : this.staticGeometry.batches()) {
+            if (!"default".equalsIgnoreCase(batch.texture().renderMode())) return false;
         }
-        Vector2f[] values = new Vector2f[]{new Vector2f(u1, v1), new Vector2f(u1, v2), new Vector2f(u2, v2), new Vector2f(u2, v1)};
-        int rotations = Math.floorMod(face.rotation(), 360) / 90;
-        for (int count = 0; count < rotations; count++) {
-            Vector2f last = values[3];
-            values[3] = values[2];
-            values[2] = values[1];
-            values[1] = values[0];
-            values[0] = last;
-        }
-        return values;
+        return true;
     }
 
-    private static void emitTriangleAsQuad(PoseStack.Pose pose, VertexConsumer consumer, Vector3f a, Vector3f b, Vector3f c, Vector2f ua, Vector2f ub, Vector2f uc, int light, int overlay, float red, float green, float blue, float alpha) {
-        emitBbQuad(pose, consumer, new Vector3f[]{a, b, c, c}, new Vector2f[]{ua, ub, uc, uc}, light, overlay, red, green, blue, alpha);
+    RenderType instancedRenderType(BbModelRepository.ResolvedTexture texture) {
+        return renderType(texture.location(), texture.renderMode(), this.spec.renderType());
     }
 
-    private static void emitBbQuad(PoseStack.Pose pose, VertexConsumer consumer, Vector3f[] vertices, Vector2f[] uv, int light, int overlay, float red, float green, float blue, float alpha) {
-        BbCoordinateSystem.ConvertedQuad converted = BbCoordinateSystem.quad(vertices, uv);
-        emitQuad(pose, consumer, converted.vertices(), converted.uvs(), light, overlay, red, green, blue, alpha);
-    }
-
-    private static void emitQuad(PoseStack.Pose pose, VertexConsumer consumer, Vector3f[] vertices, Vector2f[] uv, int light, int overlay, float red, float green, float blue, float alpha) {
-        Vector3f normal = new Vector3f(vertices[1]).sub(vertices[0]).cross(new Vector3f(vertices[2]).sub(vertices[0])).normalize();
-        Matrix4f matrix = pose.pose();
-        Matrix3f normalMatrix = pose.normal();
-        for (int index = 0; index < 4; index++) {
-            Vector3f vertex = vertices[index];
-            Vector2f tex = uv[index];
-            consumer.vertex(matrix, vertex.x, vertex.y, vertex.z)
-                    .color(red, green, blue, alpha)
-                    .uv(tex.x, tex.y)
-                    .overlayCoords(overlay)
-                    .uv2(light)
-                    .normal(normalMatrix, normal.x, normal.y, normal.z)
-                    .endVertex();
-        }
+    ResourceLocation modelResource() {
+        return this.modelResource;
     }
 
     private void renderFallback(PoseStack poseStack, VertexConsumer consumer, int light, int overlay, float red, float green, float blue, float alpha) {
@@ -331,11 +368,4 @@ public final class DynamicBbModel extends Model {
         };
     }
 
-    private static Vector3f v(float x, float y, float z) {
-        return new Vector3f(x, y, z);
-    }
-
-    private static Vector3f[] quad(Vector3f a, Vector3f b, Vector3f c, Vector3f d) {
-        return new Vector3f[]{a, b, c, d};
-    }
 }

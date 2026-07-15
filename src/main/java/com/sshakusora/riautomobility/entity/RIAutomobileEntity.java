@@ -14,6 +14,7 @@ import io.github.foundationgames.automobility.item.AutomobilityItems;
 import io.github.foundationgames.automobility.item.FrontAttachmentItem;
 import io.github.foundationgames.automobility.item.RearAttachmentItem;
 import io.github.foundationgames.automobility.sound.AutomobilitySounds;
+import io.github.foundationgames.automobility.util.SimpleMapContentRegistry;
 import io.github.foundationgames.automobility.util.duck.CollisionArea;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.NonNullList;
@@ -62,6 +63,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private final List<HitboxEntity> hitboxes = new ArrayList<>();
     private final UUID[] persistedSeatPassengers = new UUID[MAX_TRACKED_SEATS];
+
+    @Nullable private ResourceLocation unresolvedFrameId;
+    @Nullable private ResourceLocation unresolvedWheelId;
+    @Nullable private ResourceLocation unresolvedEngineId;
 
     private boolean changed = false;
     private int collisionWarmupTicks = 0;
@@ -114,8 +119,14 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
+        ResourceLocation savedFrameId = ResourceLocation.tryParse(tag.getString("frame"));
+        ResourceLocation savedWheelId = ResourceLocation.tryParse(tag.getString("wheels"));
+        ResourceLocation savedEngineId = ResourceLocation.tryParse(tag.getString("engine"));
         super.readAdditionalSaveData(tag);
-        if (usesRIASeats()) {
+        this.unresolvedFrameId = unresolvedId(savedFrameId, this.getFrame());
+        this.unresolvedWheelId = unresolvedId(savedWheelId, this.getWheels());
+        this.unresolvedEngineId = unresolvedId(savedEngineId, this.getEngine());
+        if (usesRIASeats() || this.unresolvedFrameId != null) {
             ContainerHelper.loadAllItems(tag, items);
             for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
                 String key = "SeatPassenger" + i;
@@ -127,12 +138,18 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        if (usesRIASeats()) {
+        preserveUnresolvedId(tag, "frame", this.unresolvedFrameId);
+        preserveUnresolvedId(tag, "wheels", this.unresolvedWheelId);
+        preserveUnresolvedId(tag, "engine", this.unresolvedEngineId);
+        boolean riaSeats = usesRIASeats();
+        if (riaSeats || this.unresolvedFrameId != null) {
             ContainerHelper.saveAllItems(tag, items);
-            for (int i = 0; i < getSeatCount(); i++) {
-                Entity passenger = getSeatPassenger(i);
+            for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
+                Entity passenger = riaSeats && i < getSeatCount() ? getSeatPassenger(i) : null;
                 if (passenger != null) {
                     tag.putUUID("SeatPassenger" + i, passenger.getUUID());
+                } else if (this.unresolvedFrameId != null && persistedSeatPassengers[i] != null) {
+                    tag.putUUID("SeatPassenger" + i, persistedSeatPassengers[i]);
                 }
             }
         }
@@ -145,6 +162,9 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
     @Override
     public void setComponents(AutomobileFrame frame, AutomobileWheel wheel, AutomobileEngine engine) {
+        this.unresolvedFrameId = null;
+        this.unresolvedWheelId = null;
+        this.unresolvedEngineId = null;
         super.setComponents(frame, wheel, engine);
         if (usesRIASeats()) {
             EntityDimensions dimensions = getDefinition().dimensions();
@@ -156,9 +176,12 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     public void reloadRIAutomobilityComponents() {
-        AutomobileFrame frame = AutomobileFrame.REGISTRY.getOrDefault(this.getFrame().getId());
-        AutomobileWheel wheel = AutomobileWheel.REGISTRY.getOrDefault(this.getWheels().getId());
-        AutomobileEngine engine = AutomobileEngine.REGISTRY.getOrDefault(this.getEngine().getId());
+        AutomobileFrame frame = resolveComponent(AutomobileFrame.REGISTRY, this.unresolvedFrameId, this.getFrame());
+        AutomobileWheel wheel = resolveComponent(AutomobileWheel.REGISTRY, this.unresolvedWheelId, this.getWheels());
+        AutomobileEngine engine = resolveComponent(AutomobileEngine.REGISTRY, this.unresolvedEngineId, this.getEngine());
+        this.unresolvedFrameId = clearIfResolved(this.unresolvedFrameId, frame);
+        this.unresolvedWheelId = clearIfResolved(this.unresolvedWheelId, wheel);
+        this.unresolvedEngineId = clearIfResolved(this.unresolvedEngineId, engine);
         super.setComponents(frame, wheel, engine);
 
         if (usesRIASeats()) {
@@ -170,6 +193,35 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             this.dimensionsNeedRefresh = true;
             updateCullingBox();
         }
+    }
+
+    @Nullable
+    private static ResourceLocation unresolvedId(@Nullable ResourceLocation savedId,
+                                                 SimpleMapContentRegistry.Identifiable resolved) {
+        return savedId != null && !savedId.equals(resolved.getId()) ? savedId : null;
+    }
+
+    private static void preserveUnresolvedId(CompoundTag tag, String key, @Nullable ResourceLocation id) {
+        if (id != null) {
+            tag.putString(key, id.toString());
+        }
+    }
+
+    private static <T extends SimpleMapContentRegistry.Identifiable> T resolveComponent(
+            SimpleMapContentRegistry<T> registry, @Nullable ResourceLocation unresolvedId, T current) {
+        if (unresolvedId != null) {
+            T resolved = registry.get(unresolvedId);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+        return registry.getOrDefault(current.getId());
+    }
+
+    @Nullable
+    private static ResourceLocation clearIfResolved(@Nullable ResourceLocation unresolvedId,
+                                                    SimpleMapContentRegistry.Identifiable resolved) {
+        return unresolvedId != null && unresolvedId.equals(resolved.getId()) ? null : unresolvedId;
     }
 
     @Override

@@ -113,16 +113,16 @@ final class VehiclePreviewRenderer {
     boolean mouseDragged(double mouseX, double mouseY, int button, boolean firstPerson) {
         if (dragButton != button) return false;
         if (firstPerson) {
-            firstPersonYaw += (float)(mouseX - lastMouseX) * 0.35F;
+            firstPersonYaw += (float) (mouseX - lastMouseX) * 0.35F;
             firstPersonPitch = Math.max(-80.0F, Math.min(80.0F,
-                    firstPersonPitch + (float)(mouseY - lastMouseY) * 0.35F));
+                    firstPersonPitch + (float) (mouseY - lastMouseY) * 0.35F));
         } else if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            rotationY += (float)(mouseX - lastMouseX);
+            rotationY += (float) (mouseX - lastMouseX);
             rotationX = Math.max(-80.0F, Math.min(80.0F,
-                    rotationX + (float)(mouseY - lastMouseY)));
+                    rotationX + (float) (mouseY - lastMouseY)));
         } else {
-            panX += (float)(mouseX - lastMouseX);
-            panY += (float)(mouseY - lastMouseY);
+            panX += (float) (mouseX - lastMouseX);
+            panY += (float) (mouseY - lastMouseY);
         }
         lastMouseX = mouseX;
         lastMouseY = mouseY;
@@ -135,9 +135,9 @@ final class VehiclePreviewRenderer {
 
     void mouseScrolled(double amount, boolean firstPerson) {
         if (firstPerson) {
-            firstPersonFov = Math.max(30.0F, Math.min(100.0F, firstPersonFov - (float)amount * 4.0F));
+            firstPersonFov = Math.max(30.0F, Math.min(100.0F, firstPersonFov - (float) amount * 4.0F));
         } else {
-            zoom = Math.max(12.0F, Math.min(80.0F, zoom + (float)amount * 3.0F));
+            zoom = Math.max(12.0F, Math.min(80.0F, zoom + (float) amount * 3.0F));
         }
     }
 
@@ -150,12 +150,11 @@ final class VehiclePreviewRenderer {
         pose.translate((x0 + x1) / 2.0F + panX, (y0 + y1) / 2.0F + 24 + panY, 160);
         pose.mulPoseMatrix(new Matrix4f().scaling(zoom, zoom, -zoom));
         pose.mulPose(Axis.XP.rotationDegrees(180.0F));
-        pose.mulPose(new Quaternionf().rotationX((float)Math.toRadians(rotationX)));
-        pose.mulPose(new Quaternionf().rotationY((float)Math.toRadians(rotationY)));
+        pose.mulPose(new Quaternionf().rotationX((float) Math.toRadians(rotationX)));
+        pose.mulPose(new Quaternionf().rotationY((float) Math.toRadians(rotationY)));
         RenderSystem.enableDepthTest();
         Lighting.setupForEntityInInventory();
-        Minecraft minecraft = Minecraft.getInstance();
-        MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource buffers = graphics.bufferSource();
         switch (view) {
             case FRAME, FRAME_WHEELS, FRAME_SEATS, FRAME_HITBOXES -> {
                 if (!draft.isPartVisible(VehicleEditorDraft.Target.FRAME)) break;
@@ -167,12 +166,12 @@ final class VehiclePreviewRenderer {
             }
             case WHEEL -> renderSingleWheel(pose, buffers, partialTick);
             case ENGINE -> renderSingleEngine(pose, buffers, partialTick);
-            case SEAT_FIRST_PERSON -> { }
+            case SEAT_FIRST_PERSON -> {
+            }
         }
         buffers.endBatch();
         finishPreviewOutline(outlineBuffers, partialTick);
         pose.popPose();
-        graphics.flush();
         Lighting.setupFor3DItems();
         RenderSystem.disableDepthTest();
         graphics.disableScissor();
@@ -207,10 +206,10 @@ final class VehiclePreviewRenderer {
         graphics.enableScissor(x0, y0, x1, y1);
         Window window = minecraft.getWindow();
         double guiScale = window.getGuiScale();
-        int viewportX = (int)Math.round(x0 * guiScale);
-        int viewportY = window.getHeight() - (int)Math.round(y1 * guiScale);
-        int viewportWidth = Math.max(1, (int)Math.round((x1 - x0) * guiScale));
-        int viewportHeight = Math.max(1, (int)Math.round((y1 - y0) * guiScale));
+        int viewportX = (int) Math.round(x0 * guiScale);
+        int viewportY = window.getHeight() - (int) Math.round(y1 * guiScale);
+        int viewportWidth = Math.max(1, (int) Math.round((x1 - x0) * guiScale));
+        int viewportHeight = Math.max(1, (int) Math.round((y1 - y0) * guiScale));
         Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         PoseStack modelView = RenderSystem.getModelViewStack();
         modelView.pushPose();
@@ -219,7 +218,7 @@ final class VehiclePreviewRenderer {
             RenderSystem.applyModelViewMatrix();
             RenderSystem.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
             Matrix4f perspective = new Matrix4f().setPerspective(
-                    (float)Math.toRadians(fov), (float)viewportWidth / viewportHeight, 0.05F, 100.0F);
+                    (float) Math.toRadians(fov), (float) viewportWidth / viewportHeight, 0.05F, 100.0F);
             RenderSystem.setProjectionMatrix(perspective, VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask(true);
@@ -253,7 +252,7 @@ final class VehiclePreviewRenderer {
         if (view != View.FRAME_WHEELS && view != View.FRAME_SEATS) return null;
         Minecraft minecraft = Minecraft.getInstance();
         RenderTarget entityTarget = minecraft.levelRenderer.entityTarget();
-        PostChain entityEffect = ((LevelRendererAccessor)minecraft.levelRenderer).riautomobility$getEntityEffect();
+        PostChain entityEffect = ((LevelRendererAccessor) minecraft.levelRenderer).riautomobility$getEntityEffect();
         if (entityTarget == null || entityEffect == null || minecraft.player == null) return null;
         entityTarget.clear(Minecraft.ON_OSX);
         minecraft.getMainRenderTarget().bindWrite(false);
@@ -265,7 +264,7 @@ final class VehiclePreviewRenderer {
     private void finishPreviewOutline(OutlineBufferSource outlineBuffers, float partialTick) {
         if (outlineBuffers == null) return;
         Minecraft minecraft = Minecraft.getInstance();
-        PostChain entityEffect = ((LevelRendererAccessor)minecraft.levelRenderer).riautomobility$getEntityEffect();
+        PostChain entityEffect = ((LevelRendererAccessor) minecraft.levelRenderer).riautomobility$getEntityEffect();
         if (entityEffect == null) return;
         Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         try {
