@@ -9,7 +9,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import com.sshakusora.riautomobility.entity.HitboxEntity;
-import com.sshakusora.riautomobility.mixin.accessor.LevelRendererAccessor;
 import com.sshakusora.riautomobility.model.bbmodel.BbRenderContext;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
@@ -18,6 +17,7 @@ import io.github.foundationgames.automobility.automobile.WheelBase;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
 import io.github.foundationgames.automobility.automobile.render.AutomobileRenderer;
 import io.github.foundationgames.automobility.automobile.render.BaseModel;
+import io.github.foundationgames.automobility.automobile.render.ExhaustFumesModel;
 import io.github.foundationgames.automobility.automobile.render.wheel.WheelContextReceiver;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -41,6 +41,7 @@ final class VehiclePreviewRenderer {
         FRAME_WHEELS,
         FRAME_SEATS,
         FRAME_HITBOXES,
+        FRAME_ATTACHMENTS,
         WHEEL,
         ENGINE,
         SEAT_FIRST_PERSON
@@ -156,13 +157,14 @@ final class VehiclePreviewRenderer {
         Lighting.setupForEntityInInventory();
         MultiBufferSource.BufferSource buffers = graphics.bufferSource();
         switch (view) {
-            case FRAME, FRAME_WHEELS, FRAME_SEATS, FRAME_HITBOXES -> {
+            case FRAME, FRAME_WHEELS, FRAME_SEATS, FRAME_HITBOXES, FRAME_ATTACHMENTS -> {
                 if (!draft.isPartVisible(VehicleEditorDraft.Target.FRAME)) break;
                 AutomobileRenderer.render(pose, buffers, LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, partialTick, preview);
                 if (view == View.FRAME_WHEELS) renderSelectedWheelOutline(pose, outlineBuffers, partialTick);
                 if (view == View.FRAME_HITBOXES) renderHitboxOutlines(pose, buffers);
                 if (view == View.FRAME_SEATS) renderSeatPlayers(pose, buffers, outlineBuffers);
+                if (view == View.FRAME_ATTACHMENTS) renderAttachmentOutlines(pose, outlineBuffers, partialTick);
             }
             case WHEEL -> renderSingleWheel(pose, buffers, partialTick);
             case ENGINE -> renderSingleEngine(pose, buffers, partialTick);
@@ -249,10 +251,11 @@ final class VehiclePreviewRenderer {
     }
 
     private OutlineBufferSource preparePreviewOutline() {
-        if (view != View.FRAME_WHEELS && view != View.FRAME_SEATS) return null;
+        if (view != View.FRAME_WHEELS && view != View.FRAME_SEATS
+                && view != View.FRAME_ATTACHMENTS) return null;
         Minecraft minecraft = Minecraft.getInstance();
         RenderTarget entityTarget = minecraft.levelRenderer.entityTarget();
-        PostChain entityEffect = ((LevelRendererAccessor) minecraft.levelRenderer).riautomobility$getEntityEffect();
+        PostChain entityEffect = minecraft.levelRenderer.entityEffect;
         if (entityTarget == null || entityEffect == null || minecraft.player == null) return null;
         entityTarget.clear(Minecraft.ON_OSX);
         minecraft.getMainRenderTarget().bindWrite(false);
@@ -264,7 +267,7 @@ final class VehiclePreviewRenderer {
     private void finishPreviewOutline(OutlineBufferSource outlineBuffers, float partialTick) {
         if (outlineBuffers == null) return;
         Minecraft minecraft = Minecraft.getInstance();
-        PostChain entityEffect = ((LevelRendererAccessor) minecraft.levelRenderer).riautomobility$getEntityEffect();
+        PostChain entityEffect = minecraft.levelRenderer.entityEffect;
         if (entityEffect == null) return;
         Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         try {
@@ -307,6 +310,53 @@ final class VehiclePreviewRenderer {
         }
     }
 
+    private void renderAttachmentOutlines(PoseStack pose, OutlineBufferSource outlineBuffers,
+                                          float partialTick) {
+        if (outlineBuffers == null) return;
+        AutomobileFrame frame = preview.getFrame();
+        float chassisRaise = preview.getWheels().model().radius() / 16.0F;
+        pose.pushPose();
+        pose.mulPose(Axis.ZP.rotationDegrees(180.0F));
+        pose.mulPose(Axis.YP.rotationDegrees(preview.getAutomobileYaw(partialTick) + 180.0F));
+        pose.translate(0.0F, -chassisRaise, 0.0F);
+        renderRearAttachmentOutline(pose, outlineBuffers, frame, chassisRaise, partialTick);
+        renderFrontAttachmentOutline(pose, outlineBuffers, frame);
+        pose.popPose();
+    }
+
+    private void renderRearAttachmentOutline(PoseStack pose, OutlineBufferSource outlineBuffers,
+                                             AutomobileFrame frame, float chassisRaise, float partialTick) {
+        var type = preview.getRearAttachmentType();
+        if (type.isEmpty()) return;
+        Model model = AutomobileModels.getModel(type.model().modelId());
+        if (model == null) return;
+        outlineBuffers.setColor(255, 72, 184, 255);
+        VertexConsumer buffer = outlineBuffers.getBuffer(model.renderType(type.model().texture()));
+        pose.pushPose();
+        pose.translate(0.0F, chassisRaise, frame.model().rearAttachmentPos() / 16.0F);
+        pose.mulPose(Axis.YN.rotationDegrees(preview.getAutomobileYaw(partialTick)
+                - preview.getRearAttachmentYaw(partialTick)));
+        pose.translate(0.0F, 0.0F, type.model().pivotDistPx() / 16.0F);
+        model.renderToBuffer(pose, buffer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                1.0F, 1.0F, 1.0F, 1.0F);
+        pose.popPose();
+    }
+
+    private void renderFrontAttachmentOutline(PoseStack pose, OutlineBufferSource outlineBuffers,
+                                              AutomobileFrame frame) {
+        var type = preview.getFrontAttachmentType();
+        if (type.isEmpty()) return;
+        Model model = AutomobileModels.getModel(type.model().modelId());
+        if (model == null) return;
+        outlineBuffers.setColor(48, 210, 255, 255);
+        VertexConsumer buffer = outlineBuffers.getBuffer(model.renderType(type.model().texture()));
+        pose.pushPose();
+        pose.translate(0.0F, 0.0F, frame.model().frontAttachmentPos() / -16.0F);
+        model.renderToBuffer(pose, buffer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                1.0F, 1.0F, 1.0F, 1.0F);
+        pose.popPose();
+    }
+
     private void renderSingleWheel(PoseStack pose, MultiBufferSource.BufferSource buffers, float partialTick) {
         if (!draft.isPartVisible(VehicleEditorDraft.Target.WHEEL)) return;
         AutomobileWheel wheel = draft.previewWheel();
@@ -326,8 +376,44 @@ final class VehiclePreviewRenderer {
         if (model == null) return;
         pose.pushPose();
         applySingleComponentTransform(pose);
+        applyEngineRunningAnimation(pose, partialTick);
         renderSingleModel(pose, buffers, model, engine.model().texture(), partialTick);
+        renderEngineExhaust(pose, buffers, engine, partialTick);
         pose.popPose();
+    }
+
+    private void renderEngineExhaust(PoseStack pose, MultiBufferSource.BufferSource buffers,
+                                     AutomobileEngine engine, float partialTick) {
+        if (!preview.engineRunning()) return;
+        Model fumes = AutomobileModels.getModel(AutomobileModels.EXHAUST_FUMES);
+        if (fumes == null) return;
+        ResourceLocation[] textures;
+        RenderType renderType;
+        if (preview.getBoostTimer() > 0) {
+            textures = ExhaustFumesModel.FLAME_TEXTURES;
+            int frame = (int) (preview.getTime() % textures.length);
+            renderType = RenderType.eyes(textures[frame]);
+        } else {
+            textures = ExhaustFumesModel.SMOKE_TEXTURES;
+            int frame = (int) Math.floor(((preview.getTime() + partialTick) / 1.5F) % textures.length);
+            renderType = RenderType.entityTranslucent(textures[frame]);
+        }
+        VertexConsumer fumesBuffer = buffers.getBuffer(renderType);
+        for (AutomobileEngine.ExhaustPos exhaust : engine.model().exhausts()) {
+            pose.pushPose();
+            pose.translate(exhaust.x() / 16.0F, -exhaust.y() / 16.0F, exhaust.z() / 16.0F);
+            pose.mulPose(Axis.YP.rotationDegrees(exhaust.yaw()));
+            pose.mulPose(Axis.XP.rotationDegrees(exhaust.pitch()));
+            fumes.renderToBuffer(pose, fumesBuffer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                    1.0F, 1.0F, 1.0F, 1.0F);
+            pose.popPose();
+        }
+    }
+
+    private void applyEngineRunningAnimation(PoseStack pose, float partialTick) {
+        if (!preview.engineRunning()) return;
+        double animationTime = preview.getTime() + partialTick;
+        pose.translate(0.0D, Math.cos(animationTime * 2.7D) / 156.0D, 0.0D);
     }
 
     private void renderSingleModel(PoseStack pose, MultiBufferSource.BufferSource buffers, Model model,

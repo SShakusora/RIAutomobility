@@ -36,8 +36,10 @@ import java.util.function.Supplier;
 public final class VehicleImportScreen extends AbstractContainerScreen<VehicleImportMenu> {
     private static final int TAB_WIDTH = 62;
     private static final int PARAM_WIDTH = 226;
-    private static final int GUI_HEIGHT = 320;
+    private static final int GUI_HEIGHT = 300;
     private static final int CONTROL_ROW_STEP = 24;
+    private static final int DENSE_CONTROL_ROW_STEP = 20;
+    private static final float COMPACT_TOGGLE_TEXT_SCALE = 0.8F;
     private static final int FIELD_LABEL_WIDTH = 66;
     private static final int NUMBER_ARROW_WIDTH = 18;
     private static final float FINE_STEP_SCALE = 0.1F;
@@ -92,7 +94,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         labels.clear(); parameterTooltips.clear(); selectionButtons.clear(); attachmentIconLists.clear();
         numberControls.clear(); availableWithoutPreview.clear();
         if (selectionType != null) { addSelectionControls(); return; }
-        int x = leftPos + 5;
+        int x = leftPos + 7;
         int y = topPos + 24;
         for (Page value : Page.values()) {
             Button tab = texturedButton(VehicleImportText.component(value.label),
@@ -111,8 +113,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         }
         addExportItemControl();
         int px = previewX0() + 6;
-        addRenderableWidget(texturedButton(VehicleImportText.component("button.reset_view"),
-                b -> resetView(), px, topPos + 26, 72, 18));
+        VehicleTexturedButton resetViewButton = texturedButton(VehicleImportText.component("button.reset_view"),
+                b -> resetView(), px, topPos + 26, 72, 18);
+        resetViewButton.active = hasCurrentPartPreview();
+        addRenderableWidget(resetViewButton);
         disableUnavailablePartControls(panelX);
     }
 
@@ -148,7 +152,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private int addIdentity(int x, int y) {
-        labeledText(x, y, "label.name", draft.displayName, v -> draft.displayName = v); y += CONTROL_ROW_STEP;
+        labeledText(x, y, "label.name", draft.displayName(), draft::setDisplayName); y += CONTROL_ROW_STEP;
         return y;
     }
 
@@ -183,10 +187,15 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private void addFrameBasicControls(int x, int y) {
         y = addIdentity(x, y);
         labeledNumber(x, y, "label.weight", 0.05F, () -> draft.weight, v -> draft.weight = v); y += CONTROL_ROW_STEP;
-        labeledNumber(x, y, "label.engine_back", 1.0F, () -> draft.enginePosBack, v -> draft.enginePosBack = v); y += CONTROL_ROW_STEP;
-        labeledNumber(x, y, "label.engine_height", 1.0F, () -> draft.enginePosUp, v -> draft.enginePosUp = v); y += CONTROL_ROW_STEP;
+        labeledNumber(x, y, "label.engine_back", 1.0F, () -> draft.enginePosBack,
+                v -> draft.enginePosBack = v, !draft.hideEngine); y += CONTROL_ROW_STEP;
+        labeledNumber(x, y, "label.engine_height", 1.0F, () -> draft.enginePosUp,
+                v -> draft.enginePosUp = v, !draft.hideEngine); y += CONTROL_ROW_STEP;
         binaryToggle(x, y, "label.hide_engine", "off", "on",
-                () -> draft.hideEngine, () -> draft.hideEngine = !draft.hideEngine);
+                () -> draft.hideEngine, () -> {
+                    draft.hideEngine = !draft.hideEngine;
+                    resetWidgets();
+                });
         y += CONTROL_ROW_STEP;
         addComponentButtons(x, y, SelectionType.FRAME);
     }
@@ -210,19 +219,19 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 });
         y += 28;
         labeledNumber(x, y, "label.forward", 1.0F, () -> currentWheelPoint().forward(), v -> replaceWheelPoint(new VehicleEditorDraft.WheelPoint(
-                v, currentWheelPoint().right(), currentWheelPoint().scale(), currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += CONTROL_ROW_STEP;
+                v, currentWheelPoint().right(), currentWheelPoint().scale(), currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += DENSE_CONTROL_ROW_STEP;
         labeledNumber(x, y, "label.right", 1.0F, () -> currentWheelPoint().right(), v -> replaceWheelPoint(new VehicleEditorDraft.WheelPoint(
-                currentWheelPoint().forward(), v, currentWheelPoint().scale(), currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += CONTROL_ROW_STEP;
+                currentWheelPoint().forward(), v, currentWheelPoint().scale(), currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += DENSE_CONTROL_ROW_STEP;
         labeledNumber(x, y, "label.scale", 0.05F, () -> currentWheelPoint().scale(), v -> replaceWheelPoint(new VehicleEditorDraft.WheelPoint(
-                currentWheelPoint().forward(), currentWheelPoint().right(), v, currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += CONTROL_ROW_STEP;
+                currentWheelPoint().forward(), currentWheelPoint().right(), v, currentWheelPoint().yaw(), currentWheelPoint().end(), currentWheelPoint().side()))); y += DENSE_CONTROL_ROW_STEP;
         labeledNumber(x, y, "label.yaw", 5.0F, () -> currentWheelPoint().yaw(), v -> replaceWheelPoint(new VehicleEditorDraft.WheelPoint(
-                currentWheelPoint().forward(), currentWheelPoint().right(), currentWheelPoint().scale(), v, currentWheelPoint().end(), currentWheelPoint().side()))); y += CONTROL_ROW_STEP;
+                currentWheelPoint().forward(), currentWheelPoint().right(), currentWheelPoint().scale(), v, currentWheelPoint().end(), currentWheelPoint().side()))); y += DENSE_CONTROL_ROW_STEP;
         binaryToggle(x, y, "label.axle", "rear", "front", () -> currentWheelPoint().end().equals("front"), () -> {
             VehicleEditorDraft.WheelPoint p = currentWheelPoint();
             replaceWheelPoint(new VehicleEditorDraft.WheelPoint(p.forward(), p.right(), p.scale(), p.yaw(),
                     p.end().equals("front") ? "back" : "front", p.side()));
         });
-        y += CONTROL_ROW_STEP;
+        y += DENSE_CONTROL_ROW_STEP;
         binaryToggle(x, y, "label.side", "right", "left", () -> currentWheelPoint().side().equals("left"), () -> {
             VehicleEditorDraft.WheelPoint p = currentWheelPoint();
             replaceWheelPoint(new VehicleEditorDraft.WheelPoint(p.forward(), p.right(), p.scale(), p.yaw(), p.end(),
@@ -231,6 +240,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void addWheelControls(int x, int y) {
+        if (!wheelTab.isAvailable(draft)) wheelTab = WheelTab.BASIC;
         int gap = 2;
         int tabWidth = (PARAM_WIDTH - gap) / WheelTab.values().length;
         int tabX = x;
@@ -242,7 +252,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 draft.target = VehicleEditorDraft.Target.WHEEL;
                 resetWidgets();
             }, tabX, y, width, 20);
-            tab.active = wheelTab != value;
+            tab.active = wheelTab != value && value.isAvailable(draft);
             addRenderableWidget(tab);
             availableWithoutPreview.add(tab);
             tabX += width + gap;
@@ -318,32 +328,42 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     private void addAttachmentControls(int x, int y) {
         labeledNumber(x, y, "label.front_attachment_position", 1.0F,
-                () -> draft.frontAttachmentPos, value -> draft.frontAttachmentPos = value);
+                () -> draft.frontAttachmentPos, value -> draft.frontAttachmentPos = value,
+                draft.frontAttachmentEnabled);
         y += CONTROL_ROW_STEP;
         attachmentToggleRow(x, y,
                 "label.front_attachment", "disabled", "enabled",
                 () -> draft.frontAttachmentEnabled,
-                () -> draft.frontAttachmentEnabled = !draft.frontAttachmentEnabled,
+                () -> {
+                    draft.frontAttachmentEnabled = !draft.frontAttachmentEnabled;
+                    resetWidgets();
+                },
                 "label.front_list", "blacklist", "whitelist",
                 () -> draft.frontAttachmentWhitelistMode,
-                () -> draft.frontAttachmentWhitelistMode = !draft.frontAttachmentWhitelistMode);
+                () -> draft.frontAttachmentWhitelistMode = !draft.frontAttachmentWhitelistMode,
+                draft.frontAttachmentEnabled);
         y += CONTROL_ROW_STEP;
         attachmentListField(x, y, "label.front_list", draft.frontAttachmentListText,
-                SelectionType.FRONT_ATTACHMENTS);
+                SelectionType.FRONT_ATTACHMENTS, draft.frontAttachmentEnabled);
         y += CONTROL_ROW_STEP;
         labeledNumber(x, y, "label.rear_attachment_position", 1.0F,
-                () -> draft.rearAttachmentPos, value -> draft.rearAttachmentPos = value);
+                () -> draft.rearAttachmentPos, value -> draft.rearAttachmentPos = value,
+                draft.rearAttachmentEnabled);
         y += CONTROL_ROW_STEP;
         attachmentToggleRow(x, y,
                 "label.rear_attachment", "disabled", "enabled",
                 () -> draft.rearAttachmentEnabled,
-                () -> draft.rearAttachmentEnabled = !draft.rearAttachmentEnabled,
+                () -> {
+                    draft.rearAttachmentEnabled = !draft.rearAttachmentEnabled;
+                    resetWidgets();
+                },
                 "label.rear_list", "blacklist", "whitelist",
                 () -> draft.rearAttachmentWhitelistMode,
-                () -> draft.rearAttachmentWhitelistMode = !draft.rearAttachmentWhitelistMode);
+                () -> draft.rearAttachmentWhitelistMode = !draft.rearAttachmentWhitelistMode,
+                draft.rearAttachmentEnabled);
         y += CONTROL_ROW_STEP;
         attachmentListField(x, y, "label.rear_list", draft.rearAttachmentListText,
-                SelectionType.REAR_ATTACHMENTS);
+                SelectionType.REAR_ATTACHMENTS, draft.rearAttachmentEnabled);
     }
 
     private void addHitboxControls(int x, int y) {
@@ -360,9 +380,9 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         }
 
         VehicleEditorDraft.HitboxPoint point = draft.hitboxes.get(hitboxIndex);
-        vectorFields(x, y, point.origin(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(v, currentHitbox().width(), currentHitbox().height(), currentHitbox().hasContainer()))); y += CONTROL_ROW_STEP * 3;
-        labeledNumber(x, y, "label.width", 0.0625F, () -> currentHitbox().width(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(currentHitbox().origin(), v, currentHitbox().height(), currentHitbox().hasContainer()))); y += CONTROL_ROW_STEP;
-        labeledNumber(x, y, "label.height", 0.0625F, () -> currentHitbox().height(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(currentHitbox().origin(), currentHitbox().width(), v, currentHitbox().hasContainer()))); y += CONTROL_ROW_STEP;
+        vectorFields(x, y, point.origin(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(v, currentHitbox().width(), currentHitbox().height(), currentHitbox().hasContainer()))); y += DENSE_CONTROL_ROW_STEP * 3;
+        labeledNumber(x, y, "label.width", 0.0625F, () -> currentHitbox().width(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(currentHitbox().origin(), v, currentHitbox().height(), currentHitbox().hasContainer()))); y += DENSE_CONTROL_ROW_STEP;
+        labeledNumber(x, y, "label.height", 0.0625F, () -> currentHitbox().height(), v -> replaceHitbox(new VehicleEditorDraft.HitboxPoint(currentHitbox().origin(), currentHitbox().width(), v, currentHitbox().hasContainer()))); y += DENSE_CONTROL_ROW_STEP;
         binaryToggle(x, y, "label.container_hitbox", "off", "on", () -> currentHitbox().hasContainer(), () -> {
             var hitbox = currentHitbox();
             replaceHitbox(new VehicleEditorDraft.HitboxPoint(
@@ -509,23 +529,27 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                                      String firstLabel, String firstFalseLabel, String firstTrueLabel,
                                      BooleanSupplier firstGetter, Runnable firstToggle,
                                      String secondLabel, String secondFalseLabel, String secondTrueLabel,
-                                     BooleanSupplier secondGetter, Runnable secondToggle) {
+                                     BooleanSupplier secondGetter, Runnable secondToggle,
+                                     boolean secondActive) {
         int gap = 4;
         int groupWidth = (PARAM_WIDTH - gap) / 2;
         compactBinaryToggle(x, y, groupWidth, firstLabel, firstFalseLabel, firstTrueLabel,
-                firstGetter, firstToggle);
+                firstGetter, firstToggle, true);
         compactBinaryToggle(x + groupWidth + gap, y, PARAM_WIDTH - groupWidth - gap,
-                secondLabel, secondFalseLabel, secondTrueLabel, secondGetter, secondToggle);
+                secondLabel, secondFalseLabel, secondTrueLabel, secondGetter, secondToggle, secondActive);
     }
 
     private void compactBinaryToggle(int x, int y, int width, String label,
                                      String falseLabel, String trueLabel,
-                                     BooleanSupplier getter, Runnable toggle) {
+                                     BooleanSupplier getter, Runnable toggle, boolean active) {
         int labelWidth = 44;
         labels.add(new FieldLabel(label, x, y + 6, labelWidth - 4));
         addParameterTooltip(x, y, width, VehicleImportTooltips.toggle(label));
-        addRenderableWidget(new VehicleToggleSliderButton(x + labelWidth, y, width - labelWidth, 20,
-                label, falseLabel, trueLabel, getter, toggle));
+        VehicleToggleSliderButton button = new VehicleToggleSliderButton(x + labelWidth, y,
+                width - labelWidth, 20, label, falseLabel, trueLabel, getter, toggle,
+                COMPACT_TOGGLE_TEXT_SCALE);
+        button.active = active;
+        addRenderableWidget(button);
     }
 
     private void labeledText(int x, int y, String label, String value, Consumer<String> setter) {
@@ -537,7 +561,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         field.setMaxLength(1024); field.setValue(value); field.setResponder(setter); addRenderableWidget(field);
     }
 
-    private void attachmentListField(int x, int y, String label, String value, SelectionType type) {
+    private void attachmentListField(int x, int y, String label, String value, SelectionType type,
+                                     boolean active) {
         labels.add(new FieldLabel(label, x, y + 6, FIELD_LABEL_WIDTH));
         addParameterTooltip(x, y, PARAM_WIDTH, VehicleImportText.component(type == SelectionType.FRONT_ATTACHMENTS
                 ? "tooltip.front_list" : "tooltip.rear_list"));
@@ -555,9 +580,11 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 });
         attachmentIconLists.add(iconList);
         addRenderableWidget(iconList);
-        addRenderableWidget(texturedButton(VehicleImportText.component("button.select_list"),
+        VehicleTexturedButton selectButton = texturedButton(VehicleImportText.component("button.select_list"),
                 b -> openAttachmentSelection(type),
-                x + PARAM_WIDTH - buttonWidth, y, buttonWidth, 20));
+                x + PARAM_WIDTH - buttonWidth, y, buttonWidth, 20);
+        selectButton.active = active;
+        addRenderableWidget(selectButton);
     }
 
     private List<ItemStack> attachmentListStacks(SelectionType type, String value) {
@@ -572,11 +599,21 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void labeledNumber(int x, int y, String label, float step, Supplier<Float> getter, Consumer<Float> setter) {
-        labeledNumber(x, y, label, PARAM_WIDTH - 70, step, getter, setter);
+        labeledNumber(x, y, label, PARAM_WIDTH - 70, step, getter, setter, true);
+    }
+
+    private void labeledNumber(int x, int y, String label, float step, Supplier<Float> getter,
+                               Consumer<Float> setter, boolean active) {
+        labeledNumber(x, y, label, PARAM_WIDTH - 70, step, getter, setter, active);
     }
 
     private void labeledNumber(int x, int y, String label, int fieldWidth, float step,
                                Supplier<Float> getter, Consumer<Float> setter) {
+        labeledNumber(x, y, label, fieldWidth, step, getter, setter, true);
+    }
+
+    private void labeledNumber(int x, int y, String label, int fieldWidth, float step,
+                               Supplier<Float> getter, Consumer<Float> setter, boolean active) {
         labels.add(new FieldLabel(label, x, y + 6, FIELD_LABEL_WIDTH));
         addParameterTooltip(x, y, Math.min(PARAM_WIDTH, 70 + fieldWidth),
                 VehicleImportTooltips.number(label.substring("label.".length()), page == Page.WHEEL, frameTab == FrameTab.SEATS));
@@ -585,11 +622,15 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 fieldWidth - NUMBER_ARROW_WIDTH * 2, 20, VehicleImportText.component(label));
         field.setValue(Float.toString(getter.get()));
         field.setResponder(value -> { try { setter.accept(Float.parseFloat(value)); status = ""; } catch (NumberFormatException e) { status = VehicleImportText.string("status.invalid_number"); } });
-        addRenderableWidget(new VehicleNumberArrowButton(fieldX, y, NUMBER_ARROW_WIDTH, 20, Component.literal("<"),
-                () -> nudgeNumber(field, getter, -effectiveNumberStep(step))));
-        addRenderableWidget(new VehicleNumberArrowButton(fieldX + fieldWidth - NUMBER_ARROW_WIDTH, y,
-                NUMBER_ARROW_WIDTH, 20, Component.literal(">"),
-                () -> nudgeNumber(field, getter, effectiveNumberStep(step))));
+        VehicleNumberArrowButton decrease = new VehicleNumberArrowButton(fieldX, y, NUMBER_ARROW_WIDTH, 20,
+                Component.literal("<"), () -> nudgeNumber(field, getter, -effectiveNumberStep(step)));
+        VehicleNumberArrowButton increase = new VehicleNumberArrowButton(fieldX + fieldWidth - NUMBER_ARROW_WIDTH, y,
+                NUMBER_ARROW_WIDTH, 20, Component.literal(">"), () -> nudgeNumber(field, getter, effectiveNumberStep(step)));
+        field.active = active;
+        decrease.active = active;
+        increase.active = active;
+        addRenderableWidget(decrease);
+        addRenderableWidget(increase);
         addRenderableWidget(field);
         numberControls.add(new NumberControl(field, step, getter));
     }
@@ -635,7 +676,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         try {
             Path defaultDirectory = CarPackManager.getRootDirectory().resolve("exports").toAbsolutePath();
             Files.createDirectories(defaultDirectory);
-            String fileStem = exportFileStem(draft.displayName);
+            String fileStem = exportFileStem(draft.displayName());
             Path defaultPath = nextAvailableExportPath(defaultDirectory, fileStem);
             String selected = TinyFileDialogs.tinyfd_saveFileDialog(
                     VehicleImportText.string("dialog.export_pack"), defaultPath.toString(), null, VehicleImportText.string("dialog.export_filter"));
@@ -689,7 +730,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         draft.target = page.target;
         VehicleEditorDraft.Target exportedTarget = draft.target;
         var componentId = draft.componentId();
-        String exportedDisplayName = draft.displayName;
+        String exportedDisplayName = draft.displayName();
         int containerId = menu.containerId;
         exportingItem = true;
         if (exportItemButton != null) exportItemButton.active = false;
@@ -904,7 +945,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 case WHEELS -> VehiclePreviewRenderer.View.FRAME_WHEELS;
                 case SEATS -> VehiclePreviewRenderer.View.FRAME_SEATS;
                 case HITBOXES -> VehiclePreviewRenderer.View.FRAME_HITBOXES;
-                case BASIC, ATTACHMENTS -> VehiclePreviewRenderer.View.FRAME;
+                case BASIC -> VehiclePreviewRenderer.View.FRAME;
+                case ATTACHMENTS -> VehiclePreviewRenderer.View.FRAME_ATTACHMENTS;
             };
         };
     }
@@ -1057,6 +1099,9 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         BASIC("tab.basic"), ADVANCED("tab.advanced");
         final String label;
         WheelTab(String label) { this.label = label; }
+        boolean isAvailable(VehicleEditorDraft draft) {
+            return this == BASIC || draft.isPartVisible(VehicleEditorDraft.Target.WHEEL);
+        }
     }
     private enum SelectionType {
         FRAME("page.frame", VehicleComponentCatalog.Kind.FRAME),

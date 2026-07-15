@@ -28,4 +28,29 @@ final class VehicleScrollingText {
         graphics.drawString(font, text, x - offset, y, color, false);
         graphics.disableScissor();
     }
+
+    static void renderCentered(GuiGraphics graphics, Font font, Component text,
+                               int x, int y, int width, int height, int color, float scale) {
+        int availableWidth = Math.max(1, (int) (width / scale));
+        int textWidth = font.width(text);
+        int overflow = Math.max(0, textWidth - availableWidth);
+        int offset = 0;
+        if (overflow > 0) {
+            double time = Util.getMillis() / 1000.0D;
+            double duration = Math.max(overflow * scale * 0.5D, 3.0D);
+            double progress = Math.sin((Math.PI / 2.0D)
+                    * Math.cos((Math.PI * 2.0D) * time / duration)) / 2.0D + 0.5D;
+            offset = (int) Mth.lerp(progress, 0.0D, overflow);
+        }
+
+        int textX = overflow == 0 ? (availableWidth - textWidth) / 2 : -offset;
+        float textY = (height - font.lineHeight * scale) / 2.0F;
+        graphics.enableScissor(x, y, x + width, y + height);
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y + textY, 0.0F);
+        graphics.pose().scale(scale, scale, 1.0F);
+        graphics.drawString(font, text, textX, 0, color, false);
+        graphics.pose().popPose();
+        graphics.disableScissor();
+    }
 }

@@ -2,10 +2,7 @@ package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
-import com.sshakusora.riautomobility.content.EngineSpec;
-import com.sshakusora.riautomobility.content.FrameSpec;
-import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
-import com.sshakusora.riautomobility.content.WheelSpec;
+import com.sshakusora.riautomobility.content.*;
 import com.sshakusora.riautomobility.network.packet.client.SyncCustomComponentsClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -28,10 +25,12 @@ public class SyncCustomComponentsPacket {
     public SyncCustomComponentsPacket(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
                                       Map<ResourceLocation, EngineSpec> engines,
                                       List<CarPackManifestEntry> carPacks) {
-        this.frames = frames;
-        this.wheels = wheels;
-        this.engines = engines;
-        this.carPacks = carPacks;
+        this.frames = Map.copyOf(frames);
+        this.wheels = Map.copyOf(wheels);
+        this.engines = Map.copyOf(engines);
+        this.carPacks = List.copyOf(carPacks);
+        ComponentSpecNetworkCodec.validateComponents(
+                this.frames.values(), this.wheels.values(), this.engines.values());
     }
 
     public static SyncCustomComponentsPacket create() {
@@ -62,7 +61,7 @@ public class SyncCustomComponentsPacket {
 
     public static SyncCustomComponentsPacket decode(FriendlyByteBuf buf) {
         int frameCount = buf.readVarInt();
-        if (frameCount < 0 || frameCount > 4096) {
+        if (frameCount < 0 || frameCount > ComponentSpecNetworkCodec.MAX_COMPONENTS_PER_TYPE) {
             throw new IllegalArgumentException("Invalid custom frame count: " + frameCount);
         }
         Map<ResourceLocation, FrameSpec> frames = new LinkedHashMap<>();
@@ -72,7 +71,7 @@ public class SyncCustomComponentsPacket {
         }
 
         int wheelCount = buf.readVarInt();
-        if (wheelCount < 0 || wheelCount > 4096) {
+        if (wheelCount < 0 || wheelCount > ComponentSpecNetworkCodec.MAX_COMPONENTS_PER_TYPE) {
             throw new IllegalArgumentException("Invalid custom wheel count: " + wheelCount);
         }
         Map<ResourceLocation, WheelSpec> wheels = new LinkedHashMap<>();
@@ -81,7 +80,9 @@ public class SyncCustomComponentsPacket {
             wheels.put(spec.id(), spec);
         }
         int engineCount = buf.readVarInt();
-        if (engineCount < 0 || engineCount > 4096) throw new IllegalArgumentException("Invalid custom engine count: " + engineCount);
+        if (engineCount < 0 || engineCount > ComponentSpecNetworkCodec.MAX_COMPONENTS_PER_TYPE) {
+            throw new IllegalArgumentException("Invalid custom engine count: " + engineCount);
+        }
         Map<ResourceLocation, EngineSpec> engines = new LinkedHashMap<>();
         for (int i = 0; i < engineCount; i++) {
             EngineSpec spec = EngineSpec.read(buf);

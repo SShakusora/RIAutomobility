@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.editor.upload.CarPackUploadService;
+import com.sshakusora.riautomobility.network.CarPackNetworkLimits;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -9,7 +10,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 public record CarPackUploadChunkPacket(UUID uploadId, int index, byte[] data) {
-    public static final int MAX_CHUNK_SIZE = 256 * 1024;
+    public static final int MAX_CHUNK_SIZE = CarPackNetworkLimits.MAX_CHUNK_DATA_SIZE;
 
     public CarPackUploadChunkPacket {
         if (index < 0 || data == null || data.length == 0 || data.length > MAX_CHUNK_SIZE) {

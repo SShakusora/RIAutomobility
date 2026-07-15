@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -97,12 +98,15 @@ public final class CarPackUploadService {
                     .resolve(upload.request.packName() + CarPackManager.CAR_PACK_EXTENSION).normalize();
             if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize()))
                 throw new IOException("Invalid target path");
-            if (Files.exists(target) && !upload.request.overwrite())
-                throw new IOException("A car pack with this name already exists");
-            Files.move(upload.temporary, target, StandardCopyOption.REPLACE_EXISTING);
-
-            CarPackRuntime.reloadServer();
-            CarPackEvents.CommonEvents.syncAll(player.server);
+            installAtomically(upload.temporary, target, upload.request.overwrite(),
+                    () -> {
+                        CarPackRuntime.reloadServer();
+                        CarPackEvents.CommonEvents.syncAll(player.server);
+                    },
+                    () -> {
+                        CarPackRuntime.reloadServer();
+                        CarPackEvents.CommonEvents.syncAll(player.server);
+                    });
             success(player, uploadId, "Installed " + target.getFileName());
         } catch (Exception exception) {
             abort(upload);
@@ -192,6 +196,53 @@ public final class CarPackUploadService {
         if (!player.hasPermissions(2)) throw new IOException("Server operator permission is required");
     }
 
+    static void installAtomically(Path source, Path target, boolean overwrite,
+                                  CheckedAction apply, CheckedAction rollback) throws Exception {
+        boolean targetExists = Files.exists(target);
+        if (targetExists && !overwrite) {
+            throw new IOException("A car pack with this name already exists");
+        }
+
+        Path backup = target.resolveSibling(target.getFileName() + "." + UUID.randomUUID() + ".backup");
+        boolean backupCreated = false;
+        boolean installed = false;
+        try {
+            if (targetExists) {
+                moveAtomically(target, backup);
+                backupCreated = true;
+            }
+            moveAtomically(source, target);
+            installed = true;
+            apply.run();
+            if (backupCreated) {
+                Files.delete(backup);
+                backupCreated = false;
+            }
+        } catch (Exception failure) {
+            try {
+                if (installed) {
+                    Files.deleteIfExists(target);
+                }
+                if (backupCreated) {
+                    moveAtomically(backup, target);
+                    backupCreated = false;
+                }
+                rollback.run();
+            } catch (Exception rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+            }
+            throw failure;
+        }
+    }
+
+    private static void moveAtomically(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException exception) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     private static void discardPlayerUpload(UUID playerId) {
         UPLOADS.values().stream().filter(upload -> upload.playerId.equals(playerId)).toList().forEach(CarPackUploadService::abort);
     }
@@ -244,5 +295,10 @@ public final class CarPackUploadService {
             this.temporary = temporary;
             this.output = output;
         }
+    }
+
+    @FunctionalInterface
+    interface CheckedAction {
+        void run() throws Exception;
     }
 }

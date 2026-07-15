@@ -24,12 +24,12 @@ public final class VehicleEditorDraft {
 
     public Target target = Target.FRAME;
     public Target previewTarget;
-    public String displayName = VehicleImportText.string("default_name");
     public boolean overwrite;
     public boolean showInCreativeTab = true;
     public String modelError = "";
 
     private final EnumMap<Target, Path> modelFiles = new EnumMap<>(Target.class);
+    private final EnumMap<Target, String> displayNames = new EnumMap<>(Target.class);
     private final EnumMap<Target, Boolean> previewReady = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> previewKeys = new EnumMap<>(Target.class);
     private final EnumSet<Target> visibleParts = EnumSet.noneOf(Target.class);
@@ -102,6 +102,7 @@ public final class VehicleEditorDraft {
 
     public VehicleEditorDraft(AutomobileFrame frame, AutomobileWheel wheel, AutomobileEngine engine) {
         for (Target value : Target.values()) {
+            displayNames.put(value, VehicleImportText.string("default_name." + value.path));
             previewReady.put(value, false);
             previewKeys.put(value, UUID.randomUUID().toString().replace("-", ""));
         }
@@ -112,6 +113,14 @@ public final class VehicleEditorDraft {
 
     public Path modelFile() {
         return modelFiles.get(target);
+    }
+
+    public String displayName() {
+        return displayNames.get(target);
+    }
+
+    public void setDisplayName(String displayName) {
+        displayNames.put(target, displayName);
     }
 
     public Path modelFile(Target part) {
@@ -218,6 +227,7 @@ public final class VehicleEditorDraft {
     }
 
     public String validationError() {
+        String displayName = displayName();
         if (displayName.isBlank() || displayName.length() > 80)
             return VehicleImportText.string("validation.display_name_length");
         if (target == Target.FRAME) {

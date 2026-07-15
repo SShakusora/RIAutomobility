@@ -41,7 +41,7 @@ public final class DynamicBbModel extends Model {
     private boolean loggedBroken;
 
     public DynamicBbModel(ResourceLocation componentId, FrameSpec.ModelSpec spec, Model fallbackModel, Consumer<ResourceLocation> missingCallback) {
-        super(renderTypeFactory(spec.renderType()));
+        super(defaultRenderTypeFactory(spec));
         this.modelResource = spec.bbModel();
         this.spec = spec;
         this.fallbackModel = fallbackModel;
@@ -353,6 +353,18 @@ public final class DynamicBbModel extends Model {
 
     public static Function<ResourceLocation, RenderType> renderTypeFactory(String name) {
         return texture -> renderType(texture, "default", name);
+    }
+
+    private static Function<ResourceLocation, RenderType> defaultRenderTypeFactory(FrameSpec.ModelSpec spec) {
+        return fallbackTexture -> {
+            BbModelData.Document document = BbModelRepository.get(spec.bbModel());
+            if (document == null) {
+                return renderType(fallbackTexture, "default", spec.renderType());
+            }
+            BbModelRepository.ResolvedTexture texture = BbModelRepository.resolveTexture(
+                    spec.bbModel(), spec, document, BbModelData.TextureReference.none());
+            return renderType(texture.location(), texture.renderMode(), spec.renderType());
+        };
     }
 
     private static RenderType renderType(ResourceLocation texture, String textureMode, String configuredType) {

@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.carpack;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackResources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -53,6 +55,25 @@ class CarPackArchiveStoreTest {
         ));
 
         assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
+    }
+
+    @Test
+    void readsTheComponentOwnershipIndexFromMetadata() throws IOException {
+        Path archive = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[\"test:wheel\"],"
+                        + "\"engines\":[\"test:engine\"]}}",
+                "data/test/riautomobility/frames/frame.json", "{}",
+                "data/test/riautomobility/wheels/wheel.json", "{}",
+                "data/test/riautomobility/engines/engine.json", "{}"
+        ));
+
+        CarPackArchiveStore.validateRiautoArchive(archive);
+        assertEquals(List.of(
+                new ResourceLocation("test", "frame"),
+                new ResourceLocation("test", "wheel"),
+                new ResourceLocation("test", "engine")
+        ), CarPackArchiveStore.readDeclaredComponentIds(archive));
     }
 
     @Test
@@ -161,16 +182,24 @@ class CarPackArchiveStoreTest {
     void validatesManifestBoundsAndDigests() {
         String digest = "a".repeat(64);
         assertDoesNotThrow(() -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024
+                "riautomobility/test", "test", digest, digest, 1024, List.of(new ResourceLocation("test", "frame"))
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "other/test", "test", digest, digest, 1024
+                "other/test", "test", digest, digest, 1024, List.of(new ResourceLocation("test", "frame"))
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", "invalid", digest, 1024
+                "riautomobility/test", "test", "invalid", digest, 1024, List.of(new ResourceLocation("test", "frame"))
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, CarPackManifestEntry.MAX_ARCHIVE_SIZE + 1
+                "riautomobility/test", "test", digest, digest, CarPackManifestEntry.MAX_ARCHIVE_SIZE + 1,
+                List.of(new ResourceLocation("test", "frame"))
+        ));
+        assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
+                "riautomobility/test", "test", digest, digest, 1024, List.of()
+        ));
+        assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
+                "riautomobility/test", "test", digest, digest, 1024,
+                List.of(new ResourceLocation("test", "frame"), new ResourceLocation("test", "frame"))
         ));
     }
 

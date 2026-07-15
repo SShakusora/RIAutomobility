@@ -11,9 +11,11 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public record RequestCarPacksPacket(List<Request> requests) {
+    public static final int MAX_REQUESTS = 256;
+
     public RequestCarPacksPacket {
         requests = List.copyOf(requests);
-        if (requests.size() > CarPackManifestEntry.MAX_PACKS) {
+        if (requests.isEmpty() || requests.size() > MAX_REQUESTS) {
             throw new IllegalArgumentException("Too many requested car packs: " + requests.size());
         }
     }
@@ -28,7 +30,7 @@ public record RequestCarPacksPacket(List<Request> requests) {
 
     public static RequestCarPacksPacket decode(FriendlyByteBuf buffer) {
         int count = buffer.readVarInt();
-        if (count < 0 || count > CarPackManifestEntry.MAX_PACKS) {
+        if (count < 1 || count > MAX_REQUESTS) {
             throw new IllegalArgumentException("Invalid requested car pack count: " + count);
         }
         List<Request> requests = new ArrayList<>(count);

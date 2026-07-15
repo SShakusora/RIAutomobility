@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,16 +33,18 @@ public final class CarPackArchiveStore {
 
     public static synchronized List<CarPackManifestEntry> prepareManifest() {
         Map<String, TransferPack> prepared = new LinkedHashMap<>();
-        long totalSize = 0;
+        Map<ResourceLocation, String> componentOwners = new HashMap<>();
         for (CarPackManager.CarPack pack : CarPackManager.discoverCarPacks()) {
             try {
                 TransferPack transferPack = prepare(pack);
-                totalSize = Math.addExact(totalSize, transferPack.manifest().archiveSize());
-                if (totalSize > CarPackManifestEntry.MAX_TOTAL_ARCHIVE_SIZE) {
-                    throw new IOException("Total car pack transfer size exceeds the configured safety limit");
+                for (ResourceLocation component : transferPack.manifest().components()) {
+                    String previous = componentOwners.putIfAbsent(component, pack.id());
+                    if (previous != null) {
+                        throw new IOException("Component " + component + " is declared by both " + previous + " and " + pack.id());
+                    }
                 }
                 prepared.put(pack.id(), transferPack);
-            } catch (IOException | ArithmeticException exception) {
+            } catch (IOException exception) {
                 throw new IllegalStateException("Unable to prepare car pack " + pack.id() + " for network transfer", exception);
             }
         }
@@ -78,9 +81,37 @@ public final class CarPackArchiveStore {
         }
         String archiveDigest = sha256(archive);
         return new TransferPack(
-                new CarPackManifestEntry(pack.id(), pack.displayName(), pack.digest(), archiveDigest, size),
+                new CarPackManifestEntry(pack.id(), pack.displayName(), pack.digest(), archiveDigest, size,
+                        readDeclaredComponentIds(archive)),
                 archive
         );
+    }
+
+    static List<ResourceLocation> readDeclaredComponentIds(Path archive) throws IOException {
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
+            if (metadataEntry == null || metadataEntry.isDirectory()) {
+                throw new IOException("RIAuto archive does not contain a root " + RIAUTO_METADATA_FILE);
+            }
+            JsonObject metadata;
+            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
+                metadata = JsonParser.parseReader(reader).getAsJsonObject();
+            }
+            LinkedHashSet<ResourceLocation> ids = new LinkedHashSet<>();
+            JsonObject components = metadata.getAsJsonObject("components");
+            for (String kind : List.of("frames", "wheels", "engines")) {
+                if (!components.has(kind)) continue;
+                for (JsonElement element : components.getAsJsonArray(kind)) {
+                    ResourceLocation id = ResourceLocation.tryParse(element.getAsString());
+                    if (id == null || !ids.add(id)) {
+                        throw new IOException("RIAuto metadata contains an invalid or duplicate component id");
+                    }
+                }
+            }
+            return List.copyOf(ids);
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
+        }
     }
 
     private static void createArchive(Path root, Path target) throws IOException {

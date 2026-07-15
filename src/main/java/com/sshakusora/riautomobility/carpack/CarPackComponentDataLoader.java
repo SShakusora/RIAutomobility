@@ -4,10 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.sshakusora.riautomobility.content.EngineSpec;
-import com.sshakusora.riautomobility.content.FrameSpec;
-import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
-import com.sshakusora.riautomobility.content.WheelSpec;
+import com.sshakusora.riautomobility.content.*;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import net.minecraft.resources.ResourceLocation;
@@ -100,5 +97,11 @@ public final class CarPackComponentDataLoader {
 
     public record LoadedContent(Map<ResourceLocation, FrameSpec> frames, Map<ResourceLocation, WheelSpec> wheels,
                                 Map<ResourceLocation, EngineSpec> engines) {
+        public LoadedContent {
+            frames = Map.copyOf(frames);
+            wheels = Map.copyOf(wheels);
+            engines = Map.copyOf(engines);
+            ComponentSpecNetworkCodec.validateComponents(frames.values(), wheels.values(), engines.values());
+        }
     }
 }

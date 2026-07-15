@@ -3,7 +3,6 @@ package com.sshakusora.riautomobility.carpack.client;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.carpack.CarPackRuntime;
 import com.sshakusora.riautomobility.carpack.OverlayCloseableResourceManager;
-import com.sshakusora.riautomobility.mixin.accessor.ReloadableResourceManagerAccessor;
 import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
@@ -31,19 +30,18 @@ public final class ClientCarPackResources {
     public static void install(List<CarPackManager.CarPack> packs) {
         Minecraft minecraft = Minecraft.getInstance();
         ReloadableResourceManager manager = (ReloadableResourceManager) minecraft.getResourceManager();
-        ReloadableResourceManagerAccessor accessor = (ReloadableResourceManagerAccessor) manager;
         String fingerprint = fingerprint(packs);
-        if (mount != null && mount.fingerprint.equals(fingerprint) && accessor.riautomobility$getResources() == mount.resources) {
+        if (mount != null && mount.fingerprint.equals(fingerprint) && manager.resources == mount.resources) {
             return;
         }
 
         Set<ResourceLocation> staleTextures = mount == null ? Set.of() : mount.textures;
-        CloseableResourceManager base = detach(accessor);
+        CloseableResourceManager base = detach(manager);
         CloseableResourceManager carResources = CarPackRuntime.open(PackType.CLIENT_RESOURCES, packs);
         OverlayCloseableResourceManager combined = new OverlayCloseableResourceManager(base, carResources);
         Set<ResourceLocation> textures = textureIds(carResources);
         mount = new Mount(fingerprint, combined, carResources, textures);
-        accessor.riautomobility$setResources(combined);
+        manager.resources = combined;
 
         Set<ResourceLocation> reset = new HashSet<>(staleTextures);
         reset.addAll(textures);
@@ -54,10 +52,9 @@ public final class ClientCarPackResources {
     public static void uninstall() {
         Minecraft minecraft = Minecraft.getInstance();
         if (!(minecraft.getResourceManager() instanceof ReloadableResourceManager manager)) return;
-        ReloadableResourceManagerAccessor accessor = (ReloadableResourceManagerAccessor) manager;
         if (mount == null) return;
         Set<ResourceLocation> textures = mount.textures;
-        detach(accessor);
+        detach(manager);
         mount = null;
         textures.forEach(minecraft.getTextureManager()::release);
         CarPackGeckoReloader.clear();
@@ -75,11 +72,11 @@ public final class ClientCarPackResources {
         RIAutomobileModels.rebuildDynamicModelsNow();
     }
 
-    private static CloseableResourceManager detach(ReloadableResourceManagerAccessor accessor) {
-        CloseableResourceManager current = accessor.riautomobility$getResources();
+    private static CloseableResourceManager detach(ReloadableResourceManager manager) {
+        CloseableResourceManager current = manager.resources;
         if (mount == null || current != mount.resources) return current;
         CloseableResourceManager base = mount.resources.detachBase();
-        accessor.riautomobility$setResources(base);
+        manager.resources = base;
         mount.resources.close();
         return base;
     }

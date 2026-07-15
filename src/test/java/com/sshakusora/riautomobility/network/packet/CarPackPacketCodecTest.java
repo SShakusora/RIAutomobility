@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.network.packet;
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -16,7 +17,8 @@ class CarPackPacketCodecTest {
     @Test
     void manifestEntryRoundTrips() {
         CarPackManifestEntry expected = new CarPackManifestEntry(
-                "riautomobility/example", "Example", DIGEST, "b".repeat(64), 12345
+                "riautomobility/example", "Example", DIGEST, "b".repeat(64), 12345,
+                List.of(new ResourceLocation("example", "buggy"))
         );
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
@@ -39,6 +41,8 @@ class CarPackPacketCodecTest {
         } finally {
             buffer.release();
         }
+
+        assertThrows(IllegalArgumentException.class, () -> new RequestCarPacksPacket(List.of()));
     }
 
     @Test
@@ -61,6 +65,15 @@ class CarPackPacketCodecTest {
                 0,
                 new byte[CarPackChunkPacket.MAX_CHUNK_SIZE + 1]
         ));
+
+        byte[] maximum = new byte[CarPackChunkPacket.MAX_CHUNK_SIZE];
+        FriendlyByteBuf maximumBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            CarPackChunkPacket.encode(new CarPackChunkPacket(DIGEST, Integer.MAX_VALUE, maximum), maximumBuffer);
+            assertTrue(maximumBuffer.readableBytes() < 32767);
+        } finally {
+            maximumBuffer.release();
+        }
     }
 
     @Test
@@ -90,6 +103,15 @@ class CarPackPacketCodecTest {
         }
         assertThrows(IllegalArgumentException.class, () -> new CarPackUploadChunkPacket(
                 uploadId, 0, new byte[CarPackUploadChunkPacket.MAX_CHUNK_SIZE + 1]));
+
+        FriendlyByteBuf maximumUploadBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            CarPackUploadChunkPacket.encode(new CarPackUploadChunkPacket(
+                    uploadId, Integer.MAX_VALUE, new byte[CarPackUploadChunkPacket.MAX_CHUNK_SIZE]), maximumUploadBuffer);
+            assertTrue(maximumUploadBuffer.readableBytes() < 32767);
+        } finally {
+            maximumUploadBuffer.release();
+        }
 
         CompleteCarPackUploadPacket complete = new CompleteCarPackUploadPacket(uploadId);
         FriendlyByteBuf completeBuffer = new FriendlyByteBuf(Unpooled.buffer());

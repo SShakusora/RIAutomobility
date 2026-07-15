@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,13 +20,14 @@ import java.util.zip.ZipOutputStream;
 
 public final class VehiclePackBuilder {
     public static final long MAX_SOURCE_FILE_SIZE = 32L * 1024L * 1024L;
+    private static final String EMBEDDED_PNG_PREFIX = "data:image/png;base64,";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private VehiclePackBuilder() {
     }
 
     public static Path build(VehicleEditorDraft draft, Path destination, boolean preview) throws IOException {
-        validateSources(draft);
+        BbModelData.Document document = validateSources(draft);
         String validation = draft.validationError();
         if (!validation.isBlank()) {
             throw new IOException(validation);
@@ -40,7 +42,7 @@ public final class VehiclePackBuilder {
         metadata.addProperty("format", CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
         String declaredComponentId = namespace + ":" + componentPath;
         metadata.addProperty("id", declaredComponentId);
-        metadata.addProperty("name", draft.displayName);
+        metadata.addProperty("name", draft.displayName());
         JsonObject components = new JsonObject();
         var frames = new JsonArray();
         var wheels = new JsonArray();
@@ -66,6 +68,8 @@ public final class VehiclePackBuilder {
 
         entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/" + componentPath + ".bbmodel",
                 readLimited(draft.modelFile()));
+        entries.put("assets/" + namespace + "/textures/entity/automobile/" + kind + "/" + componentPath + ".png",
+                defaultEmbeddedTexture(document));
 
         writeArchive(destination, entries);
         return destination;
@@ -111,6 +115,8 @@ public final class VehiclePackBuilder {
             }
             entries.put("assets/" + VehicleEditorDraft.PREVIEW_NAMESPACE + "/models/entity/automobile/"
                     + target.path + "/" + componentPath + ".bbmodel", readLimited(modelFile));
+            entries.put("assets/" + VehicleEditorDraft.PREVIEW_NAMESPACE + "/textures/entity/automobile/"
+                    + target.path + "/" + componentPath + ".png", defaultEmbeddedTexture(document));
             modelCount++;
         }
         if (modelCount == 0) throw new IOException("Choose at least one BBModel file");
@@ -118,13 +124,14 @@ public final class VehiclePackBuilder {
         return destination;
     }
 
-    private static void validateSources(VehicleEditorDraft draft) throws IOException {
+    private static BbModelData.Document validateSources(VehicleEditorDraft draft) throws IOException {
         BbModelData.Document document = validateSource(draft.modelFile());
         if (draft.target == VehicleEditorDraft.Target.FRAME) {
             draft.applyAutomaticFrameModelSize(BbModelBounds.measure(document));
         } else if (draft.target == VehicleEditorDraft.Target.WHEEL) {
             draft.applyAutomaticWheelModelSize(BbModelBounds.measure(document));
         }
+        return document;
     }
 
     private static BbModelData.Document validateSource(Path source) throws IOException {
@@ -149,6 +156,21 @@ public final class VehiclePackBuilder {
             BbModelParser.requireEmbeddedPngTextures(document);
         } catch (RuntimeException exception) {
             throw new IOException(exception.getMessage(), exception);
+        }
+    }
+
+    static byte[] defaultEmbeddedTexture(BbModelData.Document document) throws IOException {
+        BbModelData.Texture texture = document.textures().stream()
+                .filter(BbModelData.Texture::useAsDefault)
+                .findFirst()
+                .orElseGet(() -> document.textures().isEmpty() ? null : document.textures().get(0));
+        if (texture == null || !texture.source().startsWith(EMBEDDED_PNG_PREFIX)) {
+            throw new IOException("BBModel does not contain a default embedded PNG texture");
+        }
+        try {
+            return Base64.getDecoder().decode(texture.source().substring(EMBEDDED_PNG_PREFIX.length()));
+        } catch (IllegalArgumentException exception) {
+            throw new IOException("BBModel default texture contains invalid Base64 data", exception);
         }
     }
 

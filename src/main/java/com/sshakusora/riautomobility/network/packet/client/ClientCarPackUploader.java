@@ -9,8 +9,10 @@ import com.sshakusora.riautomobility.network.packet.CarPackUploadResultPacket;
 import com.sshakusora.riautomobility.network.packet.CompleteCarPackUploadPacket;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,18 +24,28 @@ public final class ClientCarPackUploader {
 
     public static UUID upload(Path archive, VehicleEditorDraft draft, Consumer<CarPackUploadResultPacket> callback) throws IOException {
         UUID id = UUID.randomUUID();
-        byte[] bytes = Files.readAllBytes(archive);
-        CALLBACKS.put(id, callback);
-        RIAutomobilityNetwork.CHANNEL.sendToServer(new BeginCarPackUploadPacket(id, draft.packName(), draft.namespace(),
-                draft.componentPath(), draft.target.path, draft.overwrite, bytes.length, CarPackArchiveStore.sha256(archive)));
-        int chunkSize = CarPackUploadChunkPacket.MAX_CHUNK_SIZE;
-        for (int offset = 0, index = 0; offset < bytes.length; offset += chunkSize, index++) {
-            int length = Math.min(chunkSize, bytes.length - offset);
-            byte[] chunk = new byte[length];
-            System.arraycopy(bytes, offset, chunk, 0, length);
-            RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackUploadChunkPacket(id, index, chunk));
+        long archiveSize = Files.size(archive);
+        if (archiveSize > Integer.MAX_VALUE) {
+            throw new IOException("Car pack is too large to upload");
         }
-        RIAutomobilityNetwork.CHANNEL.sendToServer(new CompleteCarPackUploadPacket(id));
+        CALLBACKS.put(id, callback);
+        try {
+            RIAutomobilityNetwork.CHANNEL.sendToServer(new BeginCarPackUploadPacket(id, draft.packName(), draft.namespace(),
+                    draft.componentPath(), draft.target.path, draft.overwrite, archiveSize, CarPackArchiveStore.sha256(archive)));
+            byte[] buffer = new byte[CarPackUploadChunkPacket.MAX_CHUNK_SIZE];
+            try (InputStream input = Files.newInputStream(archive)) {
+                int index = 0;
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    byte[] chunk = read == buffer.length ? buffer.clone() : Arrays.copyOf(buffer, read);
+                    RIAutomobilityNetwork.CHANNEL.sendToServer(new CarPackUploadChunkPacket(id, index++, chunk));
+                }
+            }
+            RIAutomobilityNetwork.CHANNEL.sendToServer(new CompleteCarPackUploadPacket(id));
+        } catch (IOException | RuntimeException exception) {
+            CALLBACKS.remove(id);
+            throw exception;
+        }
         return id;
     }
 

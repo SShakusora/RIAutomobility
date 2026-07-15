@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
+import com.sshakusora.riautomobility.network.CarPackNetworkLimits;
 import com.sshakusora.riautomobility.network.packet.client.ClientCarPackSynchronizer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
@@ -10,7 +11,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public record CarPackChunkPacket(String archiveDigest, int index, byte[] data) {
-    public static final int MAX_CHUNK_SIZE = 256 * 1024;
+    public static final int MAX_CHUNK_SIZE = CarPackNetworkLimits.MAX_CHUNK_DATA_SIZE;
 
     public CarPackChunkPacket {
         CarPackManifestEntry.validateDigest(archiveDigest, "archive");

@@ -19,16 +19,24 @@ final class VehicleToggleSliderButton extends AbstractButton {
     private final String trueLabel;
     private final BooleanSupplier getter;
     private final Runnable toggle;
+    private final float textScale;
 
     VehicleToggleSliderButton(int x, int y, int width, int height, String label,
                               String falseLabel, String trueLabel,
                               BooleanSupplier getter, Runnable toggle) {
+        this(x, y, width, height, label, falseLabel, trueLabel, getter, toggle, 1.0F);
+    }
+
+    VehicleToggleSliderButton(int x, int y, int width, int height, String label,
+                              String falseLabel, String trueLabel,
+                              BooleanSupplier getter, Runnable toggle, float textScale) {
         super(x, y, width, height, Component.empty());
         this.label = label;
         this.falseLabel = falseLabel;
         this.trueLabel = trueLabel;
         this.getter = getter;
         this.toggle = toggle;
+        this.textScale = textScale;
         updateMessage();
     }
 
@@ -46,9 +54,14 @@ final class VehicleToggleSliderButton extends AbstractButton {
         var font = Minecraft.getInstance().font;
         int textColor = active ? 0xFFE6E9ED : 0xFF9A9EA4;
         int trackX = getX() + width - TRACK_WIDTH;
-        renderScrollingString(graphics, font,
-                VehicleImportText.component(label + "." + (enabled ? trueLabel : falseLabel)),
-                getX(), getY(), trackX - 4, getY() + height, textColor);
+        Component stateLabel = VehicleImportText.component(label + "." + (enabled ? trueLabel : falseLabel));
+        if (textScale < 0.999F) {
+            VehicleScrollingText.renderCentered(graphics, font, stateLabel,
+                    getX(), getY(), trackX - 4 - getX(), height, textColor, textScale);
+        } else {
+            renderScrollingString(graphics, font, stateLabel,
+                    getX(), getY(), trackX - 4, getY() + height, textColor);
+        }
 
         int trackY = getY() + (height - TRACK_HEIGHT) / 2;
         VehicleGuiTextures.blit(graphics, !active

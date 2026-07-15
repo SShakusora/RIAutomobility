@@ -18,7 +18,7 @@ public record EngineSpec(
         FrameSpec.ModelSpec model,
         List<ExhaustSpec> exhausts,
         boolean showInCreativeTab
-) {
+) implements NetworkComponentSpec {
     public EngineSpec {
         exhausts = List.copyOf(exhausts);
     }
@@ -59,12 +59,12 @@ public record EngineSpec(
 
     public void write(FriendlyByteBuf buf) {
         buf.writeResourceLocation(this.id);
-        buf.writeUtf(this.toJson().toString());
+        ComponentSpecNetworkCodec.writeJson(buf, this.toJson());
     }
 
     public static EngineSpec read(FriendlyByteBuf buf) {
         ResourceLocation id = buf.readResourceLocation();
-        return fromJson(id, GsonHelper.parse(buf.readUtf()));
+        return fromJson(id, ComponentSpecNetworkCodec.readJson(buf));
     }
 
     public record ExhaustSpec(float x, float y, float z, float pitch, float yaw) {

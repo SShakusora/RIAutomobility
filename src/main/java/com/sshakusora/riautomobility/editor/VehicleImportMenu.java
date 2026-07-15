@@ -19,9 +19,9 @@ import net.minecraft.world.item.ItemStack;
 public final class VehicleImportMenu extends AbstractContainerMenu {
     private static final int MAX_EXPORTED_NAME_LENGTH = 80;
     public static final int OUTPUT_SLOT_X = 259;
-    public static final int OUTPUT_SLOT_Y = 276;
+    public static final int OUTPUT_SLOT_Y = 256;
     public static final int INVENTORY_X = 70;
-    public static final int INVENTORY_Y = 238;
+    public static final int INVENTORY_Y = 218;
     private static final int OUTPUT_SLOT = 0;
     private static final int PLAYER_INVENTORY_START = 1;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_START + 27;

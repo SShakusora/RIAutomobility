@@ -174,12 +174,12 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         String[][] entries = chinese ? new String[][] {
                 {"page.frame", "车架"}, {"page.wheel", "车轮"}, {"page.engine", "引擎"},
                 {"tab.basic", "基础"}, {"tab.wheels", "轮位"}, {"tab.seats", "座椅"}, {"tab.hitboxes", "碰撞"}, {"tab.attachments", "附件"}, {"tab.advanced", "高级"},
-                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.import_model", "导入 BBModel"}, {"button.export_pack", "导出 .riauto"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
+                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.import_model", "导入 BBModel"}, {"button.export_pack", "导出文件"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
                 {"label.name", "名字："}, {"label.weight", "重量："}, {"label.engine_back", "引擎后移："}, {"label.engine_height", "引擎高度："}, {"label.size", "尺寸："}, {"label.grip", "抓地力："}, {"label.radius", "半径："}, {"label.width", "宽度："}, {"label.height", "高度："}, {"label.torque", "扭矩："}, {"label.speed", "速度："}, {"label.rotation_y", "Y轴旋转："}, {"label.x", "X："}, {"label.y", "Y："}, {"label.z", "Z："},
                 {"header.wheel", "轮位 %s/%s"}, {"header.seat", "座椅 %s/%s"}, {"header.entity_hitbox", "实体碰撞箱"}, {"header.additional_hitbox", "附加碰撞箱 %s/%s"}, {"status.invalid_number", "数字格式无效"}
         } : new String[][] {
                 {"page.frame", "Frame"}, {"page.wheel", "Wheel"}, {"page.engine", "Engine"}, {"tab.basic", "Basic"}, {"tab.wheels", "Wheels"}, {"tab.seats", "Seats"}, {"tab.hitboxes", "Hitboxes"}, {"tab.attachments", "Attachments"}, {"tab.advanced", "Advanced"},
-                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.import_model", "Import BBModel"}, {"button.export_pack", "Export .riauto"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
+                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.import_model", "Import BBModel"}, {"button.export_pack", "Export File"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
                 {"label.name", "Name:"}, {"label.weight", "Weight:"}, {"label.engine_back", "Engine Back:"}, {"label.engine_height", "Engine Height:"}, {"label.size", "Size:"}, {"label.grip", "Grip:"}, {"label.radius", "Radius:"}, {"label.width", "Width:"}, {"label.height", "Height:"}, {"label.torque", "Torque:"}, {"label.speed", "Speed:"}, {"label.rotation_y", "Y Rotation:"}, {"label.x", "X:"}, {"label.y", "Y:"}, {"label.z", "Z:"},
                 {"header.wheel", "Wheel %s/%s"}, {"header.seat", "Seat %s/%s"}, {"header.entity_hitbox", "Entity Hitbox"}, {"header.additional_hitbox", "Additional Hitbox %s/%s"}, {"status.invalid_number", "Invalid number format"}
         };
@@ -261,7 +261,9 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "tooltip.front_list", chinese ? "前附件筛选名单；可选择白名单或黑名单。" : "Front attachment filter list; choose whitelist or blacklist mode."); add(p + "tooltip.rear_list", chinese ? "后附件筛选名单；可选择白名单或黑名单。" : "Rear attachment filter list; choose whitelist or blacklist mode.");
         add(p + "tooltip.preview_view", chinese ? "切换座椅页的外部和第一人称预览视角。" : "Switches the seat page between external and first-person preview views.");
         add(p + "tooltip.wheel", chinese ? "选择当前编辑并在预览中高亮的轮位。" : "Selects the wheel position being edited and highlighted in preview."); add(p + "tooltip.seat", chinese ? "选择当前编辑并在预览中高亮的座椅。" : "Selects the seat being edited and highlighted in preview."); add(p + "tooltip.collision", chinese ? "选择当前编辑并在预览中高亮的碰撞箱。" : "Selects the hitbox being edited and highlighted in preview.");
-        add(p + "default_name", chinese ? "新车辆" : "New Vehicle");
+        add(p + "default_name.frame", chinese ? "新车架" : "New Frame");
+        add(p + "default_name.wheel", chinese ? "新车轮" : "New Wheel");
+        add(p + "default_name.engine", chinese ? "新引擎" : "New Engine");
         add(p + "validation.display_name_length", chinese ? "名称长度必须为 1 到 80 个字符" : "Display name must contain 1-80 characters");
         add(p + "validation.frame_weight", chinese ? "车架重量必须大于零" : "Frame weight must be greater than zero"); add(p + "validation.item_length", chinese ? "物品显示长度必须大于零" : "Item display length must be greater than zero");
         add(p + "validation.frame_positions", chinese ? "车架位置必须是有限数值" : "Frame positions must contain finite numbers"); add(p + "validation.frame_dimensions", chinese ? "车架尺寸必须大于零" : "Frame dimensions must be greater than zero");

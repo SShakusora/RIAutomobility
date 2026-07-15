@@ -41,7 +41,7 @@ public record FrameSpec(
         List<ResourceLocation> rearAttachmentWhitelist,
         List<ResourceLocation> rearAttachmentBlacklist,
         boolean showInCreativeTab
-) {
+) implements NetworkComponentSpec {
     public AutomobileFrame toFrame() {
         return new AutomobileFrame(
                 this.id,
@@ -148,12 +148,12 @@ public record FrameSpec(
 
     public void write(FriendlyByteBuf buf) {
         buf.writeResourceLocation(this.id);
-        buf.writeUtf(this.toJson().toString());
+        ComponentSpecNetworkCodec.writeJson(buf, this.toJson());
     }
 
     public static FrameSpec read(FriendlyByteBuf buf) {
         ResourceLocation id = buf.readResourceLocation();
-        return fromJson(id, GsonHelper.parse(buf.readUtf()));
+        return fromJson(id, ComponentSpecNetworkCodec.readJson(buf));
     }
 
     private static List<Vec3> readVec3List(JsonObject json, String key) {

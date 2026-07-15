@@ -1,6 +1,5 @@
 package com.sshakusora.riautomobility.model;
 
-import com.sshakusora.riautomobility.mixin.accessor.EntityModelSetAccessor;
 import io.github.foundationgames.automobility.forge.vendored.jsonem.util.JsonEntityModelUtil;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
@@ -45,9 +44,8 @@ public final class DynamicJsonModelLoader {
     }
 
     public static void loadIntoEntityModelSet(EntityModelSet entityModels, ResourceManager manager) {
-        EntityModelSetAccessor accessor = (EntityModelSetAccessor) entityModels;
-        Map<ModelLayerLocation, LayerDefinition> roots = new HashMap<>(accessor.riautomobility$getRoots());
+        Map<ModelLayerLocation, LayerDefinition> roots = new HashMap<>(entityModels.roots);
         loadModels(manager, roots);
-        accessor.riautomobility$setRoots(roots);
+        entityModels.roots = roots;
     }
 }

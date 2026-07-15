@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipFile;
@@ -25,6 +26,16 @@ class VehiclePackBuilderTest {
     @Test
     void acceptsEmbeddedPngTextures() {
         assertDoesNotThrow(() -> VehiclePackBuilder.validateEmbeddedTextures(document(EMBEDDED_PNG)));
+    }
+
+    @Test
+    void extractsTheTextureMarkedAsDefault() throws IOException {
+        BbModelData.Texture other = texture(0, "data:image/png;base64,AA==", false);
+        BbModelData.Texture selected = texture(1, EMBEDDED_PNG, true);
+        BbModelData.Document document = new BbModelData.Document(
+                "5.0", "modded_entity", 16, 16, List.of(other, selected), List.of(), List.of());
+
+        assertArrayEquals(embeddedPngBytes(), VehiclePackBuilder.defaultEmbeddedTexture(document));
     }
 
     @Test
@@ -182,12 +193,12 @@ class VehiclePackBuilderTest {
 
         Path archive = VehiclePackBuilder.buildPreview(files, keys, temporaryDirectory.resolve("preview.riauto"));
         try (ZipFile zip = new ZipFile(archive.toFile())) {
-            assertDoesNotThrow(() -> {
-                if (zip.getEntry("assets/riautomobility_preview/models/entity/automobile/frame/"
-                        + keys.get(VehicleEditorDraft.Target.FRAME) + ".bbmodel") == null) throw new IOException("missing frame");
-                if (zip.getEntry("assets/riautomobility_preview/models/entity/automobile/wheel/"
-                        + keys.get(VehicleEditorDraft.Target.WHEEL) + ".bbmodel") == null) throw new IOException("missing wheel");
-            });
+            assertNotNull(zip.getEntry("assets/riautomobility_preview/models/entity/automobile/frame/frame_preview.bbmodel"));
+            assertNotNull(zip.getEntry("assets/riautomobility_preview/models/entity/automobile/wheel/wheel_preview.bbmodel"));
+            assertArrayEquals(embeddedPngBytes(), zip.getInputStream(zip.getEntry(
+                    "assets/riautomobility_preview/textures/entity/automobile/frame/frame_preview.png")).readAllBytes());
+            assertArrayEquals(embeddedPngBytes(), zip.getInputStream(zip.getEntry(
+                    "assets/riautomobility_preview/textures/entity/automobile/wheel/wheel_preview.png")).readAllBytes());
         }
     }
 
@@ -199,10 +210,18 @@ class VehiclePackBuilderTest {
     }
 
     private static BbModelData.Document document(String source) {
-        BbModelData.Texture texture = new BbModelData.Texture(
-                0, "texture-uuid", "0", "body.png", "", "", source,
-                "default", true, 16, 16);
+        BbModelData.Texture texture = texture(0, source, true);
         return new BbModelData.Document(
                 "5.0", "modded_entity", 16, 16, List.of(texture), List.of(), List.of());
+    }
+
+    private static BbModelData.Texture texture(int index, String source, boolean useAsDefault) {
+        return new BbModelData.Texture(
+                index, "texture-uuid-" + index, Integer.toString(index), "body.png", "", "", source,
+                "default", useAsDefault, 16, 16);
+    }
+
+    private static byte[] embeddedPngBytes() {
+        return Base64.getDecoder().decode(EMBEDDED_PNG.substring("data:image/png;base64,".length()));
     }
 }
