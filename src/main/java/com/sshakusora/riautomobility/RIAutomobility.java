@@ -9,8 +9,10 @@ import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
@@ -18,12 +20,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.event.RegisterShadersEvent;
-import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.client.event.*;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -85,6 +85,22 @@ public class RIAutomobility
         @SubscribeEvent
         public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event){
             RendererRegistry.init(event);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+            RIAutomobileModels.registerLayerDefinitions(event);
+        }
+
+        @SubscribeEvent
+        public static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
+            ResourceManagerReloadListener bbModelReloadListener = BbModelRepository::reload;
+            ResourceManagerReloadListener dynamicModelReloadListener = manager -> {
+                DynamicJsonModelLoader.loadIntoEntityModelSet(Minecraft.getInstance().getEntityModels(), manager);
+                RIAutomobileModels.rebuildDynamicModelsNow();
+            };
+            event.registerReloadListener(bbModelReloadListener);
+            event.registerReloadListener(dynamicModelReloadListener);
         }
 
         @SubscribeEvent

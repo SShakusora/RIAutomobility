@@ -26,12 +26,21 @@ public final class DynamicJsonModelLoader {
         REGISTERED_LAYERS.remove(layer);
     }
 
+    public static LayerDefinition loadRequiredModel(ResourceManager manager, ModelLayerLocation layer) {
+        ResourceLocation modelLocation = getModelLocation(layer);
+        var resource = manager.getResource(modelLocation)
+                .orElseThrow(() -> new IllegalStateException("Missing entity model " + modelLocation));
+        try (var in = resource.open()) {
+            return JsonEntityModelUtil.readJson(in)
+                    .orElseThrow(() -> new IllegalStateException("Invalid entity model " + modelLocation));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to load entity model " + modelLocation, exception);
+        }
+    }
+
     public static void loadModels(ResourceManager manager, Map<ModelLayerLocation, LayerDefinition> roots) {
         for (ModelLayerLocation layer : REGISTERED_LAYERS) {
-            ResourceLocation modelLocation = new ResourceLocation(
-                    layer.getModel().getNamespace(),
-                    "models/entity/" + layer.getModel().getPath() + "/" + layer.getLayer() + ".json"
-            );
+            ResourceLocation modelLocation = getModelLocation(layer);
 
             manager.getResource(modelLocation).ifPresent(resource -> {
                 try (var in = resource.open()) {
@@ -47,5 +56,12 @@ public final class DynamicJsonModelLoader {
         Map<ModelLayerLocation, LayerDefinition> roots = new HashMap<>(entityModels.roots);
         loadModels(manager, roots);
         entityModels.roots = roots;
+    }
+
+    private static ResourceLocation getModelLocation(ModelLayerLocation layer) {
+        return new ResourceLocation(
+                layer.getModel().getNamespace(),
+                "models/entity/" + layer.getModel().getPath() + "/" + layer.getLayer() + ".json"
+        );
     }
 }

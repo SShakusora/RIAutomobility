@@ -13,10 +13,7 @@
     "AutomobileRendererMixin",
     "AutomobilityClientMixin",
     "BEWLRsMixin",
-    "CameraMixin",
-    "EntityModelSetMixin",
     "ForgeGeometryBuilderMixin",
-    "LocalPlayerMixin",
     "accessor.AutoMechanicTableRecipeAccessor",
     "accessor.AutoMechanicTableScreenAccessor",
     "accessor.AutomobileModelsAccessor",
@@ -29,7 +26,6 @@
     "AutomobileComponentItemMixin",
     "AutomobileEntityCollisionMixin",
     "AutomobileItemMixin",
-    "EntityMixin",
     "accessor.AutomobileEntityAccessor",
     "accessor.SimpleMapContentRegistryAccessor"
   ]

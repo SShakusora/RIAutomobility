@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,7 +36,7 @@ class ComponentSpecNetworkCodecTest {
 
     @Test
     void rejectsAnOversizedAggregatePayload() {
-        List<NetworkComponentSpec> components = java.util.stream.IntStream.range(0, 18)
+        List<NetworkComponentSpec> components = IntStream.range(0, 18)
                 .mapToObj(index -> spec("component_" + index, 30_000))
                 .toList();
 

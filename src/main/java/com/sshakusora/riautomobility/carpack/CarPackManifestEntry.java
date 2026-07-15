@@ -3,8 +3,10 @@ package com.sshakusora.riautomobility.carpack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 public record CarPackManifestEntry(
         String id,
@@ -34,7 +36,7 @@ public record CarPackManifestEntry(
         }
         components = List.copyOf(components);
         if (components.isEmpty() || components.size() > MAX_COMPONENTS_PER_PACK
-                || components.stream().anyMatch(java.util.Objects::isNull)
+                || components.stream().anyMatch(Objects::isNull)
                 || new HashSet<>(components).size() != components.size()) {
             throw new IllegalArgumentException("Invalid car pack component index");
         }
@@ -66,7 +68,7 @@ public record CarPackManifestEntry(
         if (count < 1 || count > MAX_COMPONENTS_PER_PACK) {
             throw new IllegalArgumentException("Invalid car pack component count: " + count);
         }
-        java.util.ArrayList<ResourceLocation> components = new java.util.ArrayList<>(count);
+        ArrayList<ResourceLocation> components = new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
             components.add(buffer.readResourceLocation());
         }

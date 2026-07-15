@@ -38,6 +38,7 @@ public final class DynamicBbModel extends Model {
     private Map<BbModelData.Node, BbCompiledGeometry.NodeTransform> compiledTransforms = Map.of();
     private BbCompiledGeometry.StaticGeometry staticGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
     private boolean staticModel;
+    private boolean missingReported;
     private boolean loggedBroken;
 
     public DynamicBbModel(ResourceLocation componentId, FrameSpec.ModelSpec spec, Model fallbackModel, Consumer<ResourceLocation> missingCallback) {
@@ -54,7 +55,7 @@ public final class DynamicBbModel extends Model {
     public void renderToBuffer(PoseStack poseStack, VertexConsumer defaultConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         BbModelData.Document document = BbModelRepository.get(this.modelResource);
         if (document == null) {
-            fail(new BbModelFormatException("BBModel resource is not loaded: " + this.modelResource));
+            reportMissing();
             renderFallback(poseStack, defaultConsumer, packedLight, packedOverlay, red, green, blue, alpha);
             return;
         }
@@ -344,10 +345,17 @@ public final class DynamicBbModel extends Model {
     }
 
     private void fail(RuntimeException exception) {
-        this.missingCallback.accept(this.componentId);
+        reportMissing();
         if (!this.loggedBroken) {
             this.loggedBroken = true;
             LOGGER.error("Failed to render Blockbench automobile model {}", this.modelResource, exception);
+        }
+    }
+
+    private void reportMissing() {
+        if (!this.missingReported) {
+            this.missingReported = true;
+            this.missingCallback.accept(this.componentId);
         }
     }
 
@@ -359,12 +367,16 @@ public final class DynamicBbModel extends Model {
         return fallbackTexture -> {
             BbModelData.Document document = BbModelRepository.get(spec.bbModel());
             if (document == null) {
-                return renderType(fallbackTexture, "default", spec.renderType());
+                return renderType(textureWhileModelMissing(fallbackTexture), "default", spec.renderType());
             }
             BbModelRepository.ResolvedTexture texture = BbModelRepository.resolveTexture(
                     spec.bbModel(), spec, document, BbModelData.TextureReference.none());
             return renderType(texture.location(), texture.renderMode(), spec.renderType());
         };
+    }
+
+    static ResourceLocation textureWhileModelMissing(ResourceLocation requestedTexture) {
+        return PlaceholderAutomobileModel.TEXTURE;
     }
 
     private static RenderType renderType(ResourceLocation texture, String textureMode, String configuredType) {

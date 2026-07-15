@@ -30,13 +30,15 @@ import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelRenderer;
 import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelAnimatable;
 import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelModel;
 import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelRenderer;
+import com.sshakusora.riautomobility.network.packet.client.ClientCarPackSynchronizer;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
-import io.github.foundationgames.automobility.forge.vendored.jsonem.JsonEM;
 import io.github.foundationgames.automobility.util.EntityRenderHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -58,10 +60,8 @@ public class RIAutomobileModels {
         });
 
         AutomobileModels.register(RIAutomobility.rl("frame_doublemotorcar"), DoubleMotorcarFrameModel::new);
-        JsonEM.registerModelLayer(DoubleMotorcarFrameModel.MODEL_LAYER);
 
         AutomobileModels.register(RIAutomobility.rl("frame_quadmotorcar"), QuadMotorcarFrameModel::new);
-        JsonEM.registerModelLayer(QuadMotorcarFrameModel.MODEL_LAYER);
 
         AutomobileModels.register(RIAutomobility.rl("frame_lorry"), context -> {
             LorryAnimatable anim = new LorryAnimatable();
@@ -103,8 +103,12 @@ public class RIAutomobileModels {
             return new GeckoFrameModel<>(model, renderer, anim);
         });
 
-        JsonEM.registerModelLayer(PLACEHOLDER_LAYER);
-        DynamicJsonModelLoader.register(PLACEHOLDER_LAYER);
+    }
+
+    public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        registerJsonLayer(event, DoubleMotorcarFrameModel.MODEL_LAYER);
+        registerJsonLayer(event, QuadMotorcarFrameModel.MODEL_LAYER);
+        registerJsonLayer(event, PLACEHOLDER_LAYER);
     }
 
     public static void applyDynamicModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
@@ -186,7 +190,6 @@ public class RIAutomobileModels {
         }
 
         ModelLayerLocation layer = new ModelLayerLocation(modelSpec.layerLocation(), "main");
-        JsonEM.registerModelLayer(layer);
         DynamicJsonModelLoader.register(layer);
         AutomobileModels.register(modelSpec.modelId(), ctx -> {
             try {
@@ -250,6 +253,11 @@ public class RIAutomobileModels {
         }
     }
 
+    private static void registerJsonLayer(EntityRenderersEvent.RegisterLayerDefinitions event, ModelLayerLocation layer) {
+        event.registerLayerDefinition(layer, () -> DynamicJsonModelLoader.loadRequiredModel(
+                Minecraft.getInstance().getResourceManager(), layer));
+    }
+
     public static void rebuildDynamicModelsNow() {
         rebuildDynamicModels();
     }
@@ -257,6 +265,7 @@ public class RIAutomobileModels {
     public static void markMissingComponent(ResourceLocation componentId) {
         if (componentId != null) {
             MISSING_COMPONENTS.add(componentId);
+            ClientCarPackSynchronizer.requestComponent(componentId);
         }
     }
 

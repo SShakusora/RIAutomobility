@@ -305,6 +305,17 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     @Override
+    protected void addPassenger(Entity passenger) {
+        super.addPassenger(passenger);
+        if (!usesRIASeats()) {
+            return;
+        }
+
+        assignSeatForPassenger(passenger);
+        snapPassengerToSeat(passenger);
+    }
+
+    @Override
     public void provideClientInput(boolean fwd, boolean back, boolean left, boolean right, boolean space) {
         if (!usesRIASeats()) {
             super.provideClientInput(fwd, back, left, right, space);
