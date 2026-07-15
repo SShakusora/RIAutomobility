@@ -133,6 +133,17 @@ public final class CarPackUploadService {
         String dataPrefix = "data/" + request.namespace() + "/";
         String expected = dataPrefix + "riautomobility/" + request.target() + "s/"
                 + request.componentPath() + ".json";
+        ResourceLocation id = new ResourceLocation(request.namespace(), request.componentPath());
+        CarPackArchiveStore.DeclaredComponent declared = CarPackArchiveStore.readDeclaredComponent(archive);
+        CarPackArchiveStore.ComponentKind expectedKind = switch (request.target()) {
+            case "frame" -> CarPackArchiveStore.ComponentKind.FRAME;
+            case "wheel" -> CarPackArchiveStore.ComponentKind.WHEEL;
+            case "engine" -> CarPackArchiveStore.ComponentKind.ENGINE;
+            default -> throw new IOException("Invalid component target");
+        };
+        if (declared.kind() != expectedKind || !declared.id().equals(id)) {
+            throw new IOException("RIAuto metadata must declare only " + request.target() + " component " + id);
+        }
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             var entries = zip.entries();
             while (entries.hasMoreElements()) {
@@ -146,26 +157,10 @@ public final class CarPackUploadService {
             }
             ZipEntry componentEntry = zip.getEntry(expected);
             if (componentEntry == null) throw new IOException("Archive is missing " + expected);
-            ZipEntry metadataEntry = zip.getEntry(CarPackArchiveStore.RIAUTO_METADATA_FILE);
-            JsonObject metadata;
-            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
-                metadata = GsonHelper.parse(reader);
-            }
-            String componentId = request.namespace() + ":" + request.componentPath();
-            String componentList = request.target() + "s";
-            boolean declared = false;
-            for (var element : metadata.getAsJsonObject("components").getAsJsonArray(componentList)) {
-                if (element.isJsonPrimitive() && componentId.equals(element.getAsString())) {
-                    declared = true;
-                    break;
-                }
-            }
-            if (!declared) throw new IOException("RIAuto metadata does not declare " + componentId);
             JsonObject json;
             try (var reader = new InputStreamReader(zip.getInputStream(componentEntry), StandardCharsets.UTF_8)) {
                 json = GsonHelper.parse(reader);
             }
-            ResourceLocation id = new ResourceLocation(request.namespace(), request.componentPath());
             FrameSpec.ModelSpec model = switch (request.target()) {
                 case "frame" -> FrameSpec.fromJson(id, json).model();
                 case "wheel" -> WheelSpec.fromJson(id, json).model();

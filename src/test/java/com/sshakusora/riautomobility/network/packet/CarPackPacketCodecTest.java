@@ -18,7 +18,7 @@ class CarPackPacketCodecTest {
     void manifestEntryRoundTrips() {
         CarPackManifestEntry expected = new CarPackManifestEntry(
                 "riautomobility/example", "Example", DIGEST, "b".repeat(64), 12345,
-                List.of(new ResourceLocation("example", "buggy"))
+                new ResourceLocation("example", "buggy")
         );
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {

@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -24,7 +23,7 @@ class CarPackArchiveStoreTest {
     Path temporaryDirectory;
 
     @Test
-    void acceptsAValidUnifiedCarPack() throws IOException {
+    void acceptsAValidSingleComponentCarPack() throws IOException {
         Path archive = createZip(Map.of(
                 "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
@@ -61,19 +60,54 @@ class CarPackArchiveStoreTest {
     void readsTheComponentOwnershipIndexFromMetadata() throws IOException {
         Path archive = createZip(Map.of(
                 "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
-                        + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[\"test:wheel\"],"
-                        + "\"engines\":[\"test:engine\"]}}",
-                "data/test/riautomobility/frames/frame.json", "{}",
-                "data/test/riautomobility/wheels/wheel.json", "{}",
-                "data/test/riautomobility/engines/engine.json", "{}"
+                        + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[],\"engines\":[]}}",
+                "data/test/riautomobility/frames/frame.json", "{}"
         ));
 
         CarPackArchiveStore.validateRiautoArchive(archive);
-        assertEquals(List.of(
-                new ResourceLocation("test", "frame"),
-                new ResourceLocation("test", "wheel"),
-                new ResourceLocation("test", "engine")
-        ), CarPackArchiveStore.readDeclaredComponentIds(archive));
+        assertEquals(new CarPackArchiveStore.DeclaredComponent(
+                CarPackArchiveStore.ComponentKind.FRAME, new ResourceLocation("test", "frame")),
+                CarPackArchiveStore.readDeclaredComponent(archive));
+    }
+
+    @Test
+    void rejectsRiautoDeclaringMoreThanOneComponent() throws IOException {
+        Path archive = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[\"test:wheel\"],\"engines\":[]}}",
+                "data/test/riautomobility/frames/frame.json", "{}",
+                "data/test/riautomobility/wheels/wheel.json", "{}"
+        ));
+
+        IOException error = assertThrows(IOException.class,
+                () -> CarPackArchiveStore.validateRiautoArchive(archive));
+        assertTrue(error.getMessage().contains("exactly one"));
+    }
+
+    @Test
+    void rejectsRiautoDeclaringNoComponents() throws IOException {
+        Path archive = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:empty\",\"name\":\"Empty\","
+                        + "\"components\":{\"frames\":[],\"wheels\":[],\"engines\":[]}}"
+        ));
+
+        IOException error = assertThrows(IOException.class,
+                () -> CarPackArchiveStore.validateRiautoArchive(archive));
+        assertTrue(error.getMessage().contains("exactly one"));
+    }
+
+    @Test
+    void rejectsUndeclaredComponentFiles() throws IOException {
+        Path archive = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[],\"engines\":[]}}",
+                "data/test/riautomobility/frames/frame.json", "{}",
+                "data/test/riautomobility/wheels/hidden.json", "{}"
+        ));
+
+        IOException error = assertThrows(IOException.class,
+                () -> CarPackArchiveStore.validateRiautoArchive(archive));
+        assertTrue(error.getMessage().contains("undeclared component file"));
     }
 
     @Test
@@ -153,19 +187,23 @@ class CarPackArchiveStoreTest {
     }
 
     @Test
-    void repositoryExampleConformsToRuntimeOnlyContract() throws IOException {
-        Path source = Path.of("examples", "examplepack");
-        Path archive = temporaryDirectory.resolve("examplepack.riauto");
-        try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive));
-             var paths = Files.walk(source)) {
-            for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {
-                output.putNextEntry(new ZipEntry(source.relativize(file).toString().replace('\\', '/')));
-                Files.copy(file, output);
-                output.closeEntry();
+    void repositoryExamplesConformToSingleComponentContract() throws IOException {
+        Path examples = Path.of("examples", "components");
+        try (var directories = Files.list(examples)) {
+            for (Path source : directories.filter(Files::isDirectory).sorted().toList()) {
+                Path archive = temporaryDirectory.resolve(source.getFileName() + ".riauto");
+                try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive));
+                     var paths = Files.walk(source)) {
+                    for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {
+                        output.putNextEntry(new ZipEntry(source.relativize(file).toString().replace('\\', '/')));
+                        Files.copy(file, output);
+                        output.closeEntry();
+                    }
+                }
+                assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive),
+                        source.getFileName().toString());
             }
         }
-
-        assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
     }
 
     @Test
@@ -182,24 +220,20 @@ class CarPackArchiveStoreTest {
     void validatesManifestBoundsAndDigests() {
         String digest = "a".repeat(64);
         assertDoesNotThrow(() -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024, List.of(new ResourceLocation("test", "frame"))
+                "riautomobility/test", "test", digest, digest, 1024, new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "other/test", "test", digest, digest, 1024, List.of(new ResourceLocation("test", "frame"))
+                "other/test", "test", digest, digest, 1024, new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", "invalid", digest, 1024, List.of(new ResourceLocation("test", "frame"))
+                "riautomobility/test", "test", "invalid", digest, 1024, new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
                 "riautomobility/test", "test", digest, digest, CarPackManifestEntry.MAX_ARCHIVE_SIZE + 1,
-                List.of(new ResourceLocation("test", "frame"))
+                new ResourceLocation("test", "frame")
         ));
-        assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024, List.of()
-        ));
-        assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024,
-                List.of(new ResourceLocation("test", "frame"), new ResourceLocation("test", "frame"))
+        assertThrows(NullPointerException.class, () -> new CarPackManifestEntry(
+                "riautomobility/test", "test", digest, digest, 1024, null
         ));
     }
 

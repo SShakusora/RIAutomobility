@@ -174,12 +174,12 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         String[][] entries = chinese ? new String[][] {
                 {"page.frame", "车架"}, {"page.wheel", "车轮"}, {"page.engine", "引擎"},
                 {"tab.basic", "基础"}, {"tab.wheels", "轮位"}, {"tab.seats", "座椅"}, {"tab.hitboxes", "碰撞"}, {"tab.attachments", "附件"}, {"tab.advanced", "高级"},
-                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.import_model", "导入 BBModel"}, {"button.export_pack", "导出文件"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
+                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.import_model", "导入文件"}, {"button.export_pack", "导出文件"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
                 {"label.name", "名字："}, {"label.weight", "重量："}, {"label.engine_back", "引擎后移："}, {"label.engine_height", "引擎高度："}, {"label.size", "尺寸："}, {"label.grip", "抓地力："}, {"label.radius", "半径："}, {"label.width", "宽度："}, {"label.height", "高度："}, {"label.torque", "扭矩："}, {"label.speed", "速度："}, {"label.rotation_y", "Y轴旋转："}, {"label.x", "X："}, {"label.y", "Y："}, {"label.z", "Z："},
                 {"header.wheel", "轮位 %s/%s"}, {"header.seat", "座椅 %s/%s"}, {"header.entity_hitbox", "实体碰撞箱"}, {"header.additional_hitbox", "附加碰撞箱 %s/%s"}, {"status.invalid_number", "数字格式无效"}
         } : new String[][] {
                 {"page.frame", "Frame"}, {"page.wheel", "Wheel"}, {"page.engine", "Engine"}, {"tab.basic", "Basic"}, {"tab.wheels", "Wheels"}, {"tab.seats", "Seats"}, {"tab.hitboxes", "Hitboxes"}, {"tab.attachments", "Attachments"}, {"tab.advanced", "Advanced"},
-                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.import_model", "Import BBModel"}, {"button.export_pack", "Export File"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
+                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.import_model", "Import File"}, {"button.export_pack", "Export File"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
                 {"label.name", "Name:"}, {"label.weight", "Weight:"}, {"label.engine_back", "Engine Back:"}, {"label.engine_height", "Engine Height:"}, {"label.size", "Size:"}, {"label.grip", "Grip:"}, {"label.radius", "Radius:"}, {"label.width", "Width:"}, {"label.height", "Height:"}, {"label.torque", "Torque:"}, {"label.speed", "Speed:"}, {"label.rotation_y", "Y Rotation:"}, {"label.x", "X:"}, {"label.y", "Y:"}, {"label.z", "Z:"},
                 {"header.wheel", "Wheel %s/%s"}, {"header.seat", "Seat %s/%s"}, {"header.entity_hitbox", "Entity Hitbox"}, {"header.additional_hitbox", "Additional Hitbox %s/%s"}, {"status.invalid_number", "Invalid number format"}
         };
@@ -219,10 +219,12 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "position.wheel", chinese ? "轮位 %s (%.1f, %.1f)" : "Wheel %s (%.1f, %.1f)");
         add(p + "position.seat", chinese ? "座椅 %s (%.1f, %.1f, %.1f)" : "Seat %s (%.1f, %.1f, %.1f)");
         add(p + "position.additional_hitbox", chinese ? "附加碰撞箱 %s (%.1f, %.1f, %.1f)" : "Additional Hitbox %s (%.1f, %.1f, %.1f)");
-        add(p + "dialog.open_model", chinese ? "选择含内嵌 PNG 纹理的 BBModel" : "Select BBModel with embedded PNG textures");
+        add(p + "dialog.open_file", chinese ? "选择 BBModel 或 RIAuto 文件" : "Select a BBModel or RIAuto file");
+        add(p + "dialog.import_filter", "BBModel and RIAuto files (*.bbmodel, *.riauto)");
         add(p + "dialog.export_pack", chinese ? "导出 .riauto" : "Export .riauto"); add(p + "dialog.export_filter", "RIAuto files (*.riauto)");
-        add(p + "message.no_preview", chinese ? "请选择要预览的部件，或导入对应 BBModel" : "Select a component to preview or import its BBModel");
-        add(p + "status.bbmodel_only", chinese ? "只支持 .bbmodel 文件" : "Only .bbmodel files are supported");
+        add(p + "message.no_preview", chinese ? "请选择要预览的部件，或导入对应文件" : "Select a component to preview or import its file");
+        add(p + "status.file_only", chinese ? "只支持 .bbmodel 和 .riauto 文件" : "Only .bbmodel and .riauto files are supported");
+        add(p + "status.import_failed", chinese ? "导入失败：%s" : "Import failed: %s");
         add(p + "status.loading_preview", chinese ? "正在载入预览..." : "Loading preview..."); add(p + "status.preview_loaded", chinese ? "预览已载入" : "Preview loaded"); add(p + "status.preview_failed", chinese ? "预览失败：%s" : "Preview failed: %s");
         add(p + "status.exported", chinese ? "已导出：%s" : "Exported: %s"); add(p + "status.export_failed", chinese ? "导出失败：%s" : "Export failed: %s");
         add(p + "status.output_not_empty", chinese ? "请先取走输出槽中的物品" : "Remove the item from the output slot first"); add(p + "status.export_permission_required", chinese ? "导出物品需要服务器管理员权限" : "Exporting items requires server administrator permission");
@@ -268,7 +270,7 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "validation.frame_weight", chinese ? "车架重量必须大于零" : "Frame weight must be greater than zero"); add(p + "validation.item_length", chinese ? "物品显示长度必须大于零" : "Item display length must be greater than zero");
         add(p + "validation.frame_positions", chinese ? "车架位置必须是有限数值" : "Frame positions must contain finite numbers"); add(p + "validation.frame_dimensions", chinese ? "车架尺寸必须大于零" : "Frame dimensions must be greater than zero");
         add(p + "validation.seat_camera_positions", chinese ? "座椅和相机位置必须是有限数值" : "Seat and camera positions must contain finite numbers"); add(p + "validation.hitbox_dimensions", chinese ? "碰撞箱尺寸必须大于零且所有数值有限" : "Hitbox dimensions must be greater than zero and all values must be finite");
-        add(p + "validation.choose_model", chinese ? "请为 %s 选择 BBModel 文件" : "Choose a BBModel file for %s"); add(p + "validation.bbmodel_only", chinese ? "车辆导入台只接受 .bbmodel 文件" : "Vehicle Import Table only accepts .bbmodel files");
+        add(p + "validation.choose_model", chinese ? "请为 %s 选择 BBModel 文件" : "Choose a BBModel file for %s"); add(p + "validation.bbmodel_only", chinese ? "当前组件的模型源必须是 .bbmodel 文件" : "The current component model source must be a .bbmodel file");
         add(p + "validation.frame_wheels", chinese ? "车架至少需要一个轮位" : "A frame requires at least one wheel position"); add(p + "validation.invalid_resource_id", chinese ? "%s 包含无效资源 ID：%s" : "%s contains an invalid resource ID: %s");
     }
 }

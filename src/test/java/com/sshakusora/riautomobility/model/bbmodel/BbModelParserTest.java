@@ -105,10 +105,10 @@ class BbModelParserTest {
     @Test
     void parsesShippedFrameAndWheelExamples() throws IOException {
         BbModelData.Document frame = BbModelParser.parse(JsonParser.parseString(Files.readString(Path.of(
-                "examples/examplepack/assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel"
+                "examples/components/frame-bbmodel/assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel"
         ))).getAsJsonObject());
         BbModelData.Document wheel = BbModelParser.parse(JsonParser.parseString(Files.readString(Path.of(
-                "examples/examplepack/assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel"
+                "examples/components/wheel-bbmodel/assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel"
         ))).getAsJsonObject());
 
         assertEquals(3, ((BbModelData.GroupNode) frame.roots().get(0)).children().size());
@@ -236,19 +236,19 @@ class BbModelParserTest {
     void parsesShorthandModelsInShippedComponentDefinitions() throws IOException {
         ResourceLocation id = new ResourceLocation("examplepack", "example_buggy_bbmodel");
         FrameSpec frame = FrameSpec.fromJson(id, JsonParser.parseString(Files.readString(Path.of(
-                "examples/examplepack/data/examplepack/riautomobility/frames/example_buggy_bbmodel.json"
+                "examples/components/frame-bbmodel/data/examplepack/riautomobility/frames/example_buggy_bbmodel.json"
         ))).getAsJsonObject());
         WheelSpec wheel = WheelSpec.fromJson(
-                id,
+                new ResourceLocation("examplepack", "example_buggy_bbmodel_wheel"),
                 JsonParser.parseString(Files.readString(Path.of(
-                        "examples/examplepack/data/examplepack/riautomobility/wheels/example_buggy_bbmodel.json"
+                        "examples/components/wheel-bbmodel/data/examplepack/riautomobility/wheels/example_buggy_bbmodel_wheel.json"
                 ))).getAsJsonObject()
         );
 
         assertEquals("examplepack:models/entity/automobile/frame/example_buggy.bbmodel", frame.model().bbModel().toString());
         assertEquals("examplepack:riautomobility/frame/example_buggy_bbmodel", frame.model().modelId().toString());
         assertEquals("examplepack:models/entity/automobile/wheel/example_buggy.bbmodel", wheel.model().bbModel().toString());
-        assertEquals("examplepack:riautomobility/wheel/example_buggy_bbmodel", wheel.model().modelId().toString());
+        assertEquals("examplepack:riautomobility/wheel/example_buggy_bbmodel_wheel", wheel.model().modelId().toString());
     }
 
     @Test

@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "id": "examplepack:example_buggy_frame_pack",
+  "name": "Example Buggy Frame (JsonEM)",
+  "components": {
+    "frames": ["examplepack:example_buggy"],
+    "wheels": [],
+    "engines": []
+  }
+}

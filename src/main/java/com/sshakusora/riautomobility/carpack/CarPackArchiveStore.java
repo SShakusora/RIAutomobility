@@ -26,6 +26,8 @@ public final class CarPackArchiveStore {
     public static final long MAX_UNCOMPRESSED_SIZE = 1024L * 1024L * 1024L;
     public static final long MAX_ENTRY_SIZE = 256L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 8192;
+    private static final String COMPONENT_DATA_PATTERN =
+            "data/[a-z0-9_.-]+/riautomobility/(frames|wheels|engines)/[a-z0-9/._-]+\\.json";
     private static volatile Map<String, TransferPack> transferPacks = Map.of();
 
     private CarPackArchiveStore() {
@@ -37,11 +39,10 @@ public final class CarPackArchiveStore {
         for (CarPackManager.CarPack pack : CarPackManager.discoverCarPacks()) {
             try {
                 TransferPack transferPack = prepare(pack);
-                for (ResourceLocation component : transferPack.manifest().components()) {
-                    String previous = componentOwners.putIfAbsent(component, pack.id());
-                    if (previous != null) {
-                        throw new IOException("Component " + component + " is declared by both " + previous + " and " + pack.id());
-                    }
+                ResourceLocation component = transferPack.manifest().component();
+                String previous = componentOwners.putIfAbsent(component, pack.id());
+                if (previous != null) {
+                    throw new IOException("Component " + component + " is declared by both " + previous + " and " + pack.id());
                 }
                 prepared.put(pack.id(), transferPack);
             } catch (IOException exception) {
@@ -82,12 +83,12 @@ public final class CarPackArchiveStore {
         String archiveDigest = sha256(archive);
         return new TransferPack(
                 new CarPackManifestEntry(pack.id(), pack.displayName(), pack.digest(), archiveDigest, size,
-                        readDeclaredComponentIds(archive)),
+                        readDeclaredComponent(archive).id()),
                 archive
         );
     }
 
-    static List<ResourceLocation> readDeclaredComponentIds(Path archive) throws IOException {
+    public static DeclaredComponent readDeclaredComponent(Path archive) throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
             if (metadataEntry == null || metadataEntry.isDirectory()) {
@@ -97,18 +98,20 @@ public final class CarPackArchiveStore {
             try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
                 metadata = JsonParser.parseReader(reader).getAsJsonObject();
             }
-            LinkedHashSet<ResourceLocation> ids = new LinkedHashSet<>();
+            List<DeclaredComponent> declared = new ArrayList<>();
             JsonObject components = metadata.getAsJsonObject("components");
-            for (String kind : List.of("frames", "wheels", "engines")) {
-                if (!components.has(kind)) continue;
-                for (JsonElement element : components.getAsJsonArray(kind)) {
+            for (ComponentKind kind : ComponentKind.values()) {
+                if (!components.has(kind.collection)) continue;
+                for (JsonElement element : components.getAsJsonArray(kind.collection)) {
                     ResourceLocation id = ResourceLocation.tryParse(element.getAsString());
-                    if (id == null || !ids.add(id)) {
-                        throw new IOException("RIAuto metadata contains an invalid or duplicate component id");
-                    }
+                    if (id == null) throw new IOException("RIAuto metadata contains an invalid component id");
+                    declared.add(new DeclaredComponent(kind, id));
                 }
             }
-            return List.copyOf(ids);
+            if (declared.size() != 1) {
+                throw new IOException("RIAuto metadata must declare exactly one component");
+            }
+            return declared.get(0);
         } catch (RuntimeException exception) {
             throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
@@ -235,8 +238,8 @@ public final class CarPackArchiveStore {
         }
         int componentCount = validateComponentIds(components, "frames") + validateComponentIds(components, "wheels")
                 + (components.has("engines") ? validateComponentIds(components, "engines") : 0);
-        if (componentCount == 0) {
-            throw new IOException("RIAuto metadata must declare at least one frame, wheel, or engine");
+        if (componentCount != 1) {
+            throw new IOException("RIAuto metadata must declare exactly one frame, wheel, or engine component");
         }
     }
 
@@ -275,21 +278,28 @@ public final class CarPackArchiveStore {
 
     private static void validateDeclaredComponentFiles(JsonObject metadata, Set<String> entries) throws IOException {
         JsonObject components = metadata.getAsJsonObject("components");
+        Set<String> declaredFiles = new HashSet<>();
         for (String kind : List.of("frames", "wheels", "engines")) {
             if (!components.has(kind)) continue;
             for (JsonElement element : components.getAsJsonArray(kind)) {
                 String[] id = element.getAsString().split(":", 2);
                 String expected = "data/" + id[0] + "/riautomobility/" + kind + "/" + id[1] + ".json";
+                declaredFiles.add(expected);
                 if (!entries.contains(expected)) {
                     throw new IOException("RIAuto metadata declares missing component file " + expected);
                 }
+            }
+        }
+        for (String entry : entries) {
+            if (entry.matches(COMPONENT_DATA_PATTERN) && !declaredFiles.contains(entry)) {
+                throw new IOException("RIAuto archive contains undeclared component file " + entry);
             }
         }
     }
 
     private static boolean isAllowedRuntimeEntry(String name) {
         if (RIAUTO_METADATA_FILE.equals(name)) return true;
-        if (name.matches("data/[a-z0-9_.-]+/riautomobility/(frames|wheels|engines)/[a-z0-9/._-]+\\.json")) {
+        if (name.matches(COMPONENT_DATA_PATTERN)) {
             return true;
         }
         if (name.matches("assets/[a-z0-9_.-]+/models/entity/automobile/(frame|wheel|engine)/[a-z0-9/._-]+\\.(json|bbmodel)")) {
@@ -364,5 +374,34 @@ public final class CarPackArchiveStore {
     }
 
     public record TransferPack(CarPackManifestEntry manifest, Path archive) {
+    }
+
+    public enum ComponentKind {
+        FRAME("frame", "frames"),
+        WHEEL("wheel", "wheels"),
+        ENGINE("engine", "engines");
+
+        private final String path;
+        private final String collection;
+
+        ComponentKind(String path, String collection) {
+            this.path = path;
+            this.collection = collection;
+        }
+
+        public String path() {
+            return path;
+        }
+
+        public String collection() {
+            return collection;
+        }
+    }
+
+    public record DeclaredComponent(ComponentKind kind, ResourceLocation id) {
+        public DeclaredComponent {
+            Objects.requireNonNull(kind, "kind");
+            Objects.requireNonNull(id, "id");
+        }
     }
 }

@@ -517,10 +517,8 @@ public final class ClientCarPackSynchronizer {
         Set<ResourceLocation> components = new HashSet<>();
         for (CarPackManifestEntry entry : entries) {
             if (!ids.add(entry.id())) throw new IllegalArgumentException("Duplicate server car pack id: " + entry.id());
-            for (ResourceLocation component : entry.components()) {
-                if (!components.add(component)) {
-                    throw new IllegalArgumentException("Component is declared by multiple server car packs: " + component);
-                }
+            if (!components.add(entry.component())) {
+                throw new IllegalArgumentException("Component is declared by multiple server car packs: " + entry.component());
             }
         }
         return List.copyOf(entries);
@@ -643,7 +641,7 @@ public final class ClientCarPackSynchronizer {
             this.manifest = manifest;
             for (CarPackManifestEntry entry : manifest) {
                 catalog.put(entry.id(), entry);
-                entry.components().forEach(component -> componentPacks.put(component, entry.id()));
+                componentPacks.put(entry.component(), entry.id());
             }
         }
     }

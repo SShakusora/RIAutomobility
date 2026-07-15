@@ -39,7 +39,7 @@ Whether you want to drive new vehicles out of the box or design your own through
 - **Multi-Seat Vehicles** — Custom seat layouts for larger or special vehicles
 - **Custom Hitboxes & Camera** — Fine-tuned collision and camera definitions for RIA vehicles
 - **Creative Tab** — Built-in frames and wheels are available in `RIAutomobility`
-- **Unified Car Packs** — Define custom `Frame` and `Wheel` components and ship their assets together
+- **Single-Component RIAuto Files** — Package one custom frame, wheel, or engine with its assets in each file
 - **Three Rendering Pipelines** — Supports `JsonEM`, `GeckoLib`, and native Blockbench `.bbmodel` projects
 - **Safe Fallbacks** — Missing resources render as a placeholder with tooltip warnings instead of crashing
 
@@ -81,13 +81,13 @@ The mod ships with a variety of pre-made vehicles and components:
 
 #### For Custom Content (Car Packs)
 
-1. Use the in-game Vehicle Import Table to import a `.bbmodel` project with embedded PNG textures and export a `.riauto` file, or create a ZIP-compatible archive containing `riauto.json` plus the RIAutomobility-only component/model/texture paths described below
+1. Use the in-game Vehicle Import Table to import a `.bbmodel` project with embedded PNG textures or an editable `.riauto` component, then export a `.riauto` file; alternatively, create a ZIP-compatible archive containing `riauto.json` plus the RIAutomobility-only component/model/texture paths described below
 2. Place the `.riauto` file directly in Minecraft's `riautomobility/` folder
 3. Launch the game, or run `/riautomobility carpacks reload`
 
 Car packs are loaded by RIAutomobility's private runtime and never enter Minecraft's datapack or resource-pack repositories. Import, synchronization, and `/riautomobility carpacks reload` are silent and do not show the resource reload overlay. Dedicated servers only need `.riauto` files in the server `riautomobility/` folder; joining clients automatically download and verify them.
 
-The Vehicle Import Table accepts only native Blockbench `.bbmodel` projects. All model textures must be embedded as PNG data in the project and are applied automatically. JsonEM and GeckoLib remain supported for manually authored car packs, but cannot be imported through the table.
+The Vehicle Import Table accepts native Blockbench `.bbmodel` projects and single-component `.riauto` files. RIAuto import reads the file's sole component type and switches to the matching frame, wheel, or engine page automatically. All model textures must be embedded as PNG data in the project and are applied automatically. JsonEM and GeckoLib remain supported for manually authored component files, but cannot be edited through the table.
 
 ### Car Pack Guide
 
@@ -95,7 +95,9 @@ The Vehicle Import Table accepts only native Blockbench `.bbmodel` projects. All
 
 Custom components use a restricted RIAuto runtime layout. `pack.mcmeta`, recipes, tags, loot tables, advancements, functions, and other vanilla datapack/resource-pack content are rejected.
 
-`riauto.json` is the format manifest. Format version `1` declares a pack id, display name, and the frame/wheel component ids contained by the archive.
+`riauto.json` is the format manifest. Format version `1` declares a file id, display name, and exactly one frame, wheel, or engine component. The `frames`, `wheels`, and `engines` arrays must contain exactly one id in total. The archive must contain exactly one matching component definition file; undeclared component definitions are rejected.
+
+Component resource ids must be globally unique across installed RIAuto files, including across frame, wheel, and engine types. Files exported from the Vehicle Import Table generate a separate id for each page automatically.
 
 | Part | Purpose |
 |------|---------|
@@ -313,21 +315,17 @@ Example wheel definition:
 
 ### Example Pack
 
-A complete minimal example is included in this repository:
+A set of complete single-component examples is included in this repository:
 
-- [`examples/examplepack/`](examples/examplepack/)
+- [`examples/components/`](examples/components/)
 - [`examples/README.md`](examples/README.md)
 
-It contains:
-- A `JsonEM` frame and wheel example
-- A `GeckoLib` frame and wheel example
-- A native Blockbench `.bbmodel` frame and wheel example
-- Matching RIAuto-only model and animation files
+Each frame and wheel is stored in its own RIAuto source directory. The set covers JsonEM, GeckoLib, and native Blockbench `.bbmodel` models with their matching assets.
 
 
 ### Notes for Pack Authors
 
-- A car pack can define components without matching assets, but they will render as placeholders.
+- A component file can omit matching assets, but its component will render as a placeholder.
 - Missing-resource placeholders use a barrier texture for easy identification.
 - `JsonEM` components need valid `assets/<namespace>/models/entity/.../main.json` files.
 - `GeckoLib` components need valid `geo`, `animation`, and texture resources.
@@ -361,7 +359,7 @@ It contains:
 
 `RIAutomobility` 是一个基于 Minecraft `1.20.1 Forge` 的 `Automobility` 附属模组。它在 Automobility 的基础上扩展了新的车辆组件，并为玩家和内容创作者提供了强大的自定义工具。
 
-无论你是想直接使用内置新车，还是通过统一车包设计自己的载具，RIAutomobility 都能满足你的需求。
+无论你是想直接使用内置新车，还是通过独立组件文件设计自己的载具，RIAutomobility 都能满足你的需求。
 
 ### 主要功能
 
@@ -369,7 +367,7 @@ It contains:
 - **多座位载具** — 为大型或特殊车型提供自定义座位布局
 - **自定义碰撞箱与摄像机** — 为 RIA 车辆提供精细调整的碰撞箱和摄像机定义
 - **创造模式标签页** — 内置车架与车轮显示在 `飞天奇匠` 中
-- **统一车包** — 在同一个车包中定义自定义 `Frame` / `Wheel` 并附带全部资源
+- **单组件 RIAuto 文件** — 每个文件封装一个自定义车架、车轮或引擎及其资源
 - **三种渲染管线** — 同时支持 `JsonEM`、`GeckoLib` 与 Blockbench `.bbmodel` 工程模型
 - **安全降级** — 资源缺失时使用占位模型并提示，不会导致崩溃
 
@@ -411,13 +409,13 @@ It contains:
 
 #### 自定义内容（车包）
 
-1. 使用游戏内的车辆导入台导入包含内嵌 PNG 纹理的 `.bbmodel` 工程并导出 `.riauto`，或创建一个包含 `riauto.json` 以及下述 RIAutomobility 私有组件、模型和贴图路径的 ZIP 兼容归档
+1. 使用游戏内的车辆导入台导入包含内嵌 PNG 纹理的 `.bbmodel` 工程或可编辑的 `.riauto` 组件，再导出 `.riauto`；也可以创建一个包含 `riauto.json` 以及下述 RIAutomobility 私有组件、模型和贴图路径的 ZIP 兼容归档
 2. 将 `.riauto` 文件直接放入 Minecraft 的 `riautomobility/` 文件夹
 3. 启动游戏，或执行 `/riautomobility carpacks reload`
 
 车包由 RIAutomobility 私有运行时加载，不会进入 Minecraft 的数据包或资源包仓库。导入、同步以及 `/riautomobility carpacks reload` 都是静默的，不会显示资源刷新界面。专用服务器只需把 `.riauto` 文件放入服务端 `riautomobility/` 目录，客户端会自动下载并校验。
 
-车辆导入台现在只接受原生 Blockbench `.bbmodel` 工程。工程中的所有纹理都必须以内嵌 PNG 数据保存，导入后会自动应用。JsonEM 和 GeckoLib 仍可用于手工编写的车包，但不能再通过导入台导入。
+车辆导入台支持原生 Blockbench `.bbmodel` 工程和单组件 `.riauto` 文件。导入 RIAuto 时会读取文件中唯一组件的类型，并自动切换到对应的车架、车轮或引擎页面。工程中的所有纹理都必须以内嵌 PNG 数据保存，导入后会自动应用。JsonEM 和 GeckoLib 仍可用于手工编写组件文件，但不能通过导入台编辑。
 
 ### 车包教程
 
@@ -425,7 +423,9 @@ It contains:
 
 自定义车辆组件使用受限的 RIAuto 私有目录。`pack.mcmeta`、配方、标签、战利品表、进度、函数以及其他原版数据包/资源包内容都会被拒绝。
 
-`riauto.json` 是格式清单。格式版本 `1` 声明车包 id、显示名称，以及归档内包含的车架和车轮组件 id。
+`riauto.json` 是格式清单。格式版本 `1` 声明文件 id、显示名称，以及恰好一个车架、车轮或引擎组件。`frames`、`wheels`、`engines` 三个数组合计必须只有一个 id。归档中也必须恰好存在与之对应的一份组件定义；未声明的组件定义文件会被拒绝。
+
+已安装 RIAuto 文件中的组件资源 id 必须全局唯一，车架、车轮和引擎之间也不能重名。车辆导入台会自动为每个页面的导出文件生成独立 id。
 
 | 部分 | 作用 |
 |------|------|
@@ -643,20 +643,16 @@ assets/<命名空间>/textures/...
 
 ### 示例包
 
-仓库中已附带一套完整的最小示例：
+仓库中已附带一组完整的单组件示例：
 
-- [`examples/examplepack/`](examples/examplepack/)
+- [`examples/components/`](examples/components/)
 - [`examples/README.md`](examples/README.md)
 
-其中包含：
-- 一套 `JsonEM` 车架与车轮示例
-- 一套 `GeckoLib` 车架与车轮示例
-- 一套原生 Blockbench `.bbmodel` 车架与车轮示例
-- 对应的 RIAuto 私有模型与动画文件
+每个车架和车轮都存放在独立的 RIAuto 源码目录中，覆盖 JsonEM、GeckoLib 和原生 Blockbench `.bbmodel` 模型及其对应资源。
 
 ### 给内容作者的提示
 
-- 车包可以只定义组件而不提供对应资源，但组件会显示为占位模型。
+- 组件文件可以不提供对应资源，但组件会显示为占位模型。
 - 缺失资源时，占位模型使用屏障贴图，方便在物品栏中识别。
 - `JsonEM` 组件需要正确的 `assets/<命名空间>/models/entity/.../main.json`。
 - `GeckoLib` 组件需要正确的 `geo`、`animation` 和贴图资源。

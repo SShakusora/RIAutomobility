@@ -36,13 +36,14 @@ The mod includes a variety of carefully designed built-in vehicle components, av
 
 RIAutomobility adds true multi-seat support. Invite your friends for a ride, or switch seats while driving for a different travel experience.
 
-#### Unified Car Packs
+#### Single-Component RIAuto Files
 
 The most powerful feature of this mod: **create your own vehicles using only JSON — no coding required!**
 
-- Define new frames and wheels in a car pack's `data/` directory
+- Define one new frame, wheel, or engine in each RIAuto file's `data/` directory
 - Freely adjust vehicle stats: weight, dimensions, grip, seat layout, hitboxes, camera position
-- Ship models and textures in the same car pack's `assets/` directory
+- Ship that component's models and textures in the same file's `assets/` directory
+- Combine independently installed component files when assembling a vehicle
 - Optional: add Auto Mechanic Table recipes for survival-mode crafting
 
 #### Three Rendering Engine Support
@@ -95,10 +96,10 @@ Whether you are a modeling beginner or veteran, RIAutomobility has the right too
 
 Want to add exclusive vehicles for your modpack or server? RIAutomobility makes it simple:
 
-1. Write JSON definitions for vehicle stats under the car pack's `data/` directory
-2. Put models and textures under the same car pack's `assets/` directory
-3. Optional: add Auto Mechanic Table crafting recipes
-4. Place the folder or zip directly in the game directory's `riautomobility/` folder; it is enabled automatically
+1. Write one frame, wheel, or engine definition under the component source's `data/` directory
+2. Put that component's models and textures under its `assets/` directory
+3. Add a `riauto.json` manifest that declares exactly that one component
+4. ZIP the contents, rename the archive to `.riauto`, and place it in the game directory's `riautomobility/` folder
 
 For detailed JSON format documentation, field explanations, and a complete example, please refer to the [README](https://github.com/your-username/RIAutomobility#car-pack-guide) in the GitHub repository.
 
@@ -145,13 +146,14 @@ RIAutomobility 是 [Automobility](https://www.curseforge.com/minecraft/mc-mods/a
 
 RIAutomobility 为车辆添加了真正的多座位支持。你可以邀请好友一起乘车，甚至可以在行驶中切换座位，享受不一样的旅途体验。
 
-#### 统一车包
+#### 单组件 RIAuto 文件
 
 这是本模组最强大的功能：**无需编写任何代码，仅用 JSON 就能创造属于自己的车辆！**
 
-- 在车包的 `data/` 目录定义全新的车架和车轮
+- 在每个 RIAuto 文件的 `data/` 目录只定义一个全新车架、车轮或引擎
 - 自由调整车辆属性：重量、尺寸、抓地力、座位布局、碰撞箱、摄像机位置
-- 在同一车包的 `assets/` 目录附带自定义模型和贴图
+- 在同一文件的 `assets/` 目录附带该组件的模型和贴图
+- 组装车辆时组合多个独立安装的组件文件
 - 自定义配方，让车辆在生存模式中可合成
 
 #### 三种渲染引擎支持
@@ -204,10 +206,10 @@ RIAutomobility 为车辆添加了真正的多座位支持。你可以邀请好�
 
 想要为自己的整合包或服务器添加专属载具？RIAutomobility 让这一切变得简单：
 
-1. 在车包的 `data/` 目录中编写 JSON 定义车辆属性
-2. 在同一车包的 `assets/` 目录中放入模型和贴图文件
-3. 可选：添加汽车修理台合成配方
-4. 将车包文件夹或 zip 直接放入游戏目录的 `riautomobility/` 文件夹，车包会自动启用
+1. 在组件源码的 `data/` 目录中编写一个车架、车轮或引擎定义
+2. 在其 `assets/` 目录中放入该组件的模型和贴图文件
+3. 添加只声明这一个组件的 `riauto.json` 清单
+4. 压缩目录内容并将归档改名为 `.riauto`，再放入游戏目录的 `riautomobility/` 文件夹
 
 详细的 JSON 格式说明、字段解释和完整示例，请参阅 GitHub 仓库中的 [README](https://github.com/your-username/RIAutomobility#车包教程)。
 

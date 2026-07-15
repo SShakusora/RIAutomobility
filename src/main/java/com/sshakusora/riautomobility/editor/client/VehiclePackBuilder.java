@@ -134,7 +134,7 @@ public final class VehiclePackBuilder {
         return document;
     }
 
-    private static BbModelData.Document validateSource(Path source) throws IOException {
+    static BbModelData.Document validateSource(Path source) throws IOException {
         byte[] model = readLimited(source);
         JsonObject json;
         try {

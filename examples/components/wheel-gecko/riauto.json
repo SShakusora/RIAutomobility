@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "id": "examplepack:example_buggy_gecko_wheel_pack",
+  "name": "Example Buggy Wheel (GeckoLib)",
+  "components": {
+    "frames": [],
+    "wheels": ["examplepack:example_buggy_gecko_wheel"],
+    "engines": []
+  }
+}

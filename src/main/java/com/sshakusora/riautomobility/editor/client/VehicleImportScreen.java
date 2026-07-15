@@ -20,12 +20,15 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
@@ -42,6 +45,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private static final float COMPACT_TOGGLE_TEXT_SCALE = 0.8F;
     private static final int FIELD_LABEL_WIDTH = 66;
     private static final int NUMBER_ARROW_WIDTH = 18;
+    private static final int EXPORT_ITEM_BUTTON_WIDTH = 58;
     private static final float FINE_STEP_SCALE = 0.1F;
     private static final int SELECTION_COLUMNS = 12;
     private static final int SELECTION_CELL_SIZE = 24;
@@ -57,6 +61,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private final List<VehicleImportTooltips.Area> parameterTooltips = new ArrayList<>();
     private final List<NumberControl> numberControls = new ArrayList<>();
     private final List<AbstractWidget> availableWithoutPreview = new ArrayList<>();
+    private final EnumMap<VehicleEditorDraft.Target, Path> extractedImportFiles =
+            new EnumMap<>(VehicleEditorDraft.Target.class);
     private Button exportItemButton;
     private Page page = Page.FRAME;
     private FrameTab frameTab = FrameTab.BASIC;
@@ -299,11 +305,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void addExportItemControl() {
-        int buttonWidth = 58;
-        int x = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 8 - buttonWidth / 2;
+        int x = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 8 - EXPORT_ITEM_BUTTON_WIDTH / 2;
         int y = topPos + VehicleImportMenu.INVENTORY_Y;
         exportItemButton = texturedButton(VehicleImportText.component("button.export_item"),
-                b -> exportItem(), x, y, buttonWidth, 20);
+                b -> exportItem(), x, y, EXPORT_ITEM_BUTTON_WIDTH, 20);
         exportItemButton.active = !exportingItem;
         addRenderableWidget(exportItemButton);
     }
@@ -654,12 +659,52 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void chooseModel() {
-        String chosen = TinyFileDialogs.tinyfd_openFileDialog(VehicleImportText.string("dialog.open_model"), "", null, "*.bbmodel", false);
+        String chosen;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer filters = stack.mallocPointer(2);
+            filters.put(stack.UTF8("*.bbmodel"));
+            filters.put(stack.UTF8("*.riauto"));
+            filters.flip();
+            chosen = TinyFileDialogs.tinyfd_openFileDialog(
+                    VehicleImportText.string("dialog.open_file"), "",
+                    filters, VehicleImportText.string("dialog.import_filter"), false);
+        }
         if (chosen == null) return;
         Path selected = Path.of(chosen);
-        if (!selected.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".bbmodel")) { status = VehicleImportText.string("status.bbmodel_only"); return; }
-        draft.setModelFile(draft.target, selected);
-        loadPreview();
+        String fileName = selected.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (fileName.endsWith(".bbmodel")) {
+            replaceExtractedImportFile(draft.target, null);
+            draft.setModelFile(draft.target, selected);
+            loadPreview();
+            return;
+        }
+        if (!fileName.endsWith(CarPackManager.CAR_PACK_EXTENSION)) {
+            status = VehicleImportText.string("status.file_only");
+            return;
+        }
+        try {
+            Path extractionDirectory = CarPackManager.getRootDirectory().resolve("cache").resolve("editor").resolve("imports");
+            VehiclePackImporter.ImportedComponent imported =
+                    VehiclePackImporter.importComponent(selected, extractionDirectory);
+            imported.applyTo(draft);
+            replaceExtractedImportFile(imported.target(), imported.modelFile());
+            page = Page.forTarget(imported.target());
+            setTargetForPage();
+            resetWidgets();
+            loadPreview();
+        } catch (IOException exception) {
+            status = VehicleImportText.string("status.import_failed", exception.getMessage());
+        }
+    }
+
+    private void replaceExtractedImportFile(VehicleEditorDraft.Target target, Path replacement) {
+        Path previous = replacement == null ? extractedImportFiles.remove(target)
+                : extractedImportFiles.put(target, replacement);
+        if (previous == null || previous.equals(replacement)) return;
+        try {
+            Files.deleteIfExists(previous);
+        } catch (IOException ignored) {
+        }
     }
 
     private void loadPreview() {
@@ -906,7 +951,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private void renderInventoryBackground(GuiGraphics g) {
         int panelX0 = leftPos + VehicleImportMenu.INVENTORY_X - 4;
         int panelY0 = topPos + VehicleImportMenu.INVENTORY_Y - 17;
-        int panelX1 = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 23;
+        int panelX1 = leftPos + VehicleImportMenu.OUTPUT_SLOT_X + 8
+                + EXPORT_ITEM_BUTTON_WIDTH / 2 + 4;
         int panelY1 = topPos + VehicleImportMenu.INVENTORY_Y + 77;
         VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.INVENTORY,
                 panelX0, panelY0, panelX1 - panelX0, panelY1 - panelY0);
@@ -1072,7 +1118,17 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
-    @Override public void removed() { previewSession.close(); super.removed(); }
+    @Override public void removed() {
+        previewSession.close();
+        for (Path extracted : extractedImportFiles.values()) {
+            try {
+                Files.deleteIfExists(extracted);
+            } catch (IOException ignored) {
+            }
+        }
+        extractedImportFiles.clear();
+        super.removed();
+    }
     private static VehicleTexturedButton texturedButton(Component message, Button.OnPress onPress,
                                                         int x, int y, int width, int height) {
         return new VehicleTexturedButton(x, y, width, height, message, onPress);
@@ -1084,6 +1140,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         FRAME("page.frame", VehicleEditorDraft.Target.FRAME), WHEEL("page.wheel", VehicleEditorDraft.Target.WHEEL), ENGINE("page.engine", VehicleEditorDraft.Target.ENGINE);
         final String label; final VehicleEditorDraft.Target target;
         Page(String label, VehicleEditorDraft.Target target) { this.label = label; this.target = target; }
+
+        static Page forTarget(VehicleEditorDraft.Target target) {
+            return switch (target) {
+                case FRAME -> FRAME;
+                case WHEEL -> WHEEL;
+                case ENGINE -> ENGINE;
+            };
+        }
     }
     private enum FrameTab {
         BASIC("tab.basic"), WHEELS("tab.wheels"), SEATS("tab.seats"), HITBOXES("tab.hitboxes"), ATTACHMENTS("tab.attachments");

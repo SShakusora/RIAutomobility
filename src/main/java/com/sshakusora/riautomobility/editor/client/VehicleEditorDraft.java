@@ -32,9 +32,10 @@ public final class VehicleEditorDraft {
     private final EnumMap<Target, String> displayNames = new EnumMap<>(Target.class);
     private final EnumMap<Target, Boolean> previewReady = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> previewKeys = new EnumMap<>(Target.class);
+    private final EnumMap<Target, String> componentPaths = new EnumMap<>(Target.class);
     private final EnumSet<Target> visibleParts = EnumSet.noneOf(Target.class);
-    private final String componentPath = generateComponentPath();
     private Vec3 automaticCameraOffset;
+    private boolean automaticFrameModelSize;
     private boolean automaticWheelModelSize;
 
     private AutomobileFrame cachedPreviewFrame;
@@ -105,6 +106,7 @@ public final class VehicleEditorDraft {
             displayNames.put(value, VehicleImportText.string("default_name." + value.path));
             previewReady.put(value, false);
             previewKeys.put(value, UUID.randomUUID().toString().replace("-", ""));
+            componentPaths.put(value, generateComponentPath());
         }
         loadFrame(frame);
         loadWheel(wheel);
@@ -130,7 +132,15 @@ public final class VehicleEditorDraft {
     public void setModelFile(Target part, Path path) {
         modelFiles.put(part, path);
         previewReady.put(part, false);
+        if (part == Target.FRAME) automaticFrameModelSize = true;
         if (part == Target.WHEEL) automaticWheelModelSize = true;
+    }
+
+    private void setImportedModelFile(Target part, Path path) {
+        modelFiles.put(part, path);
+        previewReady.put(part, false);
+        if (part == Target.FRAME) automaticFrameModelSize = false;
+        if (part == Target.WHEEL) automaticWheelModelSize = false;
     }
 
     public boolean previewReady(Target part) {
@@ -210,8 +220,78 @@ public final class VehicleEditorDraft {
             exhausts.add(new EngineSpec.ExhaustSpec(e.x(), e.y(), e.z(), e.pitch(), e.yaw()));
     }
 
+    void importFrame(FrameSpec spec, String displayName, Path modelFile) {
+        selectedFrame = spec.toFrame();
+        displayNames.put(Target.FRAME, displayName);
+        weight = spec.weight();
+        lengthPx = spec.lengthPx();
+        enginePosBack = spec.enginePosBack();
+        enginePosUp = spec.enginePosUp();
+        rearAttachmentPos = spec.rearAttachmentPos();
+        frontAttachmentPos = spec.frontAttachmentPos();
+        widthBlocks = spec.widthBlocks();
+        heightBlocks = spec.heightBlocks();
+        hideEngine = spec.hideEngine();
+        frontAttachmentEnabled = spec.frontAttachmentEnabled();
+        rearAttachmentEnabled = spec.rearAttachmentEnabled();
+        frontAttachmentWhitelistMode = !spec.frontAttachmentWhitelist().isEmpty()
+                || spec.frontAttachmentBlacklist().isEmpty();
+        rearAttachmentWhitelistMode = !spec.rearAttachmentWhitelist().isEmpty()
+                || spec.rearAttachmentBlacklist().isEmpty();
+        frontAttachmentListText = formatResourceLocations(frontAttachmentWhitelistMode
+                ? spec.frontAttachmentWhitelist() : spec.frontAttachmentBlacklist());
+        rearAttachmentListText = formatResourceLocations(rearAttachmentWhitelistMode
+                ? spec.rearAttachmentWhitelist() : spec.rearAttachmentBlacklist());
+        wheelPoints.clear();
+        for (WheelBase.WheelPos point : spec.wheelBase().toWheelBase().wheels) wheelPoints.add(WheelPoint.from(point));
+        double legacySeatYOffset = normalizedSeatYOffset(spec.seatHeight());
+        seats.clear();
+        spec.seats().forEach(seat -> seats.add(seat.add(0.0D, legacySeatYOffset, 0.0D)));
+        if (seats.isEmpty()) seats.add(defaultSeatPosition());
+        cameraPositions.clear();
+        cameraPositions.addAll(spec.cameraPositions());
+        if (cameraPositions.isEmpty()) cameraPositions.add(Vec3.ZERO);
+        hitboxes.clear();
+        spec.hitboxes().forEach(hitbox -> hitboxes.add(new HitboxPoint(
+                hitbox.origin(), hitbox.width(), hitbox.height(), hitbox.hasContainer())));
+        showInCreativeTab = spec.showInCreativeTab();
+        automaticCameraOffset = null;
+        modelError = "";
+        setImportedModelFile(Target.FRAME, modelFile);
+    }
+
+    void importWheel(WheelSpec spec, String displayName, Path modelFile) {
+        selectedWheel = spec.toWheel();
+        displayNames.put(Target.WHEEL, displayName);
+        wheelSize = spec.size();
+        wheelGrip = spec.grip();
+        wheelRadius = spec.radius();
+        wheelWidth = spec.width();
+        wheelRotationY = spec.model().rotationY();
+        showInCreativeTab = spec.showInCreativeTab();
+        modelError = "";
+        setImportedModelFile(Target.WHEEL, modelFile);
+    }
+
+    void importEngine(EngineSpec spec, String displayName, Path modelFile) {
+        selectedEngine = spec.toEngine();
+        displayNames.put(Target.ENGINE, displayName);
+        engineTorque = spec.torque();
+        engineSpeed = spec.speed();
+        engineRotationY = spec.model().rotationY();
+        exhausts.clear();
+        exhausts.addAll(spec.exhausts());
+        showInCreativeTab = spec.showInCreativeTab();
+        modelError = "";
+        setImportedModelFile(Target.ENGINE, modelFile);
+    }
+
     public ResourceLocation componentId() {
-        return new ResourceLocation(GENERATED_NAMESPACE, componentPath);
+        return componentId(target);
+    }
+
+    private ResourceLocation componentId(Target part) {
+        return new ResourceLocation(GENERATED_NAMESPACE, componentPath(part));
     }
 
     public String namespace() {
@@ -219,7 +299,11 @@ public final class VehicleEditorDraft {
     }
 
     public String componentPath() {
-        return componentPath;
+        return componentPath(target);
+    }
+
+    private String componentPath(Target part) {
+        return componentPaths.get(part);
     }
 
     static String generateComponentPath() {
@@ -266,7 +350,7 @@ public final class VehicleEditorDraft {
     }
 
     public FrameSpec.ModelSpec modelSpec(Target part, boolean preview) {
-        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(part)) : componentId();
+        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(part)) : componentId(part);
         ResourceLocation modelId = new ResourceLocation(id.getNamespace(), "riautomobility/" + part.path + "/" + id.getPath());
         ResourceLocation texture = new ResourceLocation(id.getNamespace(), "textures/entity/automobile/" + part.path + "/" + id.getPath() + ".png");
         float rotationY = switch (part) {
@@ -390,7 +474,7 @@ public final class VehicleEditorDraft {
 
     public FrameSpec frameSpec(boolean preview) {
         syncAutomaticCameraPositions();
-        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.FRAME)) : componentId();
+        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.FRAME)) : componentId(Target.FRAME);
         return new FrameSpec(id, weight, modelSpec(Target.FRAME, preview),
                 new FrameSpec.WheelBaseSpec(null, null, wheelPoints.stream().map(WheelPoint::toSpec).toList()),
                 lengthPx, NORMALIZED_SEAT_HEIGHT_PX, enginePosBack, enginePosUp, hideEngine, rearAttachmentPos, frontAttachmentPos,
@@ -404,12 +488,12 @@ public final class VehicleEditorDraft {
     }
 
     public WheelSpec wheelSpec(boolean preview) {
-        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.WHEEL)) : componentId();
+        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.WHEEL)) : componentId(Target.WHEEL);
         return new WheelSpec(id, wheelSize, wheelGrip, wheelRadius, wheelWidth, modelSpec(Target.WHEEL, preview), showInCreativeTab);
     }
 
     public EngineSpec engineSpec(boolean preview) {
-        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.ENGINE)) : componentId();
+        ResourceLocation id = preview ? new ResourceLocation(PREVIEW_NAMESPACE, previewKey(Target.ENGINE)) : componentId(Target.ENGINE);
         return new EngineSpec(id, engineTorque, engineSpeed, modelSpec(Target.ENGINE, preview), List.copyOf(exhausts), showInCreativeTab);
     }
 
@@ -434,6 +518,7 @@ public final class VehicleEditorDraft {
     }
 
     void applyAutomaticFrameModelSize(BbModelBounds.Measurement measurement) {
+        if (!automaticFrameModelSize) return;
         BbModelBounds.Size size = measurement.size();
         lengthPx = measurement.frameItemLengthPx();
         automaticCameraOffset = automaticThirdPersonCameraOffset(
@@ -522,7 +607,7 @@ public final class VehicleEditorDraft {
     }
 
     public String packName() {
-        return GENERATED_NAMESPACE + "-" + componentPath + "-" + target.path;
+        return GENERATED_NAMESPACE + "-" + componentPath() + "-" + target.path;
     }
 
     public enum Target {
