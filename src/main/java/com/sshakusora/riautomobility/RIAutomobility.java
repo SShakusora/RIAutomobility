@@ -9,7 +9,6 @@ import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
-import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
@@ -95,10 +94,7 @@ public class RIAutomobility
         @SubscribeEvent
         public static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
             ResourceManagerReloadListener bbModelReloadListener = BbModelRepository::reload;
-            ResourceManagerReloadListener dynamicModelReloadListener = manager -> {
-                DynamicJsonModelLoader.loadIntoEntityModelSet(Minecraft.getInstance().getEntityModels(), manager);
-                RIAutomobileModels.rebuildDynamicModelsNow();
-            };
+            ResourceManagerReloadListener dynamicModelReloadListener = manager -> RIAutomobileModels.rebuildDynamicModelsNow();
             event.registerReloadListener(bbModelReloadListener);
             event.registerReloadListener(dynamicModelReloadListener);
         }

@@ -90,9 +90,6 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("container.riautomobility.hitbox", "Box");
             add("container.riautomobility.vehicle_import", "Vehicle Import Table");
             add("block.riautomobility.vehicle_import_table", "Vehicle Import Table");
-            add("commands.riautomobility.carpacks.reload.started", "Reloading RIAutomobility car packs...");
-            add("commands.riautomobility.carpacks.reload.success", "RIAutomobility car packs reloaded");
-            add("commands.riautomobility.carpacks.reload.failed", "Failed to reload RIAutomobility car packs: %s");
             add("message.riautomobility.carpacks.mismatch", "Car packs do not match the server.");
             add("message.riautomobility.carpacks.missing", "Missing: %s.");
             add("message.riautomobility.carpacks.different", "Different: %s.");
@@ -145,9 +142,6 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("container.riautomobility.hitbox", "后备箱");
             add("container.riautomobility.vehicle_import", "车辆导入台");
             add("block.riautomobility.vehicle_import_table", "车辆导入台");
-            add("commands.riautomobility.carpacks.reload.started", "正在重载 RIAutomobility 车包……");
-            add("commands.riautomobility.carpacks.reload.success", "RIAutomobility 车包已重载");
-            add("commands.riautomobility.carpacks.reload.failed", "RIAutomobility 车包重载失败：%s");
             add("message.riautomobility.carpacks.mismatch", "车包与服务器不一致。");
             add("message.riautomobility.carpacks.missing", "缺少：%s。");
             add("message.riautomobility.carpacks.different", "内容不同：%s。");

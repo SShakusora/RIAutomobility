@@ -11,9 +11,6 @@ import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.model.bbmodel.DynamicBbModel;
 import com.sshakusora.riautomobility.model.frame.DoubleMotorcarFrameModel;
 import com.sshakusora.riautomobility.model.frame.QuadMotorcarFrameModel;
-import com.sshakusora.riautomobility.model.gecko.DynamicGeckoAnimatable;
-import com.sshakusora.riautomobility.model.gecko.DynamicGeckoModel;
-import com.sshakusora.riautomobility.model.gecko.DynamicGeckoRenderer;
 import com.sshakusora.riautomobility.model.gecko.GeckoFrameModel;
 import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcAnimatable;
 import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcModel;
@@ -137,69 +134,38 @@ public class RIAutomobileModels {
 
     public static void registerTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         clearMissingComponent(componentId);
-        if (modelSpec.isBbModel()) {
-            try {
-                BbModelRepository.registerTemporary(modelSpec);
-                AutomobileModels.register(modelSpec.modelId(), ctx -> new DynamicBbModel(
-                        componentId,
-                        modelSpec,
-                        createPlaceholderModel(ctx),
-                        RIAutomobileModels::markMissingComponent
-                ));
-            } catch (RuntimeException exception) {
-                markMissingComponent(componentId);
-                LOGGER.error("Failed to register temporary Blockbench automobile model {} using {}",
-                        modelSpec.modelId(), modelSpec.bbModel(), exception);
-                AutomobileModels.register(modelSpec.modelId(), RIAutomobileModels::createPlaceholderModel);
-            }
-            return;
+        try {
+            BbModelRepository.registerTemporary(modelSpec);
+            AutomobileModels.register(modelSpec.modelId(), ctx -> new DynamicBbModel(
+                    componentId,
+                    modelSpec,
+                    createPlaceholderModel(ctx),
+                    RIAutomobileModels::markMissingComponent
+            ));
+        } catch (RuntimeException exception) {
+            markMissingComponent(componentId);
+            LOGGER.error("Failed to register temporary Blockbench automobile model {} using {}",
+                    modelSpec.modelId(), modelSpec.bbModel(), exception);
+            AutomobileModels.register(modelSpec.modelId(), RIAutomobileModels::createPlaceholderModel);
         }
-        registerDynamicModel(componentId, modelSpec);
     }
 
     public static void unregisterTemporaryDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         AutomobileModelsAccessor.riautomobility$getModelProviders().remove(modelSpec.modelId());
         AutomobileModelsAccessor.riautomobility$getModels().remove(modelSpec.modelId());
-        if (modelSpec.isBbModel()) {
-            BbModelRepository.unregisterTemporary(modelSpec);
-        } else if (!modelSpec.isGeckoLib() && modelSpec.layerLocation() != null) {
-            DynamicJsonModelLoader.unregister(new ModelLayerLocation(modelSpec.layerLocation(), "main"));
-        }
+        BbModelRepository.unregisterTemporary(modelSpec);
         clearMissingComponent(componentId);
     }
 
     private static void unregisterDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
         AutomobileModelsAccessor.riautomobility$getModelProviders().remove(modelSpec.modelId());
         AutomobileModelsAccessor.riautomobility$getModels().remove(modelSpec.modelId());
-        if (modelSpec.isBbModel()) {
-            BbModelRepository.unregister(modelSpec);
-        } else if (!modelSpec.isGeckoLib() && modelSpec.layerLocation() != null) {
-            DynamicJsonModelLoader.unregister(new ModelLayerLocation(modelSpec.layerLocation(), "main"));
-        }
+        BbModelRepository.unregister(modelSpec);
         clearMissingComponent(componentId);
     }
 
     private static void registerDynamicModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
-        if (modelSpec.isBbModel()) {
-            registerDynamicBbModel(componentId, modelSpec);
-            return;
-        }
-        if (modelSpec.isGeckoLib()) {
-            registerDynamicGeckoModel(componentId, modelSpec);
-            return;
-        }
-
-        ModelLayerLocation layer = new ModelLayerLocation(modelSpec.layerLocation(), "main");
-        DynamicJsonModelLoader.register(layer);
-        AutomobileModels.register(modelSpec.modelId(), ctx -> {
-            try {
-                return new DynamicAutomobileModel(ctx, layer, modelSpec.renderType(), modelSpec.rotationY());
-            } catch (RuntimeException exception) {
-                markMissingComponent(componentId);
-                LOGGER.error("Failed to bake dynamic automobile model {} from layer {}", modelSpec.modelId(), modelSpec.layerLocation(), exception);
-                return createPlaceholderModel(ctx);
-            }
-        });
+        registerDynamicBbModel(componentId, modelSpec);
     }
 
     private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
@@ -229,21 +195,6 @@ public class RIAutomobileModels {
         }
     }
 
-    private static void registerDynamicGeckoModel(ResourceLocation componentId, FrameSpec.ModelSpec modelSpec) {
-        AutomobileModels.register(modelSpec.modelId(), ctx -> {
-            try {
-                DynamicGeckoAnimatable animatable = new DynamicGeckoAnimatable();
-                DynamicGeckoModel model = new DynamicGeckoModel(modelSpec.geoModel(), modelSpec.texture(), modelSpec.animation());
-                DynamicGeckoRenderer renderer = new DynamicGeckoRenderer(model, animatable);
-                return new GeckoFrameModel<>(model, renderer, animatable, createPlaceholderModel(ctx), componentId, RIAutomobileModels::markMissingComponent);
-            } catch (RuntimeException exception) {
-                markMissingComponent(componentId);
-                LOGGER.error("Failed to bake dynamic GeckoLib automobile model {} using geo {}", modelSpec.modelId(), modelSpec.geoModel(), exception);
-                return createPlaceholderModel(ctx);
-            }
-        });
-    }
-
     private static Model createPlaceholderModel(EntityRendererProvider.Context ctx) {
         try {
             return new PlaceholderAutomobileModel(ctx, PLACEHOLDER_LAYER);
@@ -254,7 +205,7 @@ public class RIAutomobileModels {
     }
 
     private static void registerJsonLayer(EntityRenderersEvent.RegisterLayerDefinitions event, ModelLayerLocation layer) {
-        event.registerLayerDefinition(layer, () -> DynamicJsonModelLoader.loadRequiredModel(
+        event.registerLayerDefinition(layer, () -> BuiltinJsonModelLoader.loadRequiredModel(
                 Minecraft.getInstance().getResourceManager(), layer));
     }
 

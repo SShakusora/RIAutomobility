@@ -3,15 +3,11 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.sshakusora.riautomobility.content.FrameSpec;
-import com.sshakusora.riautomobility.content.WheelSpec;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -100,20 +96,6 @@ class BbModelParserTest {
         assertEquals(-10, point.x().getAsInt());
         assertEquals("-(query.anim_time)", point.y().getAsString());
         assertEquals(5, point.z().getAsInt());
-    }
-
-    @Test
-    void parsesShippedFrameAndWheelExamples() throws IOException {
-        BbModelData.Document frame = BbModelParser.parse(JsonParser.parseString(Files.readString(Path.of(
-                "examples/components/frame-bbmodel/assets/examplepack/models/entity/automobile/frame/example_buggy.bbmodel"
-        ))).getAsJsonObject());
-        BbModelData.Document wheel = BbModelParser.parse(JsonParser.parseString(Files.readString(Path.of(
-                "examples/components/wheel-bbmodel/assets/examplepack/models/entity/automobile/wheel/example_buggy.bbmodel"
-        ))).getAsJsonObject());
-
-        assertEquals(3, ((BbModelData.GroupNode) frame.roots().get(0)).children().size());
-        assertEquals(1, wheel.roots().size());
-        assertEquals(44.0F, BbModelBounds.maxDimensionPx(frame), 0.001F);
     }
 
     @Test
@@ -206,49 +188,16 @@ class BbModelParserTest {
     }
 
     @Test
-    void componentBbModelStringDerivesRuntimeModelId() {
-        FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
-                new JsonPrimitive("example:models/vehicles/car.bbmodel"),
-                new ResourceLocation("example", "car"),
-                "frame"
-        );
-
-        assertEquals("bbmodel", spec.type());
-        assertEquals("example:models/vehicles/car.bbmodel", spec.bbModel().toString());
-        assertEquals("example:riautomobility/frame/car", spec.modelId().toString());
-    }
-
-    @Test
-    void omittedComponentModelUsesConventionalBbModelPath() {
-        FrameSpec.ModelSpec spec = FrameSpec.ModelSpec.fromComponentJson(
-                null,
-                new ResourceLocation("example", "sports/red_car"),
-                "wheel"
-        );
-
-        assertEquals("example:models/entity/automobile/wheel/sports/red_car.bbmodel", spec.bbModel().toString());
-        assertEquals("example:riautomobility/wheel/sports/red_car", spec.modelId().toString());
-        assertEquals("", spec.bbAnimation());
-        assertTrue(spec.textureOverrides().isEmpty());
-    }
-
-    @Test
-    void parsesShorthandModelsInShippedComponentDefinitions() throws IOException {
-        ResourceLocation id = new ResourceLocation("examplepack", "example_buggy_bbmodel");
-        FrameSpec frame = FrameSpec.fromJson(id, JsonParser.parseString(Files.readString(Path.of(
-                "examples/components/frame-bbmodel/data/examplepack/riautomobility/frames/example_buggy_bbmodel.json"
-        ))).getAsJsonObject());
-        WheelSpec wheel = WheelSpec.fromJson(
-                new ResourceLocation("examplepack", "example_buggy_bbmodel_wheel"),
-                JsonParser.parseString(Files.readString(Path.of(
-                        "examples/components/wheel-bbmodel/data/examplepack/riautomobility/wheels/example_buggy_bbmodel_wheel.json"
-                ))).getAsJsonObject()
-        );
-
-        assertEquals("examplepack:models/entity/automobile/frame/example_buggy.bbmodel", frame.model().bbModel().toString());
-        assertEquals("examplepack:riautomobility/frame/example_buggy_bbmodel", frame.model().modelId().toString());
-        assertEquals("examplepack:models/entity/automobile/wheel/example_buggy.bbmodel", wheel.model().bbModel().toString());
-        assertEquals("examplepack:riautomobility/wheel/example_buggy_bbmodel_wheel", wheel.model().modelId().toString());
+    void rejectsNonEditorModelDefinitions() {
+        assertThrows(IllegalArgumentException.class,
+                () -> FrameSpec.ModelSpec.fromComponentJson(null));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrameSpec.ModelSpec.fromComponentJson(
+                        new JsonPrimitive("example:models/car.bbmodel")));
+        assertThrows(IllegalArgumentException.class,
+                () -> FrameSpec.ModelSpec.fromComponentJson(JsonParser.parseString("""
+                        {"type":"jsonem","model_id":"example:car","texture":"example:textures/car.png"}
+                        """)));
     }
 
     @Test

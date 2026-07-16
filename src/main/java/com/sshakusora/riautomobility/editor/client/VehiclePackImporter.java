@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -32,14 +33,16 @@ final class VehiclePackImporter {
     static ImportedComponent importComponent(Path archive, Path extractionDirectory) throws IOException {
         CarPackArchiveStore.validateRiautoArchive(archive);
         CarPackArchiveStore.DeclaredComponent declared = CarPackArchiveStore.readDeclaredComponent(archive);
+        Map<String, String> files = CarPackArchiveStore.readFileMappings(archive);
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             JsonObject metadata = readJson(zip, CarPackArchiveStore.RIAUTO_METADATA_FILE);
-            Candidate candidate = readCandidate(zip, declared);
+            Candidate candidate = readCandidate(zip, files, declared);
             FrameSpec.ModelSpec model = candidate.model();
             if (!model.isBbModel() || model.bbModel() == null) {
                 throw new IOException("RIAuto component does not use an editable BBModel");
             }
-            String modelEntryName = "assets/" + model.bbModel().getNamespace() + "/" + model.bbModel().getPath();
+            String modelEntryName = findFile(files,
+                    "assets/" + model.bbModel().getNamespace() + "/" + model.bbModel().getPath());
             ZipEntry modelEntry = zip.getEntry(modelEntryName);
             if (modelEntry == null || modelEntry.isDirectory()) {
                 throw new IOException("RIAuto file is missing BBModel asset " + modelEntryName);
@@ -56,7 +59,7 @@ final class VehiclePackImporter {
                 if (modelBytes.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
                     throw new IOException("BBModel exceeds " + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes");
                 }
-                modelBytes = embedExternalTextures(zip, modelBytes);
+                modelBytes = embedExternalTextures(zip, files, modelBytes);
                 if (modelBytes.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
                     throw new IOException("Editable BBModel exceeds "
                             + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes after restoring textures");
@@ -75,37 +78,39 @@ final class VehiclePackImporter {
         }
     }
 
-    private static byte[] embedExternalTextures(ZipFile zip, byte[] modelBytes) throws IOException {
+    private static byte[] embedExternalTextures(ZipFile zip, Map<String, String> files, byte[] modelBytes)
+            throws IOException {
         JsonObject model;
         BbModelData.Document document;
         try {
             model = JsonParser.parseString(new String(modelBytes, StandardCharsets.UTF_8)).getAsJsonObject();
             document = BbModelParser.parse(model);
         } catch (RuntimeException exception) {
-            throw new IOException("Invalid RIAuto v2 BBModel: " + exception.getMessage(), exception);
+            throw new IOException("Invalid RIAuto v1 BBModel: " + exception.getMessage(), exception);
         }
 
         List<BbModelParser.ExternalTexture> textures;
         try {
             textures = BbModelParser.requireExternalPngTextures(document);
         } catch (RuntimeException exception) {
-            throw new IOException("Invalid RIAuto v2 textures: " + exception.getMessage(), exception);
+            throw new IOException("Invalid RIAuto v1 textures: " + exception.getMessage(), exception);
         }
         var textureJson = model.getAsJsonArray("textures");
         long restoredSizeEstimate = modelBytes.length;
         for (int index = 0; index < textures.size(); index++) {
             BbModelParser.ExternalTexture texture = textures.get(index);
-            String entryName = "assets/" + texture.resource().getNamespace() + "/" + texture.resource().getPath();
+            String entryName = findFile(files,
+                    "assets/" + texture.resource().getNamespace() + "/" + texture.resource().getPath());
             ZipEntry entry = zip.getEntry(entryName);
             if (entry == null || entry.isDirectory()) {
-                throw new IOException("RIAuto v2 is missing external texture " + texture.resource());
+                throw new IOException("RIAuto v1 is missing external texture " + texture.resource());
             }
             byte[] png;
             try (var input = zip.getInputStream(entry)) {
                 png = input.readNBytes((int) VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + 1);
             }
             if (png.length > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
-                throw new IOException("RIAuto v2 texture exceeds " + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes");
+                throw new IOException("RIAuto v1 texture exceeds " + VehiclePackBuilder.MAX_SOURCE_FILE_SIZE + " bytes");
             }
             restoredSizeEstimate += 4L * ((png.length + 2L) / 3L);
             if (restoredSizeEstimate > VehiclePackBuilder.MAX_SOURCE_FILE_SIZE) {
@@ -126,10 +131,12 @@ final class VehiclePackImporter {
         return GSON.toJson(model).getBytes(StandardCharsets.UTF_8);
     }
 
-    private static Candidate readCandidate(ZipFile zip, CarPackArchiveStore.DeclaredComponent declared) throws IOException {
+    private static Candidate readCandidate(ZipFile zip, Map<String, String> files,
+                                           CarPackArchiveStore.DeclaredComponent declared) throws IOException {
         ResourceLocation id = declared.id();
-        JsonObject component = readJson(zip, "data/" + id.getNamespace() + "/riautomobility/"
-                + declared.kind().collection() + "/" + id.getPath() + ".json");
+        String logicalPath = "data/" + id.getNamespace() + "/riautomobility/"
+                + declared.kind().collection() + "/" + id.getPath() + ".json";
+        JsonObject component = readJson(zip, findFile(files, logicalPath));
         try {
             return switch (declared.kind()) {
                 case FRAME -> Candidate.frame(FrameSpec.fromJson(id, component));
@@ -140,6 +147,14 @@ final class VehiclePackImporter {
             throw new IOException("Invalid " + declared.kind().path() + " component " + id
                     + ": " + exception.getMessage(), exception);
         }
+    }
+
+    private static String findFile(Map<String, String> files, String logicalPath) throws IOException {
+        return files.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(logicalPath))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow(() -> new IOException("RIAuto file is missing mapped resource " + logicalPath));
     }
 
     private static JsonObject readJson(ZipFile zip, String entryName) throws IOException {

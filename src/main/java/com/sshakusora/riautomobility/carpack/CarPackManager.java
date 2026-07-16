@@ -26,7 +26,6 @@ import java.util.zip.ZipFile;
 public final class CarPackManager {
     public static final String CAR_PACK_EXTENSION = ".riauto";
     public static final String PACK_ID_PREFIX = "riautomobility/";
-    public static final String DISABLED_DIRECTORY_NAME = "disabled";
     public static final String CACHE_DIRECTORY_NAME = "cache";
     private static final String TRANSFER_CACHE_DIRECTORY_NAME = "server-transfers";
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -55,11 +54,9 @@ public final class CarPackManager {
         List<CarPack> packs = new ArrayList<>();
         try {
             Files.createDirectories(root);
-            Files.createDirectories(root.resolve(DISABLED_DIRECTORY_NAME));
             try (DirectoryStream<Path> entries = Files.newDirectoryStream(root)) {
                 for (Path entry : entries) {
-                    if (entry.getFileName().toString().equalsIgnoreCase(DISABLED_DIRECTORY_NAME)
-                            || entry.getFileName().toString().equalsIgnoreCase(CACHE_DIRECTORY_NAME)) {
+                    if (entry.getFileName().toString().equalsIgnoreCase(CACHE_DIRECTORY_NAME)) {
                         continue;
                     }
 
@@ -122,10 +119,11 @@ public final class CarPackManager {
     }
 
     public static void setClientPreviewPack(Path archive) throws IOException {
-        Pack.ResourcesSupplier resources = detectPackResources(archive);
-        if (resources == null) {
+        if (!Files.isRegularFile(archive, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("Editor preview is not a valid RIAuto archive");
         }
+        var file = archive.toFile();
+        Pack.ResourcesSupplier resources = id -> new FilePackResources(id, file, false);
         clientPreviewPack = new CarPack(
                 PACK_ID_PREFIX + "editor-preview", "Vehicle editor preview", archive, resources, digest(archive));
     }
@@ -198,7 +196,7 @@ public final class CarPackManager {
     static Pack.ResourcesSupplier detectPackResources(Path path) {
         if (isRiautoArchive(path) && Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             var file = path.toFile();
-            return id -> new FilePackResources(id, file, false);
+            return id -> new FlatRiautoPackResources(id, file);
         }
         return null;
     }

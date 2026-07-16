@@ -1,8 +1,5 @@
 {
   "block.riautomobility.vehicle_import_table": "车辆导入台",
-  "commands.riautomobility.carpacks.reload.failed": "RIAutomobility 车包重载失败：%s",
-  "commands.riautomobility.carpacks.reload.started": "正在重载 RIAutomobility 车包……",
-  "commands.riautomobility.carpacks.reload.success": "RIAutomobility 车包已重载",
   "container.riautomobility.hitbox": "后备箱",
   "container.riautomobility.vehicle_import": "车辆导入台",
   "editor.riautomobility.vehicle_import.button.back": "返回",

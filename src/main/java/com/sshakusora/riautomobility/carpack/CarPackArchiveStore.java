@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 
 public final class CarPackArchiveStore {
     public static final String RIAUTO_METADATA_FILE = "riauto.json";
-    public static final int RIAUTO_FORMAT_VERSION = 2;
+    public static final int RIAUTO_FORMAT_VERSION = 1;
     public static final int MAX_AUTHOR_LENGTH = 256;
     public static final int MAX_ENTRIES = 8192;
     public static final long MAX_UNCOMPRESSED_SIZE = 1024L * 1024L * 1024L;
@@ -29,6 +29,7 @@ public final class CarPackArchiveStore {
     private static final int BUFFER_SIZE = 8192;
     private static final String COMPONENT_DATA_PATTERN =
             "data/[a-z0-9_.-]+/riautomobility/(frames|wheels|engines)/[a-z0-9/._-]+\\.json";
+    private static final String ROOT_FILE_PATTERN = "[a-z0-9][a-z0-9._-]{0,127}";
     private static volatile Map<String, TransferPack> transferPacks = Map.of();
     private static volatile Map<ResourceLocation, ItemMetadata> componentMetadata = Map.of();
 
@@ -138,6 +139,22 @@ public final class CarPackArchiveStore {
         }
     }
 
+    public static Map<String, String> readFileMappings(Path archive) throws IOException {
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
+            if (metadataEntry == null || metadataEntry.isDirectory()) {
+                throw new IOException("RIAuto archive does not contain a root " + RIAUTO_METADATA_FILE);
+            }
+            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
+                JsonObject metadata = JsonParser.parseReader(reader).getAsJsonObject();
+                validateRiautoMetadata(metadata);
+                return readFileMappings(metadata);
+            }
+        } catch (RuntimeException exception) {
+            throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
+        }
+    }
+
     private static DeclaredComponent readDeclaredComponent(JsonObject metadata) throws IOException {
         List<DeclaredComponent> declared = new ArrayList<>();
         JsonObject components = metadata.getAsJsonObject("components");
@@ -213,12 +230,8 @@ public final class CarPackArchiveStore {
                 if (!entryNames.add(entry.getName())) {
                     throw new IOException("Car pack archive contains duplicate entry: " + entry.getName());
                 }
-                if (entry.isDirectory()) {
-                    continue;
-                }
-                if (!isAllowedRuntimeEntry(entry.getName())) {
-                    throw new IOException("RIAuto archive contains unsupported vanilla resource/data content: " + entry.getName());
-                }
+                if (entry.isDirectory()) throw new IOException("RIAuto v1 archives cannot contain directories");
+                validateRootFileName(entry.getName());
                 entries++;
                 if (entries > MAX_ENTRIES) {
                     throw new IOException("Car pack archive contains too many entries");
@@ -249,7 +262,7 @@ public final class CarPackArchiveStore {
                 metadata = JsonParser.parseReader(reader).getAsJsonObject();
             }
             validateRiautoMetadata(metadata);
-            validateDeclaredComponentFiles(metadata, entryNames);
+            validateFileMappings(metadata, entryNames);
         } catch (RuntimeException exception) {
             throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
@@ -280,6 +293,7 @@ public final class CarPackArchiveStore {
         if (componentCount != 1) {
             throw new IOException("RIAuto metadata must declare exactly one frame, wheel, or engine component");
         }
+        readFileMappings(metadata);
     }
 
     private static String metadataAuthor(JsonObject metadata) throws IOException {
@@ -342,39 +356,80 @@ public final class CarPackArchiveStore {
         }
     }
 
-    private static void validateDeclaredComponentFiles(JsonObject metadata, Set<String> entries) throws IOException {
+    private static Map<String, String> readFileMappings(JsonObject metadata) throws IOException {
+        if (!metadata.has("files") || !metadata.get("files").isJsonObject()) {
+            throw new IOException("RIAuto metadata field 'files' must be an object");
+        }
+        Map<String, String> mappings = new LinkedHashMap<>();
+        Set<String> logicalPaths = new HashSet<>();
+        for (Map.Entry<String, JsonElement> entry : metadata.getAsJsonObject("files").entrySet()) {
+            String file = entry.getKey();
+            validateRootFileName(file);
+            if (RIAUTO_METADATA_FILE.equals(file)) {
+                throw new IOException("RIAuto metadata cannot map " + RIAUTO_METADATA_FILE);
+            }
+            if (!entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isString()) {
+                throw new IOException("RIAuto file mapping for " + file + " must be a string");
+            }
+            String logicalPath = entry.getValue().getAsString();
+            if (!isAllowedRuntimePath(logicalPath)) {
+                throw new IOException("RIAuto file " + file + " maps to unsupported resource " + logicalPath);
+            }
+            if (!logicalPaths.add(logicalPath)) {
+                throw new IOException("RIAuto metadata maps more than one file to " + logicalPath);
+            }
+            mappings.put(file, logicalPath);
+        }
+        return Map.copyOf(mappings);
+    }
+
+    private static void validateFileMappings(JsonObject metadata, Set<String> entries) throws IOException {
+        Map<String, String> mappings = readFileMappings(metadata);
+        Set<String> archiveFiles = new HashSet<>(entries);
+        archiveFiles.remove(RIAUTO_METADATA_FILE);
+        if (!archiveFiles.equals(mappings.keySet())) {
+            Set<String> missing = new TreeSet<>(mappings.keySet());
+            missing.removeAll(archiveFiles);
+            Set<String> undeclared = new TreeSet<>(archiveFiles);
+            undeclared.removeAll(mappings.keySet());
+            if (!missing.isEmpty()) throw new IOException("RIAuto archive is missing mapped files: " + missing);
+            throw new IOException("RIAuto archive contains unmapped files: " + undeclared);
+        }
+
         JsonObject components = metadata.getAsJsonObject("components");
-        Set<String> declaredFiles = new HashSet<>();
+        Set<String> declaredPaths = new HashSet<>();
         for (String kind : List.of("frames", "wheels", "engines")) {
             if (!components.has(kind)) continue;
             for (JsonElement element : components.getAsJsonArray(kind)) {
                 String[] id = element.getAsString().split(":", 2);
                 String expected = "data/" + id[0] + "/riautomobility/" + kind + "/" + id[1] + ".json";
-                declaredFiles.add(expected);
-                if (!entries.contains(expected)) {
-                    throw new IOException("RIAuto metadata declares missing component file " + expected);
+                declaredPaths.add(expected);
+                if (!mappings.containsValue(expected)) {
+                    throw new IOException("RIAuto metadata declares missing component resource " + expected);
                 }
             }
         }
-        for (String entry : entries) {
-            if (entry.matches(COMPONENT_DATA_PATTERN) && !declaredFiles.contains(entry)) {
-                throw new IOException("RIAuto archive contains undeclared component file " + entry);
+        for (String logicalPath : mappings.values()) {
+            if (logicalPath.matches(COMPONENT_DATA_PATTERN) && !declaredPaths.contains(logicalPath)) {
+                throw new IOException("RIAuto archive contains undeclared component resource " + logicalPath);
             }
         }
     }
 
-    private static boolean isAllowedRuntimeEntry(String name) {
-        if (RIAUTO_METADATA_FILE.equals(name)) return true;
+    private static boolean isAllowedRuntimePath(String name) {
         if (name.matches(COMPONENT_DATA_PATTERN)) {
             return true;
         }
-        if (name.matches("assets/[a-z0-9_.-]+/models/entity/automobile/(frame|wheel|engine)/[a-z0-9/._-]+\\.(json|bbmodel)")) {
+        if (name.matches("assets/[a-z0-9_.-]+/models/entity/automobile/(frame|wheel|engine)/[a-z0-9/._-]+\\.bbmodel")) {
             return true;
         }
-        if (name.matches("assets/[a-z0-9_.-]+/(geo|animations)/[a-z0-9/._-]+\\.json")) {
-            return true;
+        return name.matches("assets/[a-z0-9_.-]+/textures/[a-z0-9/._-]+\\.png");
+    }
+
+    private static void validateRootFileName(String name) throws IOException {
+        if (name == null || !name.matches(ROOT_FILE_PATTERN) || name.contains("..")) {
+            throw new IOException("RIAuto v1 file must use a lowercase root filename: " + name);
         }
-        return name.matches("assets/[a-z0-9_.-]+/textures/[a-z0-9/._-]+\\.png(\\.mcmeta)?");
     }
 
     public static String sha256(Path path) throws IOException {

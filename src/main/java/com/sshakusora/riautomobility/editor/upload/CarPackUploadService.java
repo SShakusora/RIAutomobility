@@ -155,18 +155,14 @@ public final class CarPackUploadService {
         if (declared.kind() != expectedKind || !declared.id().equals(id)) {
             throw new IOException("RIAuto metadata must declare only " + request.target() + " component " + id);
         }
+        Map<String, String> files = CarPackArchiveStore.readFileMappings(archive);
         try (ZipFile zip = new ZipFile(archive.toFile())) {
-            var entries = zip.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                if (entry.isDirectory()) continue;
-                String name = entry.getName();
-                if (!name.equals(CarPackArchiveStore.RIAUTO_METADATA_FILE)
-                        && !name.startsWith(namespacePrefix) && !name.startsWith(dataPrefix)) {
-                    throw new IOException("Archive contains content outside its declared namespace: " + name);
+            for (String logicalPath : files.values()) {
+                if (!logicalPath.startsWith(namespacePrefix) && !logicalPath.startsWith(dataPrefix)) {
+                    throw new IOException("Archive contains content outside its declared namespace: " + logicalPath);
                 }
             }
-            ZipEntry componentEntry = zip.getEntry(expected);
+            ZipEntry componentEntry = zip.getEntry(findFile(files, expected));
             if (componentEntry == null) throw new IOException("Archive is missing " + expected);
             JsonObject json;
             try (var reader = new InputStreamReader(zip.getInputStream(componentEntry), StandardCharsets.UTF_8)) {
@@ -184,7 +180,8 @@ public final class CarPackUploadService {
             if (!"bbmodel".equals(model.type()) || !expectedModel.equals(model.bbModel())) {
                 throw new IOException("Vehicle Import Table uploads must use the generated BBModel resource " + expectedModel);
             }
-            ZipEntry modelEntry = zip.getEntry("assets/" + request.namespace() + "/" + modelPath);
+            ZipEntry modelEntry = zip.getEntry(findFile(files,
+                    "assets/" + request.namespace() + "/" + modelPath));
             if (modelEntry == null || modelEntry.isDirectory()) {
                 throw new IOException("Archive is missing embedded-texture BBModel " + expectedModel);
             }
@@ -194,8 +191,8 @@ public final class CarPackUploadService {
             }
             var document = BbModelParser.parse(modelJson);
             for (BbModelParser.ExternalTexture texture : BbModelParser.requireExternalPngTextures(document)) {
-                String textureEntryName = "assets/" + texture.resource().getNamespace()
-                        + "/" + texture.resource().getPath();
+                String textureEntryName = findFile(files, "assets/" + texture.resource().getNamespace()
+                        + "/" + texture.resource().getPath());
                 ZipEntry textureEntry = zip.getEntry(textureEntryName);
                 if (textureEntry == null || textureEntry.isDirectory()) {
                     throw new IOException("Archive is missing external texture " + texture.resource());
@@ -209,6 +206,14 @@ public final class CarPackUploadService {
         } catch (RuntimeException exception) {
             throw new IOException("Vehicle Import Table archive is invalid: " + exception.getMessage(), exception);
         }
+    }
+
+    private static String findFile(Map<String, String> files, String logicalPath) throws IOException {
+        return files.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(logicalPath))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow(() -> new IOException("Archive is missing mapped resource " + logicalPath));
     }
 
     private static boolean rejectUnauthorized(ServerPlayer player, UUID uploadId) {

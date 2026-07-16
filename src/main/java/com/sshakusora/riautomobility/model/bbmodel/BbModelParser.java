@@ -58,13 +58,13 @@ public final class BbModelParser {
         List<ExternalTexture> textures = new ArrayList<>();
         for (BbModelData.Texture texture : document.textures()) {
             if (texture.source() != null && !texture.source().isBlank()) {
-                throw new IllegalArgumentException("RIAuto v2 BBModel texture '" + texture.name()
+                throw new IllegalArgumentException("RIAuto v1 BBModel texture '" + texture.name()
                         + "' must not contain embedded image data");
             }
             String path = texture.relativePath().isBlank() ? texture.path() : texture.relativePath();
             ResourceLocation resource = path.indexOf(':') > 0 ? ResourceLocation.tryParse(path) : null;
             if (resource == null || !resource.getPath().endsWith(".png")) {
-                throw new IllegalArgumentException("RIAuto v2 BBModel texture '" + texture.name()
+                throw new IllegalArgumentException("RIAuto v1 BBModel texture '" + texture.name()
                         + "' must reference an explicit PNG resource id");
             }
             textures.add(new ExternalTexture(texture.name(), resource));

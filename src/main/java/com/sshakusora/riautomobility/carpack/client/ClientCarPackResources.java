@@ -3,10 +3,8 @@ package com.sshakusora.riautomobility.carpack.client;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.carpack.CarPackRuntime;
 import com.sshakusora.riautomobility.carpack.OverlayCloseableResourceManager;
-import com.sshakusora.riautomobility.model.DynamicJsonModelLoader;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
-import com.sshakusora.riautomobility.model.gecko.CarPackGeckoReloader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
@@ -33,7 +31,7 @@ public final class ClientCarPackResources {
         install(packs, false);
     }
 
-    private static void install(List<CarPackManager.CarPack> packs, boolean reloadAllGeckoResources) {
+    private static void install(List<CarPackManager.CarPack> packs, boolean releaseAllTextures) {
         Minecraft minecraft = Minecraft.getInstance();
         ReloadableResourceManager manager = (ReloadableResourceManager) minecraft.getResourceManager();
         String fingerprint = fingerprint(packs);
@@ -49,7 +47,7 @@ public final class ClientCarPackResources {
         mount = new Mount(fingerprint, combined, carResources, textures);
         manager.resources = combined;
 
-        if (reloadAllGeckoResources) {
+        if (releaseAllTextures) {
             Set<ResourceLocation> reset = new HashSet<>(staleTextures.keySet());
             reset.addAll(textures.keySet());
             reset.forEach(minecraft.getTextureManager()::release);
@@ -60,7 +58,6 @@ public final class ClientCarPackResources {
                     .filter(id -> !Objects.equals(staleTextures.get(id), textures.get(id)))
                     .forEach(minecraft.getTextureManager()::release);
         }
-        if (reloadAllGeckoResources) CarPackGeckoReloader.reload(carResources, manager);
     }
 
     public static void uninstall() {
@@ -71,7 +68,6 @@ public final class ClientCarPackResources {
         detach(manager);
         mount = null;
         textures.forEach(minecraft.getTextureManager()::release);
-        CarPackGeckoReloader.clear();
     }
 
     public static void refreshDiscoveredPacks() {
@@ -82,7 +78,6 @@ public final class ClientCarPackResources {
     public static void refreshDynamicModels() {
         Minecraft minecraft = Minecraft.getInstance();
         BbModelRepository.reload(minecraft.getResourceManager());
-        DynamicJsonModelLoader.loadIntoEntityModelSet(minecraft.getEntityModels(), minecraft.getResourceManager());
         RIAutomobileModels.rebuildDynamicModelsNow();
     }
 

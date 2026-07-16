@@ -15,8 +15,7 @@
     "ForgeGeometryBuilderMixin",
     "accessor.AutoMechanicTableRecipeAccessor",
     "accessor.AutoMechanicTableScreenAccessor",
-    "accessor.AutomobileModelsAccessor",
-    "accessor.GeckoLibCacheAccessor"
+    "accessor.AutomobileModelsAccessor"
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",

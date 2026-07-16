@@ -230,20 +230,21 @@ class VehiclePackBuilderTest {
     }
 
     @Test
-    void exportedRiautoV2StoresTheTextureOnlyAsAnExternalPng() throws IOException {
-        byte[] source = Files.readAllBytes(writeBbModel("v2-wheel.bbmodel"));
+    void exportedRiautoV1StoresTheTextureOnlyAsAnExternalPng() throws IOException {
+        byte[] source = Files.readAllBytes(writeBbModel("v1-wheel.bbmodel"));
         var exported = BbModelRuntimeSanitizer.externalize(source, "test",
                 "textures/entity/automobile/wheel/test-wheel");
         var component = new JsonObject();
         component.add("model", new JsonObject());
         Map<String, byte[]> entries = new LinkedHashMap<>();
-        VehiclePackBuilder.addV2ModelEntries(
-                entries, component, exported, "test", "wheel", "test-wheel");
-        Path archive = temporaryDirectory.resolve("wheel-v2.riauto");
+        JsonObject files = new JsonObject();
+        VehiclePackBuilder.addV1ModelEntries(
+                entries, files, component, exported, "test", "wheel", "test-wheel");
+        Path archive = temporaryDirectory.resolve("wheel-v1.riauto");
         VehiclePackBuilder.writeArchive(archive, entries);
 
         try (ZipFile zip = new ZipFile(archive.toFile())) {
-            assertEquals(2, CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
+            assertEquals(1, CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
 
             var modelEntry = zip.stream().filter(entry -> entry.getName().endsWith(".bbmodel"))
                     .findFirst().orElseThrow();
@@ -253,9 +254,10 @@ class VehiclePackBuilderTest {
             assertFalse(texture.has("source"));
             String resource = texture.get("relative_path").getAsString();
             assertEquals(resource, component.getAsJsonObject("model").get("texture").getAsString());
-            String[] resourceParts = resource.split(":", 2);
-            assertNotNull(zip.getEntry("assets/" + resourceParts[0] + "/" + resourceParts[1]));
+            assertTrue(files.entrySet().stream().anyMatch(entry -> entry.getValue().getAsString()
+                    .equals("assets/" + resource.replace(':', '/'))));
             assertEquals(1, zip.stream().filter(entry -> entry.getName().endsWith(".png")).count());
+            assertTrue(zip.stream().noneMatch(entry -> entry.getName().contains("/")));
         }
     }
 
@@ -301,7 +303,7 @@ class VehiclePackBuilderTest {
                 BbModelBounds.measure(VehiclePackBuilder.validateSource(model)).size());
 
         try (ZipFile zip = new ZipFile(archive.toFile())) {
-            var entry = zip.getEntry("data/riautomobility/riautomobility/wheels/" + path + ".json");
+            var entry = zip.getEntry("component.json");
             var exported = JsonParser.parseReader(new InputStreamReader(
                     zip.getInputStream(entry), StandardCharsets.UTF_8)).getAsJsonObject();
             assertEquals(expected.radiusPx(), exported.get("radius").getAsFloat(), 0.001F);

@@ -31,8 +31,8 @@ class BbCompiledGeometryTest {
         ResourceLocation modelResource = new ResourceLocation("test", "models/test.bbmodel");
         ResourceLocation texture = new ResourceLocation("test", "textures/test.png");
         FrameSpec.ModelSpec spec = new FrameSpec.ModelSpec(
-                "bbmodel", texture, new ResourceLocation("test", "test_model"), null,
-                "entity_cutout", 0, null, null, modelResource, Map.of(), "");
+                "bbmodel", texture, new ResourceLocation("test", "test_model"),
+                "entity_cutout", 0, modelResource, Map.of(), "");
 
         Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> compiled =
                 BbCompiledGeometry.compile(modelResource, spec, document);
@@ -132,7 +132,7 @@ class BbCompiledGeometryTest {
         ResourceLocation model = new ResourceLocation("test", "models/test.bbmodel");
         ResourceLocation texture = new ResourceLocation("test", "textures/test.png");
         return new FrameSpec.ModelSpec(
-                "bbmodel", texture, new ResourceLocation("test", "test_model"), null,
-                "entity_cutout", 0, null, null, model, Map.of(), "");
+                "bbmodel", texture, new ResourceLocation("test", "test_model"),
+                "entity_cutout", 0, model, Map.of(), "");
     }
 }

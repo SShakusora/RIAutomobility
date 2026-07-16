@@ -1,5 +1,7 @@
 package com.sshakusora.riautomobility.editor.upload;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.network.packet.BeginCarPackUploadPacket;
 import org.junit.jupiter.api.Test;
@@ -90,7 +92,7 @@ class CarPackUploadServiceTest {
     }
 
     @Test
-    void acceptsV2EditorArchiveWithExternalTexture() throws IOException {
+    void acceptsV1EditorArchiveWithExternalTexture() throws IOException {
         Path archive = editorArchive(true);
 
         CarPackArchiveStore.validateRiautoArchive(archive);
@@ -98,13 +100,13 @@ class CarPackUploadServiceTest {
     }
 
     @Test
-    void rejectsV2EditorArchiveWithMissingExternalTexture() throws IOException {
+    void rejectsV1EditorArchiveWithMissingExternalTexture() throws IOException {
         Path archive = editorArchive(false);
 
         CarPackArchiveStore.validateRiautoArchive(archive);
         IOException error = assertThrows(IOException.class,
                 () -> CarPackUploadService.validateEditorArchive(archive, uploadRequest(archive)));
-        assertTrue(error.getMessage().contains("missing external texture"));
+        assertTrue(error.getMessage().contains("missing mapped resource"));
     }
 
     private Path write(String name, String contents) throws IOException {
@@ -115,26 +117,35 @@ class CarPackUploadServiceTest {
         String id = "riautomobility:" + COMPONENT_PATH;
         String modelResource = "riautomobility:models/entity/automobile/wheel/" + COMPONENT_PATH + ".bbmodel";
         String textureResource = "riautomobility:textures/entity/automobile/wheel/" + COMPONENT_PATH + "/texture.png";
-        Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put("riauto.json", ("{\"format\":2,\"id\":\"" + id + "\",\"name\":\"Wheel\","
-                + "\"author\":\"" + EXPORTING_PLAYER_NAME + "\","
-                + "\"components\":{\"frames\":[],\"wheels\":[\"" + id + "\"],\"engines\":[]}}")
-                .getBytes(StandardCharsets.UTF_8));
-        entries.put("data/riautomobility/riautomobility/wheels/" + COMPONENT_PATH + ".json",
+        Map<String, byte[]> content = new LinkedHashMap<>();
+        JsonObject files = new JsonObject();
+        content.put("component.json",
                 ("{\"size\":0.6,\"grip\":0.5,\"radius\":3,\"width\":3,\"model\":{"
                         + "\"type\":\"bbmodel\",\"texture\":\"" + textureResource + "\","
                         + "\"model_id\":\"riautomobility:riautomobility/wheel/" + COMPONENT_PATH + "\","
                         + "\"bbmodel\":\"" + modelResource + "\"}}")
                         .getBytes(StandardCharsets.UTF_8));
-        entries.put("assets/riautomobility/models/entity/automobile/wheel/" + COMPONENT_PATH + ".bbmodel",
+        files.addProperty("component.json",
+                "data/riautomobility/riautomobility/wheels/" + COMPONENT_PATH + ".json");
+        content.put("model.bbmodel",
                 ("{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
                         + "\"textures\":[{\"name\":\"wheel.png\",\"relative_path\":\""
                         + textureResource + "\"}],\"elements\":[],\"outliner\":[]}")
                         .getBytes(StandardCharsets.UTF_8));
+        files.addProperty("model.bbmodel",
+                "assets/riautomobility/models/entity/automobile/wheel/" + COMPONENT_PATH + ".bbmodel");
         if (includeTexture) {
-            entries.put("assets/riautomobility/textures/entity/automobile/wheel/"
-                    + COMPONENT_PATH + "/texture.png", PNG);
+            content.put("texture.png", PNG);
+            files.addProperty("texture.png", "assets/riautomobility/textures/entity/automobile/wheel/"
+                    + COMPONENT_PATH + "/texture.png");
         }
+        JsonObject metadata = JsonParser.parseString("{\"format\":1,\"id\":\"" + id + "\",\"name\":\"Wheel\","
+                + "\"author\":\"" + EXPORTING_PLAYER_NAME + "\","
+                + "\"components\":{\"frames\":[],\"wheels\":[\"" + id + "\"],\"engines\":[]}}").getAsJsonObject();
+        metadata.add("files", files);
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("riauto.json", metadata.toString().getBytes(StandardCharsets.UTF_8));
+        entries.putAll(content);
         Path archive = temporaryDirectory.resolve("editor-" + includeTexture + ".riauto");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive))) {
             for (Map.Entry<String, byte[]> entry : entries.entrySet()) {

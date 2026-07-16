@@ -1,7 +1,10 @@
 package com.sshakusora.riautomobility.carpack;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -25,7 +28,7 @@ class CarPackArchiveStoreTest {
     @Test
     void acceptsAValidSingleComponentCarPack() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "assets/test/textures/entity/car.png", "png",
                 "data/test/riautomobility/frames/car.json", "{}"
@@ -37,7 +40,7 @@ class CarPackArchiveStoreTest {
     @Test
     void acceptsAValidRiautoCarPack() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\",\"author\":\"Test Author\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\",\"author\":\"Test Author\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}"
         ));
@@ -53,7 +56,7 @@ class CarPackArchiveStoreTest {
     @Test
     void rejectsInvalidAuthorMetadata() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\",\"author\":\"bad\\nauthor\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\",\"author\":\"bad\\nauthor\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}"
         ));
@@ -64,7 +67,7 @@ class CarPackArchiveStoreTest {
     @Test
     void acceptsAnEngineOnlyRiautoCarPack() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:engine\",\"name\":\"Test Engine\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:engine\",\"name\":\"Test Engine\","
                         + "\"components\":{\"frames\":[],\"wheels\":[],\"engines\":[\"test:engine\"]}}",
                 "data/test/riautomobility/engines/engine.json", "{}"
         ));
@@ -75,7 +78,7 @@ class CarPackArchiveStoreTest {
     @Test
     void readsTheComponentOwnershipIndexFromMetadata() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/frame.json", "{}"
         ));
@@ -89,7 +92,7 @@ class CarPackArchiveStoreTest {
     @Test
     void rejectsRiautoDeclaringMoreThanOneComponent() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[\"test:wheel\"],\"engines\":[]}}",
                 "data/test/riautomobility/frames/frame.json", "{}",
                 "data/test/riautomobility/wheels/wheel.json", "{}"
@@ -103,7 +106,7 @@ class CarPackArchiveStoreTest {
     @Test
     void rejectsRiautoDeclaringNoComponents() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:empty\",\"name\":\"Empty\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:empty\",\"name\":\"Empty\","
                         + "\"components\":{\"frames\":[],\"wheels\":[],\"engines\":[]}}"
         ));
 
@@ -115,7 +118,7 @@ class CarPackArchiveStoreTest {
     @Test
     void rejectsUndeclaredComponentFiles() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:frame\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/frame.json", "{}",
                 "data/test/riautomobility/wheels/hidden.json", "{}"
@@ -123,13 +126,13 @@ class CarPackArchiveStoreTest {
 
         IOException error = assertThrows(IOException.class,
                 () -> CarPackArchiveStore.validateRiautoArchive(archive));
-        assertTrue(error.getMessage().contains("undeclared component file"));
+        assertTrue(error.getMessage().contains("undeclared component resource"));
     }
 
     @Test
     void opensRiautoWithMinecraftFilePackResources() throws IOException {
         Path archive = Files.move(createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[],\"wheels\":[\"test:wheel\"],\"engines\":[]}}",
                 "data/test/riautomobility/wheels/wheel.json", "{}"
         )), temporaryDirectory.resolve("test.riauto"));
@@ -138,6 +141,12 @@ class CarPackArchiveStoreTest {
         assertNotNull(supplier);
         try (PackResources resources = supplier.open("test")) {
             assertNotNull(resources.getRootResource("riauto.json"));
+            var component = resources.getResource(PackType.SERVER_DATA,
+                    new ResourceLocation("test", "riautomobility/wheels/wheel.json"));
+            assertNotNull(component);
+            try (var input = component.get()) {
+                assertEquals("{}", new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            }
         }
     }
 
@@ -161,9 +170,9 @@ class CarPackArchiveStoreTest {
     }
 
     @Test
-    void rejectsDiscardedV1Format() throws IOException {
+    void rejectsDiscardedV2Format() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}"
         ));
@@ -191,46 +200,40 @@ class CarPackArchiveStoreTest {
     @Test
     void rejectsVanillaDatapackContent() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}",
                 "data/test/recipes/car.json", "{}"
         ));
 
         IOException error = assertThrows(IOException.class, () -> CarPackArchiveStore.validateArchive(archive));
-        assertTrue(error.getMessage().contains("unsupported vanilla"));
+        assertTrue(error.getMessage().contains("unsupported resource"));
+    }
+
+    @Test
+    void rejectsManuallyPackagedJsonAndGeckoModels() throws IOException {
+        Path archive = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
+                        + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
+                "data/test/riautomobility/frames/car.json", "{}",
+                "assets/test/models/entity/automobile/frame/car/main.json", "{}",
+                "assets/test/geo/car.geo.json", "{}"
+        ));
+
+        IOException error = assertThrows(IOException.class, () -> CarPackArchiveStore.validateArchive(archive));
+        assertTrue(error.getMessage().contains("unsupported resource"));
     }
 
     @Test
     void rejectsMinecraftPackMetadata() throws IOException {
         Path archive = createZip(Map.of(
-                "riauto.json", "{\"format\":2,\"id\":\"test:car\",\"name\":\"Test Car\","
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}",
                 "pack.mcmeta", "{}"
         ));
 
         assertThrows(IOException.class, () -> CarPackArchiveStore.validateArchive(archive));
-    }
-
-    @Test
-    void repositoryExamplesConformToSingleComponentContract() throws IOException {
-        Path examples = Path.of("examples", "components");
-        try (var directories = Files.list(examples)) {
-            for (Path source : directories.filter(Files::isDirectory).sorted().toList()) {
-                Path archive = temporaryDirectory.resolve(source.getFileName() + ".riauto");
-                try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive));
-                     var paths = Files.walk(source)) {
-                    for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {
-                        output.putNextEntry(new ZipEntry(source.relativize(file).toString().replace('\\', '/')));
-                        Files.copy(file, output);
-                        output.closeEntry();
-                    }
-                }
-                assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive),
-                        source.getFileName().toString());
-            }
-        }
     }
 
     @Test
@@ -270,8 +273,32 @@ class CarPackArchiveStoreTest {
 
     private Path createZip(Map<String, String> entries) throws IOException {
         Path archive = temporaryDirectory.resolve("pack-" + System.nanoTime() + ".zip");
+        Map<String, String> flattened = new LinkedHashMap<>();
+        JsonObject files = new JsonObject();
+        int index = 0;
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            String name = entry.getKey();
+            if (name.startsWith("assets/") || name.startsWith("data/")) {
+                String extension = name.substring(name.lastIndexOf('.'));
+                String physicalName = "file-" + index++ + extension;
+                flattened.put(physicalName, entry.getValue());
+                files.addProperty(physicalName, name);
+            } else {
+                flattened.put(name, entry.getValue());
+            }
+        }
+        if (flattened.containsKey("riauto.json")) {
+            try {
+                JsonObject metadata = JsonParser.parseString(flattened.get("riauto.json")).getAsJsonObject();
+                if (metadata.has("format") && metadata.get("format").getAsInt() == 1) {
+                    metadata.add("files", files);
+                    flattened.put("riauto.json", metadata.toString());
+                }
+            } catch (RuntimeException ignored) {
+            }
+        }
         try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive))) {
-            for (Map.Entry<String, String> entry : entries.entrySet()) {
+            for (Map.Entry<String, String> entry : flattened.entrySet()) {
                 output.putNextEntry(new ZipEntry(entry.getKey()));
                 output.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
                 output.closeEntry();

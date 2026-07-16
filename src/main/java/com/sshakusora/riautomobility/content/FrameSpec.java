@@ -82,7 +82,7 @@ public record FrameSpec(
         return new FrameSpec(
                 id,
                 GsonHelper.getAsFloat(json, "weight"),
-                ModelSpec.fromComponentJson(json.get("model"), id, "frame"),
+                ModelSpec.fromComponentJson(json.get("model")),
                 WheelBaseSpec.fromJson(GsonHelper.getAsJsonObject(json, "wheel_base")),
                 GsonHelper.getAsFloat(json, "length_px"),
                 GsonHelper.getAsFloat(json, "seat_height", 4.0F),
@@ -218,65 +218,40 @@ public record FrameSpec(
             String type,
             ResourceLocation texture,
             ResourceLocation modelId,
-            ResourceLocation layerLocation,
             String renderType,
             float rotationY,
-            ResourceLocation geoModel,
-            ResourceLocation animation,
             ResourceLocation bbModel,
             Map<String, ResourceLocation> textureOverrides,
             String bbAnimation
     ) {
-        public static ModelSpec fromComponentJson(JsonElement modelElement, ResourceLocation componentId, String componentKind) {
-            JsonObject model;
-            if (modelElement == null || modelElement.isJsonNull()) {
-                model = new JsonObject();
-                model.addProperty("type", "bbmodel");
-            } else if (modelElement.isJsonPrimitive() && modelElement.getAsJsonPrimitive().isString()) {
-                model = new JsonObject();
-                model.addProperty("type", "bbmodel");
-                model.addProperty("bbmodel", modelElement.getAsString());
-            } else if (modelElement.isJsonObject()) {
-                model = modelElement.getAsJsonObject().deepCopy();
-                boolean hasLegacyModelIdentity = model.has("model_id")
-                        || model.has("layer_location")
-                        || model.has("geo_model")
-                        || model.has("animation")
-                        || model.has("texture");
-                if (!model.has("type") && !hasLegacyModelIdentity) {
-                    model.addProperty("type", "bbmodel");
-                }
-            } else {
-                throw new IllegalArgumentException("model must be an object, a BBModel resource string, or omitted");
+        public static ModelSpec fromComponentJson(JsonElement modelElement) {
+            if (modelElement == null || !modelElement.isJsonObject()) {
+                throw new IllegalArgumentException("RIAuto components must contain an editor-generated BBModel object");
             }
-
-            if ("bbmodel".equalsIgnoreCase(GsonHelper.getAsString(model, "type", "jsonem"))) {
-                if (!model.has("bbmodel")) {
-                    model.addProperty("bbmodel", defaultBbModel(componentId, componentKind).toString());
-                }
-                if (!model.has("model_id")) {
-                    model.addProperty("model_id", defaultModelId(componentId, componentKind).toString());
-                }
+            JsonObject model = modelElement.getAsJsonObject().deepCopy();
+            if (!"bbmodel".equalsIgnoreCase(GsonHelper.getAsString(model, "type", ""))) {
+                throw new IllegalArgumentException("RIAuto components only support BBModel models");
+            }
+            if (!model.has("bbmodel") || !model.has("model_id") || !model.has("texture")) {
+                throw new IllegalArgumentException("RIAuto component is missing editor-generated BBModel fields");
             }
             return fromJson(model);
         }
 
         public static ModelSpec fromJson(JsonObject json) {
-            String type = GsonHelper.getAsString(json, "type", json.has("bbmodel") ? "bbmodel" : "jsonem");
+            String type = GsonHelper.getAsString(json, "type", "");
+            if (!"bbmodel".equalsIgnoreCase(type)) {
+                throw new IllegalArgumentException("RIAuto components only support BBModel models");
+            }
             ResourceLocation texture = json.has("texture")
                     ? parseId(GsonHelper.getAsString(json, "texture"))
-                    : "bbmodel".equalsIgnoreCase(type)
-                    ? new ResourceLocation("minecraft", "textures/item/barrier.png")
-                    : parseId(GsonHelper.getAsString(json, "texture"));
+                    : new ResourceLocation("minecraft", "textures/item/barrier.png");
             return new ModelSpec(
                     type,
                     texture,
                     parseId(GsonHelper.getAsString(json, "model_id")),
-                    json.has("layer_location") ? parseId(GsonHelper.getAsString(json, "layer_location")) : null,
                     GsonHelper.getAsString(json, "render_type", "entity_cutout"),
                     GsonHelper.getAsFloat(json, "rotation_y", 0.0F),
-                    json.has("geo_model") ? parseId(GsonHelper.getAsString(json, "geo_model")) : null,
-                    json.has("animation") ? parseId(GsonHelper.getAsString(json, "animation")) : null,
                     json.has("bbmodel") ? parseId(GsonHelper.getAsString(json, "bbmodel")) : null,
                     readTextureOverrides(json),
                     GsonHelper.getAsString(json, "bb_animation", "")
@@ -288,17 +263,8 @@ public record FrameSpec(
             json.addProperty("type", this.type);
             json.addProperty("texture", this.texture.toString());
             json.addProperty("model_id", this.modelId.toString());
-            if (this.layerLocation != null) {
-                json.addProperty("layer_location", this.layerLocation.toString());
-            }
             json.addProperty("render_type", this.renderType);
             json.addProperty("rotation_y", this.rotationY);
-            if (this.geoModel != null) {
-                json.addProperty("geo_model", this.geoModel.toString());
-            }
-            if (this.animation != null) {
-                json.addProperty("animation", this.animation.toString());
-            }
             if (this.bbModel != null) {
                 json.addProperty("bbmodel", this.bbModel.toString());
             }
@@ -311,10 +277,6 @@ public record FrameSpec(
                 json.addProperty("bb_animation", this.bbAnimation);
             }
             return json;
-        }
-
-        public boolean isGeckoLib() {
-            return "geckolib".equalsIgnoreCase(this.type);
         }
 
         public boolean isBbModel() {
@@ -333,19 +295,6 @@ public record FrameSpec(
             return Map.copyOf(textures);
         }
 
-        private static ResourceLocation defaultBbModel(ResourceLocation componentId, String componentKind) {
-            return new ResourceLocation(
-                    componentId.getNamespace(),
-                    "models/entity/automobile/" + componentKind + "/" + componentId.getPath() + ".bbmodel"
-            );
-        }
-
-        private static ResourceLocation defaultModelId(ResourceLocation componentId, String componentKind) {
-            return new ResourceLocation(
-                    componentId.getNamespace(),
-                    "riautomobility/" + componentKind + "/" + componentId.getPath()
-            );
-        }
     }
 
     public record WheelBaseSpec(Float forwardSeparation, Float sideSeparation, List<WheelPosSpec> wheels) {

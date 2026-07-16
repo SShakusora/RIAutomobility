@@ -369,8 +369,8 @@ public final class VehicleEditorDraft {
             case WHEEL -> wheelRotationY;
             case ENGINE -> engineRotationY;
         };
-        return new FrameSpec.ModelSpec("bbmodel", texture, modelId, null, "entity_cutout", rotationY,
-                null, null, new ResourceLocation(id.getNamespace(), "models/entity/automobile/" + part.path + "/" + id.getPath() + ".bbmodel"), Map.of(), "");
+        return new FrameSpec.ModelSpec("bbmodel", texture, modelId, "entity_cutout", rotationY,
+                new ResourceLocation(id.getNamespace(), "models/entity/automobile/" + part.path + "/" + id.getPath() + ".bbmodel"), Map.of(), "");
     }
 
     public FrameSpec.ModelSpec modelSpec(boolean preview) {

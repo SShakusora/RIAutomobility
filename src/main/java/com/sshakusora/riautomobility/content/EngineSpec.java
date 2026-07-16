@@ -39,7 +39,7 @@ public record EngineSpec(
                 id,
                 GsonHelper.getAsFloat(json, "torque"),
                 GsonHelper.getAsFloat(json, "speed"),
-                FrameSpec.ModelSpec.fromComponentJson(json.get("model"), id, "engine"),
+                FrameSpec.ModelSpec.fromComponentJson(json.get("model")),
                 exhausts,
                 GsonHelper.getAsBoolean(json, "show_in_creative_tab", true)
         );

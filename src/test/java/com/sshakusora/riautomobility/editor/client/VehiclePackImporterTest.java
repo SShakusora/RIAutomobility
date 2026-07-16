@@ -58,13 +58,13 @@ class VehiclePackImporterTest {
     }
 
     @Test
-    void rejectsASoleComponentThatIsNotEditableAsBbModel() throws IOException {
+    void rejectsAComponentThatWasNotGeneratedByTheEditor() throws IOException {
         Path archive = archive(Map.of("sample:legacy", frameJson("jsonem", 0.5F)), Map.of());
 
         IOException exception = assertThrows(IOException.class, () -> VehiclePackImporter.importComponent(
                 archive, temporaryDirectory.resolve("imports")));
 
-        assertTrue(exception.getMessage().contains("does not use an editable BBModel"));
+        assertTrue(exception.getMessage().contains("only support BBModel"));
     }
 
     @Test
@@ -85,11 +85,11 @@ class VehiclePackImporterTest {
     }
 
     @Test
-    void restoresExternalV2TexturesForEditing() throws IOException {
-        Path archive = v2Archive(true);
+    void restoresExternalV1TexturesForEditing() throws IOException {
+        Path archive = v1Archive(true);
 
         var imported = VehiclePackImporter.importComponent(
-                archive, temporaryDirectory.resolve("v2-imports"));
+                archive, temporaryDirectory.resolve("v1-imports"));
 
         String importedModel = Files.readString(imported.modelFile());
         var texture = JsonParser.parseString(importedModel).getAsJsonObject()
@@ -100,25 +100,31 @@ class VehiclePackImporterTest {
     }
 
     @Test
-    void rejectsV2ModelsWhoseExternalTextureIsMissing() throws IOException {
-        Path archive = v2Archive(false);
+    void rejectsV1ModelsWhoseExternalTextureIsMissing() throws IOException {
+        Path archive = v1Archive(false);
 
         IOException exception = assertThrows(IOException.class, () -> VehiclePackImporter.importComponent(
-                archive, temporaryDirectory.resolve("missing-v2-imports")));
+                archive, temporaryDirectory.resolve("missing-v1-imports")));
 
-        assertTrue(exception.getMessage().contains("missing external texture"));
+        assertTrue(exception.getMessage().contains("missing mapped resource"));
     }
 
     private Path archive(Map<String, String> frameComponents, Map<String, String> bbModels) throws IOException {
         String frameIds = frameComponents.keySet().stream().map(id -> "\"" + id + "\"")
                 .reduce((left, right) -> left + "," + right).orElse("");
-        Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put("riauto.json", ("{\"format\":2,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
-                + "\"author\":\"OriginalPlayer\","
-                + "\"components\":{\"frames\":[" + frameIds + "],\"wheels\":[],\"engines\":[]}}")
-                .getBytes(StandardCharsets.UTF_8));
-        frameComponents.forEach((id, json) -> entries.put(componentEntry(id), json.getBytes(StandardCharsets.UTF_8)));
-        bbModels.forEach((id, modelJson) -> addExternalModel(entries, id, modelJson));
+        Map<String, byte[]> content = new LinkedHashMap<>();
+        Map<String, String> files = new LinkedHashMap<>();
+        int componentIndex = 0;
+        for (Map.Entry<String, String> component : frameComponents.entrySet()) {
+            String file = componentIndex++ == 0 ? "component.json" : "component-" + componentIndex + ".json";
+            content.put(file, component.getValue().getBytes(StandardCharsets.UTF_8));
+            files.put(file, componentEntry(component.getKey()));
+        }
+        bbModels.forEach((id, modelJson) -> addExternalModel(content, files, id, modelJson));
+        Map<String, byte[]> entries = withMetadata(content, files,
+                "{\"format\":1,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
+                        + "\"author\":\"OriginalPlayer\","
+                        + "\"components\":{\"frames\":[" + frameIds + "],\"wheels\":[],\"engines\":[]}}");
 
         Path archive = temporaryDirectory.resolve("test-" + frameComponents.size() + "-" + bbModels.size() + ".riauto");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive), StandardCharsets.UTF_8)) {
@@ -131,8 +137,10 @@ class VehiclePackImporterTest {
         return archive;
     }
 
-    private static void addExternalModel(Map<String, byte[]> entries, String id, String modelJson) {
+    private static void addExternalModel(Map<String, byte[]> entries, Map<String, String> files,
+                                         String id, String modelJson) {
         String[] parts = id.split(":", 2);
+        String suffix = parts[1].replace('/', '-');
         JsonObject model = JsonParser.parseString(modelJson).getAsJsonObject();
         var textures = model.getAsJsonArray("textures");
         for (int index = 0; index < textures.size(); index++) {
@@ -141,31 +149,39 @@ class VehiclePackImporterTest {
                     texture.remove("source").getAsString().substring("data:image/png;base64,".length()));
             String texturePath = "textures/entity/automobile/frame/" + parts[1] + "/texture-" + index + ".png";
             texture.addProperty("relative_path", parts[0] + ":" + texturePath);
-            entries.put("assets/" + parts[0] + "/" + texturePath, png);
+            String textureFile = "texture-" + suffix + "-" + index + ".png";
+            entries.put(textureFile, png);
+            files.put(textureFile, "assets/" + parts[0] + "/" + texturePath);
         }
-        entries.put(modelEntry(id), model.toString().getBytes(StandardCharsets.UTF_8));
+        String modelFile = "model-" + suffix + ".bbmodel";
+        entries.put(modelFile, model.toString().getBytes(StandardCharsets.UTF_8));
+        files.put(modelFile, modelEntry(id));
     }
 
-    private Path v2Archive(boolean includeTexture) throws IOException {
+    private Path v1Archive(boolean includeTexture) throws IOException {
         String textureResource = "sample:textures/entity/automobile/frame/frame/texture.png";
         String model = "{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
                 + "\"textures\":[{\"uuid\":\"body\",\"name\":\"body.png\",\"relative_path\":\""
                 + textureResource + "\"}],\"elements\":[],\"outliner\":[]}";
-        Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put("riauto.json", ("{\"format\":2,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
-                + "\"author\":\"OriginalPlayer\","
-                + "\"components\":{\"frames\":[\"sample:frame\"],\"wheels\":[],\"engines\":[]}}")
-                .getBytes(StandardCharsets.UTF_8));
-        entries.put(componentEntry("sample:frame"),
+        Map<String, byte[]> content = new LinkedHashMap<>();
+        Map<String, String> files = new LinkedHashMap<>();
+        content.put("component.json",
                 frameJson("sample:models/entity/automobile/frame/frame.bbmodel", 1.25F)
                         .getBytes(StandardCharsets.UTF_8));
-        entries.put(modelEntry("sample:frame"), model.getBytes(StandardCharsets.UTF_8));
+        files.put("component.json", componentEntry("sample:frame"));
+        content.put("model.bbmodel", model.getBytes(StandardCharsets.UTF_8));
+        files.put("model.bbmodel", modelEntry("sample:frame"));
         if (includeTexture) {
-            entries.put("assets/sample/textures/entity/automobile/frame/frame/texture.png",
+            content.put("texture.png",
                     Base64.getDecoder().decode(EMBEDDED_PNG.substring("data:image/png;base64,".length())));
+            files.put("texture.png", "assets/sample/textures/entity/automobile/frame/frame/texture.png");
         }
+        Map<String, byte[]> entries = withMetadata(content, files,
+                "{\"format\":1,\"id\":\"sample:pack\",\"name\":\"Imported Vehicle\","
+                        + "\"author\":\"OriginalPlayer\","
+                        + "\"components\":{\"frames\":[\"sample:frame\"],\"wheels\":[],\"engines\":[]}}");
 
-        Path archive = temporaryDirectory.resolve("v2-" + includeTexture + ".riauto");
+        Path archive = temporaryDirectory.resolve("v1-" + includeTexture + ".riauto");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive), StandardCharsets.UTF_8)) {
             for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
                 zip.putNextEntry(new ZipEntry(entry.getKey()));
@@ -174,6 +190,18 @@ class VehiclePackImporterTest {
             }
         }
         return archive;
+    }
+
+    private static Map<String, byte[]> withMetadata(Map<String, byte[]> content, Map<String, String> files,
+                                                    String metadataJson) {
+        JsonObject metadata = JsonParser.parseString(metadataJson).getAsJsonObject();
+        JsonObject fileMappings = new JsonObject();
+        files.forEach(fileMappings::addProperty);
+        metadata.add("files", fileMappings);
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("riauto.json", metadata.toString().getBytes(StandardCharsets.UTF_8));
+        entries.putAll(content);
+        return entries;
     }
 
     private static String componentEntry(String id) {
@@ -189,7 +217,9 @@ class VehiclePackImporterTest {
     private static String frameJson(String model, float weight) {
         String modelJson = "jsonem".equals(model)
                 ? "{\"type\":\"jsonem\",\"texture\":\"minecraft:textures/item/barrier.png\",\"model_id\":\"automobility:empty\"}"
-                : "\"" + model + "\"";
+                : "{\"type\":\"bbmodel\",\"texture\":\"sample:textures/imported.png\","
+                + "\"model_id\":\"sample:imported_model\",\"bbmodel\":\""
+                + model + "\"}";
         return "{\"weight\":" + weight + ",\"model\":" + modelJson
                 + ",\"wheel_base\":{\"forward_separation\":16,\"side_separation\":10},"
                 + "\"length_px\":24,\"engine_pos_back\":8,\"engine_pos_up\":2,"

@@ -31,7 +31,7 @@ public record WheelSpec(
                 GsonHelper.getAsFloat(json, "grip"),
                 GsonHelper.getAsFloat(json, "radius"),
                 GsonHelper.getAsFloat(json, "width"),
-                FrameSpec.ModelSpec.fromComponentJson(json.get("model"), id, "wheel"),
+                FrameSpec.ModelSpec.fromComponentJson(json.get("model")),
                 GsonHelper.getAsBoolean(json, "show_in_creative_tab", true)
         );
     }

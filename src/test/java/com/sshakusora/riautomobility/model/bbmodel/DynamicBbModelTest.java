@@ -42,11 +42,8 @@ class DynamicBbModelTest {
                 "bbmodel",
                 CONFIGURED_TEXTURE,
                 MODEL_ID,
-                null,
                 "entity_cutout",
                 0.0F,
-                null,
-                null,
                 MODEL_RESOURCE,
                 Map.of(),
                 ""

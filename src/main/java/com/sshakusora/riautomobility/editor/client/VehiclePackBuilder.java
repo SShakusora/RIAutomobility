@@ -49,6 +49,7 @@ public final class VehiclePackBuilder {
 
         String kind = draft.target.path;
         Map<String, byte[]> entries = new LinkedHashMap<>();
+        JsonObject files = new JsonObject();
         JsonObject metadata = new JsonObject();
         metadata.addProperty("format", CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
         String declaredComponentId = namespace + ":" + componentPath;
@@ -68,16 +69,17 @@ public final class VehiclePackBuilder {
         components.add("wheels", wheels);
         components.add("engines", engines);
         metadata.add("components", components);
-        entries.put(CarPackArchiveStore.RIAUTO_METADATA_FILE, GSON.toJson(metadata).getBytes(StandardCharsets.UTF_8));
-
         JsonObject component = switch (draft.target) {
             case FRAME -> draft.frameSpec(preview).toJson();
             case WHEEL -> draft.wheelSpec(preview).toJson();
             case ENGINE -> draft.engineSpec(preview).toJson();
         };
-        addV2ModelEntries(entries, component, model.exported(), namespace, kind, componentPath);
-        entries.put("data/" + namespace + "/riautomobility/" + draft.target.path + "s/"
-                + componentPath + ".json", GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
+        addV1ModelEntries(entries, files, component, model.exported(), namespace, kind, componentPath);
+        addMappedEntry(entries, files, "component.json",
+                "data/" + namespace + "/riautomobility/" + draft.target.path + "s/" + componentPath + ".json",
+                GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
+        metadata.add("files", files);
+        entries = withMetadata(metadata, entries);
 
         writeArchive(destination, entries);
         return destination;
@@ -131,13 +133,17 @@ public final class VehiclePackBuilder {
         metadata.add("components", components);
 
         Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put(CarPackArchiveStore.RIAUTO_METADATA_FILE,
-                GSON.toJson(metadata).getBytes(StandardCharsets.UTF_8));
+        JsonObject files = new JsonObject();
         JsonObject component = request.component().deepCopy();
         applyAutomaticModelSize(request, component, sourceDocument);
-        addV2ModelEntries(entries, component, exported, request.namespace(), request.target().path, request.componentPath());
-        entries.put("data/" + request.namespace() + "/riautomobility/" + request.target().path + "s/"
-                + request.componentPath() + ".json", GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
+        addV1ModelEntries(entries, files, component, exported, request.namespace(), request.target().path,
+                request.componentPath());
+        addMappedEntry(entries, files, "component.json",
+                "data/" + request.namespace() + "/riautomobility/" + request.target().path + "s/"
+                        + request.componentPath() + ".json",
+                GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
+        metadata.add("files", files);
+        entries = withMetadata(metadata, entries);
         writeArchive(destination, entries);
         return destination;
     }
@@ -291,13 +297,32 @@ public final class VehiclePackBuilder {
         }
     }
 
-    static void addV2ModelEntries(Map<String, byte[]> entries, JsonObject component,
+    static void addV1ModelEntries(Map<String, byte[]> entries, JsonObject files, JsonObject component,
                                   BbModelRuntimeSanitizer.ExportedModel model, String namespace,
                                   String kind, String componentPath) {
         component.getAsJsonObject("model").addProperty("texture", model.defaultTexture());
-        entries.put("assets/" + namespace + "/models/entity/automobile/" + kind + "/"
-                + componentPath + ".bbmodel", model.modelBytes());
-        entries.putAll(model.textureEntries());
+        addMappedEntry(entries, files, "model.bbmodel",
+                "assets/" + namespace + "/models/entity/automobile/" + kind + "/"
+                        + componentPath + ".bbmodel", model.modelBytes());
+        for (Map.Entry<String, byte[]> texture : model.textureEntries().entrySet()) {
+            String logicalPath = texture.getKey();
+            String hashFile = logicalPath.substring(logicalPath.lastIndexOf('/') + 1);
+            addMappedEntry(entries, files, "texture-" + hashFile, logicalPath, texture.getValue());
+        }
+    }
+
+    private static void addMappedEntry(Map<String, byte[]> entries, JsonObject files, String file,
+                                       String logicalPath, byte[] contents) {
+        entries.put(file, contents);
+        files.addProperty(file, logicalPath);
+    }
+
+    private static Map<String, byte[]> withMetadata(JsonObject metadata, Map<String, byte[]> contentEntries) {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put(CarPackArchiveStore.RIAUTO_METADATA_FILE,
+                GSON.toJson(metadata).getBytes(StandardCharsets.UTF_8));
+        entries.putAll(contentEntries);
+        return entries;
     }
 
     private static String validateAuthor(String author) throws IOException {
