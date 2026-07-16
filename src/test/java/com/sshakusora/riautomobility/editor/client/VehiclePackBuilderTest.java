@@ -6,6 +6,7 @@ import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
+import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
@@ -257,6 +258,7 @@ class VehiclePackBuilderTest {
             assertTrue(files.entrySet().stream().anyMatch(entry -> entry.getValue().getAsString()
                     .equals("assets/" + resource.replace(':', '/'))));
             assertEquals(1, zip.stream().filter(entry -> entry.getName().endsWith(".png")).count());
+            assertNotNull(zip.getEntry("texture-0.png"));
             assertTrue(zip.stream().noneMatch(entry -> entry.getName().contains("/")));
         }
     }
@@ -280,6 +282,51 @@ class VehiclePackBuilderTest {
 
         assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
         assertEquals("Test Author", CarPackArchiveStore.readAuthor(archive));
+    }
+
+    @Test
+    void animatedModelSurvivesCompressedArchiveRoundTrip() throws IOException {
+        Path source = Files.writeString(temporaryDirectory.resolve("animated-frame.bbmodel"), ("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "textures":[{"uuid":"texture","name":"body.png","source":"%s"}],
+                  "elements":[{"uuid":"cube-node","type":"cube","from":[0,0,0],"to":[16,16,16],
+                    "faces":{"north":{"uv":[0,0,16,16],"texture":0}}}],
+                  "groups":[{"uuid":"animated-bone","name":"Animated Bone","children":["cube-node"]}],
+                  "outliner":["animated-bone"],
+                  "animations":[{"uuid":"drive-animation","name":"drive","length":1,"loop":"loop",
+                    "animators":{"animated-bone":{"type":"bone","keyframes":[
+                      {"channel":"rotation","time":0,"interpolation":"bezier",
+                       "data_points":[{"x":"query.vehicle_steering * 30","y":0,"z":0},{"x":15,"y":0,"z":0}],
+                       "bezier_left_time":[-0.1,-0.1,-0.1],"bezier_left_value":[0,0,0],
+                       "bezier_right_time":[0.1,0.1,0.1],"bezier_right_value":[5,0,0]}
+                    ]}}}]
+                }
+                """).formatted(EMBEDDED_PNG));
+        String path = "auto_11111111111111111111111111111111";
+        var request = new VehiclePackBuilder.ExportRequest(
+                VehicleEditorDraft.Target.FRAME, source, "riautomobility", path,
+                "Animated Frame", "Test Author", frameComponent(path), "animated-frame", false);
+        Path archive = VehiclePackBuilder.build(request, temporaryDirectory.resolve("animated-frame.riauto"));
+
+        var imported = VehiclePackImporter.importComponent(
+                archive, temporaryDirectory.resolve("animated-import"));
+        JsonObject restored = JsonParser.parseString(Files.readString(imported.modelFile())).getAsJsonObject();
+        BbModelData.Document document = BbModelParser.parse(restored);
+        BbModelData.Animation animation = document.animations().get(0);
+        BbModelData.GroupNode root = assertInstanceOf(BbModelData.GroupNode.class, document.roots().get(0));
+        BbModelData.Keyframe keyframe = animation.animators().get(root.uuid()).keyframes().get(0);
+
+        assertEquals("drive-animation", animation.uuid());
+        assertEquals("drive", animation.name());
+        assertEquals("loop", animation.loop());
+        assertEquals(2, keyframe.dataPoints().size());
+        assertEquals("query.vehicle_steering * 30", keyframe.dataPoints().get(0).x().getAsString());
+        assertArrayEquals(new float[]{-0.1F, -0.1F, -0.1F}, keyframe.bezierLeftTime());
+        assertArrayEquals(new float[]{5.0F, 0.0F, 0.0F}, keyframe.bezierRightValue());
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            assertNotNull(zip.getEntry("texture-0.png"));
+        }
     }
 
     @Test
@@ -328,6 +375,19 @@ class VehiclePackBuilderTest {
                 + "\"faces\":{\"north\":{\"uv\":[0,0,4,10],\"texture\":0}}}],"
                 + "\"outliner\":[\"wheel\"]}";
         return Files.writeString(temporaryDirectory.resolve("automatic-wheel.bbmodel"), json);
+    }
+
+    private static JsonObject frameComponent(String path) {
+        return JsonParser.parseString(("""
+                {"weight":0.3,"model":{"type":"bbmodel",
+                 "model_id":"riautomobility:%s",
+                 "bbmodel":"riautomobility:models/entity/automobile/frame/%s.bbmodel"},
+                 "wheel_base":{"forward_separation":16,"side_separation":10},
+                 "length_px":24,"engine_pos_back":8,"engine_pos_up":2,
+                 "rear_attachment_pos":12,"front_attachment_pos":12,
+                 "dimensions":{"width":1.5,"height":1},"seats":[],
+                 "camera_positions":[],"hitboxes":[],"show_in_creative_tab":true}
+                """).formatted(path, path)).getAsJsonObject();
     }
 
     private static BbModelData.Document document(String source) {

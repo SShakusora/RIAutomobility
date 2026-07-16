@@ -1,6 +1,9 @@
 package com.sshakusora.riautomobility.editor.client;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
@@ -20,13 +23,14 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public final class VehiclePackBuilder {
     public static final long MAX_SOURCE_FILE_SIZE = 32L * 1024L * 1024L;
     private static final String EMBEDDED_PNG_PREFIX = "data:image/png;base64,";
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new Gson();
     private static final ExecutorService BUILD_IO = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "RIAutomobility vehicle pack builder");
         thread.setDaemon(true);
@@ -306,8 +310,8 @@ public final class VehiclePackBuilder {
                         + componentPath + ".bbmodel", model.modelBytes());
         for (Map.Entry<String, byte[]> texture : model.textureEntries().entrySet()) {
             String logicalPath = texture.getKey();
-            String hashFile = logicalPath.substring(logicalPath.lastIndexOf('/') + 1);
-            addMappedEntry(entries, files, "texture-" + hashFile, logicalPath, texture.getValue());
+            String textureFile = logicalPath.substring(logicalPath.lastIndexOf('/') + 1);
+            addMappedEntry(entries, files, textureFile, logicalPath, texture.getValue());
         }
     }
 
@@ -348,6 +352,7 @@ public final class VehiclePackBuilder {
 
     static void writeArchive(Path destination, Map<String, byte[]> entries) throws IOException {
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(destination), StandardCharsets.UTF_8)) {
+            zip.setLevel(Deflater.BEST_COMPRESSION);
             for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
                 ZipEntry zipEntry = new ZipEntry(entry.getKey());
                 zipEntry.setTime(0L);
