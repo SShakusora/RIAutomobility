@@ -211,13 +211,13 @@ class CarPackArchiveStoreTest {
     }
 
     @Test
-    void rejectsManuallyPackagedJsonAndGeckoModels() throws IOException {
+    void rejectsManuallyPackagedLegacyModels() throws IOException {
         Path archive = createZip(Map.of(
                 "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Test Car\","
                         + "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
                 "data/test/riautomobility/frames/car.json", "{}",
                 "assets/test/models/entity/automobile/frame/car/main.json", "{}",
-                "assets/test/geo/car.geo.json", "{}"
+                "assets/test/models/legacy/car.model.json", "{}"
         ));
 
         IOException error = assertThrows(IOException.class, () -> CarPackArchiveStore.validateArchive(archive));

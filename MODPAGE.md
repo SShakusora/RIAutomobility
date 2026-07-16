@@ -21,12 +21,11 @@ English | [中文](#中文)
 |-----|-----------------|
 | Forge | `47.1.x` |
 | Automobility | `0.4.2+1.20.1-forge` |
-| GeckoLib | `4.x` |
 
 ### Installation
 
 1. Install Forge for Minecraft 1.20.1.
-2. Put Automobility, GeckoLib, and RIAutomobility in the `mods/` folder.
+2. Put Automobility and RIAutomobility in the `mods/` folder.
 3. Launch the game.
 
 ### Create And Share A Vehicle Component
@@ -66,12 +65,11 @@ RIAutomobility is available under the MIT License.
 |------|----------|
 | Forge | `47.1.x` |
 | Automobility | `0.4.2+1.20.1-forge` |
-| GeckoLib | `4.x` |
 
 ### 安装
 
 1. 安装 Minecraft 1.20.1 对应的 Forge。
-2. 将 Automobility、GeckoLib 和 RIAutomobility 放入 `mods/` 文件夹。
+2. 将 Automobility 和 RIAutomobility 放入 `mods/` 文件夹。
 3. 启动游戏。
 
 ### 制作并分享车辆部件

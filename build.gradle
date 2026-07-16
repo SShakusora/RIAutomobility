@@ -148,13 +148,6 @@ repositories {
         }
     }
 
-    maven {
-        name = "GeckoLib Dependencies"
-        url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
-        content {
-            includeGroup "com.eliotlash.mclib"
-        }
-    }
 }
 
 dependencies {
@@ -168,8 +161,6 @@ dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     implementation fg.deobf("curse.maven:automobility-658286:4613497")
-    implementation fg.deobf("curse.maven:geckolib-388172:7025129")
-    compileOnly "com.eliotlash.mclib:mclib:20"
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -180,7 +171,6 @@ dependencies {
 
     testImplementation platform("org.junit:junit-bom:5.10.2")
     testImplementation "org.junit.jupiter:junit-jupiter"
-    testRuntimeOnly "com.eliotlash.mclib:mclib:20"
 
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
     // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar

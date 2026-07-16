@@ -11,22 +11,6 @@ import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.model.bbmodel.DynamicBbModel;
 import com.sshakusora.riautomobility.model.frame.DoubleMotorcarFrameModel;
 import com.sshakusora.riautomobility.model.frame.QuadMotorcarFrameModel;
-import com.sshakusora.riautomobility.model.gecko.GeckoFrameModel;
-import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcAnimatable;
-import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcModel;
-import com.sshakusora.riautomobility.model.gecko.frame.dmc12.DmcRenderer;
-import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryAnimatable;
-import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryModel;
-import com.sshakusora.riautomobility.model.gecko.frame.lorry.LorryRenderer;
-import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaAnimatable;
-import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaModel;
-import com.sshakusora.riautomobility.model.gecko.frame.standard_formula.StandardFormulaRenderer;
-import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelAnimatable;
-import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelModel;
-import com.sshakusora.riautomobility.model.gecko.wheel.dmc12.DmcWheelRenderer;
-import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelAnimatable;
-import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelModel;
-import com.sshakusora.riautomobility.model.gecko.wheel.standard_formula.StandardFormulaWheelRenderer;
 import com.sshakusora.riautomobility.network.packet.client.ClientCarPackSynchronizer;
 import io.github.foundationgames.automobility.automobile.render.AutomobileModels;
 import io.github.foundationgames.automobility.util.EntityRenderHelper;
@@ -49,6 +33,7 @@ public class RIAutomobileModels {
     private static final Set<ResourceLocation> MISSING_COMPONENTS = new HashSet<>();
     private static EntityRendererProvider.Context renderContext;
     private static final Map<ResourceLocation, FrameSpec.ModelSpec> CUSTOM_MODEL_SPECS = new LinkedHashMap<>();
+    private static final List<FrameSpec.ModelSpec> BUILTIN_BB_MODELS = new ArrayList<>();
 
     public static void init() {
         EntityRenderHelper.registerContextListener(ctx -> {
@@ -60,46 +45,36 @@ public class RIAutomobileModels {
 
         AutomobileModels.register(RIAutomobility.rl("frame_quadmotorcar"), QuadMotorcarFrameModel::new);
 
-        AutomobileModels.register(RIAutomobility.rl("frame_lorry"), context -> {
-            LorryAnimatable anim = new LorryAnimatable();
-            LorryModel model = new LorryModel();
-            LorryRenderer renderer = new LorryRenderer(model, anim);
+        registerBuiltinBbModel("frame_lorry", "lorry_frame.bbmodel",
+                "textures/entity/automobile/frame/lorry.png");
+        registerBuiltinBbModel("frame_dmc12", "dmc12_frame.bbmodel",
+                "textures/entity/automobile/frame/dmc12.png");
+        registerBuiltinBbModel("frame_standard_formula", "standard_formula_frame.bbmodel",
+                "textures/entity/automobile/frame/standard_formula.png");
+        registerBuiltinBbModel("wheel_dmc12", "dmc12_wheel.bbmodel",
+                "textures/entity/automobile/wheel/dmc12.png");
+        registerBuiltinBbModel("wheel_standard_formula", "standard_formula_wheel.bbmodel",
+                "textures/entity/automobile/wheel/standard_formula.png");
 
-            return new GeckoFrameModel<>(model, renderer, anim);
-        });
+    }
 
-        AutomobileModels.register(RIAutomobility.rl("frame_dmc12"), context -> {
-            DmcAnimatable anim = new DmcAnimatable();
-            DmcModel model = new DmcModel();
-            DmcRenderer renderer = new DmcRenderer(model, anim);
-
-            return new GeckoFrameModel<>(model, renderer, anim);
-        });
-
-        AutomobileModels.register(RIAutomobility.rl("frame_standard_formula"), context -> {
-            StandardFormulaAnimatable anim = new StandardFormulaAnimatable();
-            StandardFormulaModel model = new StandardFormulaModel();
-            StandardFormulaRenderer renderer = new StandardFormulaRenderer(model, anim);
-
-            return new GeckoFrameModel<>(model, renderer, anim);
-        });
-
-        AutomobileModels.register(RIAutomobility.rl("wheel_dmc12"), context -> {
-            DmcWheelAnimatable anim = new DmcWheelAnimatable();
-            DmcWheelModel model = new DmcWheelModel();
-            DmcWheelRenderer renderer = new DmcWheelRenderer(model, anim);
-
-            return new GeckoFrameModel<>(model, renderer, anim);
-        });
-
-        AutomobileModels.register(RIAutomobility.rl("wheel_standard_formula"), context -> {
-            StandardFormulaWheelAnimatable anim = new StandardFormulaWheelAnimatable();
-            StandardFormulaWheelModel model = new StandardFormulaWheelModel();
-            StandardFormulaWheelRenderer renderer = new StandardFormulaWheelRenderer(model, anim);
-
-            return new GeckoFrameModel<>(model, renderer, anim);
-        });
-
+    private static void registerBuiltinBbModel(String modelId, String modelFile, String texturePath) {
+        ResourceLocation id = RIAutomobility.rl(modelId);
+        FrameSpec.ModelSpec spec = new FrameSpec.ModelSpec(
+                "bbmodel",
+                RIAutomobility.rl(texturePath),
+                id,
+                "entity_cutout",
+                0.0F,
+                RIAutomobility.rl("models/entity/automobile/builtin/" + modelFile),
+                Map.of(),
+                ""
+        );
+        BUILTIN_BB_MODELS.add(spec);
+        BbModelRepository.register(spec);
+        AutomobileModels.register(id, context -> new DynamicBbModel(
+                id, spec, createPlaceholderModel(context), ignored -> {
+        }));
     }
 
     public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
@@ -169,9 +144,9 @@ public class RIAutomobileModels {
     }
 
     private static void prepareBbModels(Collection<FrameSpec> frames, Collection<WheelSpec> wheels, Collection<EngineSpec> engines) {
-        Set<ResourceLocation> resources = Stream.concat(Stream.concat(
+        Set<ResourceLocation> resources = Stream.concat(BUILTIN_BB_MODELS.stream(), Stream.concat(Stream.concat(
                                 frames.stream().map(FrameSpec::model), wheels.stream().map(WheelSpec::model)),
-                        engines.stream().map(EngineSpec::model))
+                        engines.stream().map(EngineSpec::model)))
                 .filter(FrameSpec.ModelSpec::isBbModel)
                 .map(FrameSpec.ModelSpec::bbModel)
                 .filter(Objects::nonNull)

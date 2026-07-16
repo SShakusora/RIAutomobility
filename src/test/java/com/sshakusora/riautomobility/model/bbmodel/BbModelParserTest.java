@@ -3,18 +3,52 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.sshakusora.riautomobility.content.FrameSpec;
-import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BbModelParserTest {
+    @Test
+    void parsesConvertedBuiltinVehicleModels() throws IOException {
+        Map<String, BuiltinModelExpectation> models = Map.of(
+                "dmc12_frame.bbmodel", new BuiltinModelExpectation(501,
+                        "riautomobility:textures/entity/automobile/frame/dmc12.png"),
+                "standard_formula_frame.bbmodel", new BuiltinModelExpectation(211,
+                        "riautomobility:textures/entity/automobile/frame/standard_formula.png"),
+                "lorry_frame.bbmodel", new BuiltinModelExpectation(204,
+                        "riautomobility:textures/entity/automobile/frame/lorry.png"),
+                "dmc12_wheel.bbmodel", new BuiltinModelExpectation(82,
+                        "riautomobility:textures/entity/automobile/wheel/dmc12.png"),
+                "standard_formula_wheel.bbmodel", new BuiltinModelExpectation(43,
+                        "riautomobility:textures/entity/automobile/wheel/standard_formula.png")
+        );
+
+        for (Map.Entry<String, BuiltinModelExpectation> entry : models.entrySet()) {
+            BbModelData.Document document = parseBuiltinModel(entry.getKey());
+            BuiltinModelExpectation expected = entry.getValue();
+
+            assertFalse(document.roots().isEmpty(), entry.getKey());
+            assertEquals(expected.elements(), countElements(document.roots()), entry.getKey());
+            assertEquals(1, document.textures().size(), entry.getKey());
+            BbModelData.Texture texture = document.textures().get(0);
+            assertTrue(expected.texture().equals(texture.relativePath())
+                            || texture.source().startsWith("data:image/png;base64,"),
+                    entry.getKey());
+            float maxDimension = BbModelBounds.maxDimensionPx(document);
+            assertTrue(Float.isFinite(maxDimension) && maxDimension > 0.0F, entry.getKey());
+        }
+    }
+
     @Test
     void parsesNativeGeometryHierarchyTexturesAndAnimation() {
         BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
@@ -217,6 +251,21 @@ class BbModelParserTest {
     }
 
     @Test
+    void evaluatesMolangQueriesOperatorsFunctionsAndConditionals() {
+        MolangExpression.Expression expression = MolangExpression.compile(
+                "query.anim_time > 1 ? math.lerp(2, math.clamp(10, 0, 6), 0.5) + 2 * 3 : 0");
+
+        assertEquals(10.0D, expression.evaluate(name -> name.equals("query.anim_time") ? 2.0D : 0.0D), 0.0001D);
+        assertEquals(0.0D, expression.evaluate(name -> 0.5D), 0.0001D);
+    }
+
+    @Test
+    void rejectsInvalidMolangExpressions() {
+        assertThrows(IllegalArgumentException.class, () -> MolangExpression.compile("math.unknown(1)"));
+        assertThrows(IllegalArgumentException.class, () -> MolangExpression.compile("1 +"));
+    }
+
+    @Test
     void reusesAnimationSampleStorage() {
         BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
                 {
@@ -266,8 +315,8 @@ class BbModelParserTest {
         Vector3f position = BbCoordinateSystem.position(new Vector3f(2, 5, 7));
         Vector3f rotation = BbCoordinateSystem.rotation(new Vector3f(10, 20, 30));
 
-        assertEquals(new Vector3f(2, -5, 7), position);
-        assertEquals(new Vector3f(-10, 20, -30), rotation);
+        assertEquals(new Vector3f(-2, -5, 7), position);
+        assertEquals(new Vector3f(-10, -20, 30), rotation);
     }
 
     @Test
@@ -291,8 +340,10 @@ class BbModelParserTest {
                 .cross(new Vector3f(converted.vertices()[2]).sub(converted.vertices()[0]));
 
         assertTrue(normal.z > 0);
-        assertEquals(new Vector3f(1, -1, 0), converted.vertices()[0]);
-        assertEquals(new Vector2f(1, 1), converted.uvs()[0]);
+        assertEquals(0.0F, converted.vertices()[0].x, 0.0F);
+        assertEquals(0.0F, converted.vertices()[0].y, 0.0F);
+        assertEquals(0.0F, converted.vertices()[0].z, 0.0F);
+        assertEquals(new Vector2f(0, 0), converted.uvs()[0]);
     }
 
     @Test
@@ -326,5 +377,24 @@ class BbModelParserTest {
                 leftTime, leftValue, rightTime, rightValue
         );
     }
+
+    private static BbModelData.Document parseBuiltinModel(String name) throws IOException {
+        String path = "assets/riautomobility/models/entity/automobile/builtin/" + name;
+        try (InputStream stream = BbModelParserTest.class.getClassLoader().getResourceAsStream(path)) {
+            assertNotNull(stream, path);
+            return BbModelParser.parse(JsonParser.parseReader(new InputStreamReader(stream, UTF_8)).getAsJsonObject());
+        }
+    }
+
+    private static int countElements(List<BbModelData.Node> nodes) {
+        int count = 0;
+        for (BbModelData.Node node : nodes) {
+            if (node instanceof BbModelData.ElementNode) count++;
+            if (node instanceof BbModelData.GroupNode group) count += countElements(group.children());
+        }
+        return count;
+    }
+
+    private record BuiltinModelExpectation(int elements, String texture) {}
 
 }

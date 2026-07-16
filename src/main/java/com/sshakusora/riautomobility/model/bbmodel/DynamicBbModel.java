@@ -108,11 +108,11 @@ public final class DynamicBbModel extends Model {
         } else {
             Vector3f animatedPosition = animation.position();
             Vector3f translation = this.renderScratch.translation
-                    .set(animatedPosition.x, -animatedPosition.y, animatedPosition.z)
+                    .set(-animatedPosition.x, -animatedPosition.y, animatedPosition.z)
                     .mul(PIXEL).add(transform.translation());
             Vector3f animatedRotation = animation.rotation();
             Vector3f rotation = this.renderScratch.rotation
-                    .set(-animatedRotation.x, animatedRotation.y, -animatedRotation.z)
+                    .set(-animatedRotation.x, -animatedRotation.y, animatedRotation.z)
                     .add(transform.rotation());
             Quaternionf quaternion = this.renderScratch.quaternion.rotationZYX(
                     (float) Math.toRadians(rotation.z),

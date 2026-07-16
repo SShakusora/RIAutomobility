@@ -3,27 +3,15 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonElement;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import org.joml.Vector3f;
-import software.bernie.geckolib.core.molang.MolangException;
-import software.bernie.geckolib.core.molang.MolangParser;
-import software.bernie.geckolib.core.molang.expressions.MolangValue;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.DoubleSupplier;
 
 public final class BbAnimationPlayer {
-    private static final Map<String, MolangValue> EXPRESSIONS = new ConcurrentHashMap<>();
+    private static final Map<String, MolangExpression.Expression> EXPRESSIONS = new ConcurrentHashMap<>();
     private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
     private static final Map<RenderableAutomobile, SampleCache> SAMPLE_CACHES = new WeakHashMap<>();
     private static final QueryState QUERY_STATE = new QueryState();
-    private static final DoubleSupplier ANIMATION_TIME = () -> QUERY_STATE.animationTime;
-    private static final DoubleSupplier LIFE_TIME = () -> QUERY_STATE.lifeTime;
-    private static final DoubleSupplier ON_GROUND = () -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.automobileOnGround() ? 1 : 0;
-    private static final DoubleSupplier STEERING = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getSteering(QUERY_STATE.tickDelta);
-    private static final DoubleSupplier WHEEL_ANGLE = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getWheelAngle(QUERY_STATE.tickDelta);
-    private static final DoubleSupplier ENGINE_RUNNING = () -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.engineRunning() ? 1 : 0;
-    private static final DoubleSupplier TURBO_CHARGE = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getTurboCharge();
-    private static final DoubleSupplier BOOST_TIMER = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getBoostTimer();
     private static final ThreadLocal<AnimationScratch> SAMPLE_SCRATCH = ThreadLocal.withInitial(AnimationScratch::new);
     private static final ThreadLocal<SampleCache> FALLBACK_SAMPLE_CACHE = ThreadLocal.withInitial(SampleCache::new);
 
@@ -51,7 +39,7 @@ public final class BbAnimationPlayer {
         float tickDelta = context == null ? 0.0F : context.tickDelta();
         float absoluteTime = automobile == null ? 0.0F : (automobile.getTime() + tickDelta) / 20.0F;
         float time = animationTime(animation, absoluteTime);
-        configureMolang(automobile, time, absoluteTime, tickDelta);
+        configureQueries(automobile, time, absoluteTime, tickDelta);
 
         List<PreparedAnimator> animators = prepared(animation);
         SampleCache cache;
@@ -124,20 +112,11 @@ public final class BbAnimationPlayer {
         return Math.min(time, animation.length());
     }
 
-    private static void configureMolang(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
+    private static void configureQueries(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
         QUERY_STATE.automobile = automobile;
         QUERY_STATE.animationTime = animationTime;
         QUERY_STATE.lifeTime = lifeTime;
         QUERY_STATE.tickDelta = tickDelta;
-        MolangParser parser = MolangParser.INSTANCE;
-        parser.setValue("query.anim_time", ANIMATION_TIME);
-        parser.setValue("query.life_time", LIFE_TIME);
-        parser.setValue("query.is_on_ground", ON_GROUND);
-        parser.setValue("query.vehicle_steering", STEERING);
-        parser.setValue("query.vehicle_wheel_angle", WHEEL_ANGLE);
-        parser.setValue("query.vehicle_engine_running", ENGINE_RUNNING);
-        parser.setValue("query.vehicle_turbo_charge", TURBO_CHARGE);
-        parser.setValue("query.vehicle_boost_timer", BOOST_TIMER);
     }
 
     static Vector3f sampleChannel(List<BbModelData.Keyframe> keyframes, float time, Vector3f defaultValue) {
@@ -199,17 +178,25 @@ public final class BbAnimationPlayer {
         }
         String expression = value.getAsString();
         try {
-            MolangValue parsed = EXPRESSIONS.computeIfAbsent(expression, key -> {
-                try {
-                    return MolangParser.parseExpression(key);
-                } catch (MolangException exception) {
-                    throw new InvalidMolangException(exception);
-                }
-            });
-            return parsed.get();
-        } catch (InvalidMolangException exception) {
-            throw new BbModelFormatException("Invalid Blockbench Molang expression '" + expression + "'", exception.getCause());
+            return EXPRESSIONS.computeIfAbsent(expression, MolangExpression::compile)
+                    .evaluate(BbAnimationPlayer::queryValue);
+        } catch (IllegalArgumentException exception) {
+            throw new BbModelFormatException("Invalid Blockbench Molang expression '" + expression + "'", exception);
         }
+    }
+
+    private static double queryValue(String name) {
+        return switch (name) {
+            case "query.anim_time" -> QUERY_STATE.animationTime;
+            case "query.life_time" -> QUERY_STATE.lifeTime;
+            case "query.is_on_ground" -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.automobileOnGround() ? 1 : 0;
+            case "query.vehicle_steering" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getSteering(QUERY_STATE.tickDelta);
+            case "query.vehicle_wheel_angle" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getWheelAngle(QUERY_STATE.tickDelta);
+            case "query.vehicle_engine_running" -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.engineRunning() ? 1 : 0;
+            case "query.vehicle_turbo_charge" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getTurboCharge();
+            case "query.vehicle_boost_timer" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getBoostTimer();
+            default -> 0.0D;
+        };
     }
 
     private static Vector3f catmullRomInto(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3,
@@ -356,9 +343,4 @@ public final class BbAnimationPlayer {
         }
     }
 
-    private static final class InvalidMolangException extends RuntimeException {
-        private InvalidMolangException(Throwable cause) {
-            super(cause);
-        }
-    }
 }

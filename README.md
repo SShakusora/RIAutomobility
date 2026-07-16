@@ -27,12 +27,11 @@ RIAutomobility is an addon for Automobility on Minecraft 1.20.1. It adds built-i
 | Minecraft | `1.20.1` |
 | Forge | `47.1.x` |
 | [Automobility](https://www.curseforge.com/minecraft/mc-mods/automobility) | `0.4.2+1.20.1-forge` |
-| [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) | `4.x` |
 
 ### Installation
 
 1. Install Forge for Minecraft 1.20.1.
-2. Install Automobility, GeckoLib, and RIAutomobility in the `mods/` folder.
+2. Install Automobility and RIAutomobility in the `mods/` folder.
 3. Launch the game.
 
 ### Built-in Content
@@ -91,12 +90,11 @@ RIAutomobility 是适用于 Minecraft 1.20.1 的 Automobility 附属模组。模
 | Minecraft | `1.20.1` |
 | Forge | `47.1.x` |
 | [Automobility](https://www.curseforge.com/minecraft/mc-mods/automobility) | `0.4.2+1.20.1-forge` |
-| [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) | `4.x` |
 
 ### 安装方法
 
 1. 安装 Minecraft 1.20.1 对应的 Forge。
-2. 将 Automobility、GeckoLib 和 RIAutomobility 放入 `mods/` 文件夹。
+2. 将 Automobility 和 RIAutomobility 放入 `mods/` 文件夹。
 3. 启动游戏。
 
 ### 内置内容

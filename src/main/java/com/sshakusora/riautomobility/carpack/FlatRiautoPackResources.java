@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -24,7 +25,7 @@ final class FlatRiautoPackResources extends AbstractPackResources {
         super(id, false);
         try {
             Map<String, String> mappings = CarPackArchiveStore.readFileMappings(file.toPath());
-            this.logicalToFile = mappings.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+            this.logicalToFile = mappings.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                     Map.Entry::getValue, Map.Entry::getKey));
             this.zip = new ZipFile(file);
         } catch (IOException exception) {
