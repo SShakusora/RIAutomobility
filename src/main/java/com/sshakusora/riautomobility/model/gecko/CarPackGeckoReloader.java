@@ -10,10 +10,7 @@ import software.bernie.geckolib.loading.object.BakedAnimations;
 import software.bernie.geckolib.loading.object.BakedModelFactory;
 import software.bernie.geckolib.loading.object.GeometryTree;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Replaces only GeckoLib entries supplied by the currently mounted RIAuto packs.
@@ -55,6 +52,46 @@ public final class CarPackGeckoReloader {
         GeckoLibCacheAccessor.riautomobility$setAnimations(Map.copyOf(animations));
         modelIds = Set.copyOf(nextModels);
         animationIds = Set.copyOf(nextAnimations);
+    }
+
+    public static void refresh(ResourceManager combined, Collection<ResourceLocation> changedModels,
+                               Collection<ResourceLocation> changedAnimations) {
+        if (!changedModels.isEmpty()) {
+            Map<ResourceLocation, BakedGeoModel> models = new HashMap<>(GeckoLibCacheAccessor.riautomobility$getModels());
+            Set<ResourceLocation> nextModels = new HashSet<>(modelIds);
+            for (ResourceLocation id : changedModels) {
+                models.remove(id);
+                nextModels.remove(id);
+                if (combined.getResource(id).isEmpty()) continue;
+                try {
+                    Model model = FileLoader.loadModelFile(id, combined);
+                    models.put(id, BakedModelFactory.getForNamespace(id.getNamespace()).constructGeoModel(GeometryTree.fromModel(model)));
+                    nextModels.add(id);
+                } catch (RuntimeException exception) {
+                    throw new IllegalStateException("Failed to refresh RIAuto GeckoLib model " + id, exception);
+                }
+            }
+            GeckoLibCacheAccessor.riautomobility$setModels(Map.copyOf(models));
+            modelIds = Set.copyOf(nextModels);
+        }
+
+        if (!changedAnimations.isEmpty()) {
+            Map<ResourceLocation, BakedAnimations> animations = new HashMap<>(GeckoLibCacheAccessor.riautomobility$getAnimations());
+            Set<ResourceLocation> nextAnimations = new HashSet<>(animationIds);
+            for (ResourceLocation id : changedAnimations) {
+                animations.remove(id);
+                nextAnimations.remove(id);
+                if (combined.getResource(id).isEmpty()) continue;
+                try {
+                    animations.put(id, FileLoader.loadAnimationsFile(id, combined));
+                    nextAnimations.add(id);
+                } catch (RuntimeException exception) {
+                    throw new IllegalStateException("Failed to refresh RIAuto GeckoLib animation " + id, exception);
+                }
+            }
+            GeckoLibCacheAccessor.riautomobility$setAnimations(Map.copyOf(animations));
+            animationIds = Set.copyOf(nextAnimations);
+        }
     }
 
     public static void clear() {

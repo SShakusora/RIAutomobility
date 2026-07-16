@@ -8,6 +8,7 @@ import java.util.Objects;
 public record CarPackManifestEntry(
         String id,
         String displayName,
+        String author,
         String contentDigest,
         String archiveDigest,
         long archiveSize,
@@ -16,6 +17,7 @@ public record CarPackManifestEntry(
     public static final int MAX_PACKS = 4096;
     public static final int MAX_ID_LENGTH = 256;
     public static final int MAX_DISPLAY_NAME_LENGTH = 256;
+    public static final int MAX_AUTHOR_LENGTH = 256;
     public static final long MAX_ARCHIVE_SIZE = 256L * 1024L * 1024L;
 
     public CarPackManifestEntry {
@@ -24,6 +26,10 @@ public record CarPackManifestEntry(
         }
         if (displayName == null || displayName.isBlank() || displayName.length() > MAX_DISPLAY_NAME_LENGTH) {
             throw new IllegalArgumentException("Invalid car pack display name");
+        }
+        if (author == null || author.length() > MAX_AUTHOR_LENGTH
+                || author.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("Invalid car pack author");
         }
         validateDigest(contentDigest, "content");
         validateDigest(archiveDigest, "archive");
@@ -36,6 +42,7 @@ public record CarPackManifestEntry(
     public void write(FriendlyByteBuf buffer) {
         buffer.writeUtf(this.id, MAX_ID_LENGTH);
         buffer.writeUtf(this.displayName, MAX_DISPLAY_NAME_LENGTH);
+        buffer.writeUtf(this.author, MAX_AUTHOR_LENGTH);
         buffer.writeUtf(this.contentDigest, 64);
         buffer.writeUtf(this.archiveDigest, 64);
         buffer.writeLong(this.archiveSize);
@@ -46,6 +53,7 @@ public record CarPackManifestEntry(
         return new CarPackManifestEntry(
                 buffer.readUtf(MAX_ID_LENGTH),
                 buffer.readUtf(MAX_DISPLAY_NAME_LENGTH),
+                buffer.readUtf(MAX_AUTHOR_LENGTH),
                 buffer.readUtf(64),
                 buffer.readUtf(64),
                 buffer.readLong(),

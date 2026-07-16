@@ -8,15 +8,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public final class DynamicJsonModelLoader {
     private static final Set<ModelLayerLocation> REGISTERED_LAYERS = new LinkedHashSet<>();
 
-    private DynamicJsonModelLoader() {}
+    private DynamicJsonModelLoader() {
+    }
 
     public static void register(ModelLayerLocation layer) {
         REGISTERED_LAYERS.add(layer);
@@ -55,6 +53,24 @@ public final class DynamicJsonModelLoader {
     public static void loadIntoEntityModelSet(EntityModelSet entityModels, ResourceManager manager) {
         Map<ModelLayerLocation, LayerDefinition> roots = new HashMap<>(entityModels.roots);
         loadModels(manager, roots);
+        entityModels.roots = roots;
+    }
+
+    public static void refreshIntoEntityModelSet(EntityModelSet entityModels, ResourceManager manager,
+                                                 Collection<ModelLayerLocation> layers) {
+        if (layers.isEmpty()) return;
+        Map<ModelLayerLocation, LayerDefinition> roots = new HashMap<>(entityModels.roots);
+        for (ModelLayerLocation layer : layers) {
+            roots.remove(layer);
+            ResourceLocation modelLocation = getModelLocation(layer);
+            manager.getResource(modelLocation).ifPresent(resource -> {
+                try (var in = resource.open()) {
+                    JsonEntityModelUtil.readJson(in).ifPresent(model -> roots.put(layer, model));
+                } catch (IOException exception) {
+                    throw new IllegalStateException("Failed to refresh dynamic automobile model " + modelLocation, exception);
+                }
+            });
+        }
         entityModels.roots = roots;
     }
 

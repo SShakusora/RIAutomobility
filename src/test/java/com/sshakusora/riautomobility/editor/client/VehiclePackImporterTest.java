@@ -92,7 +92,7 @@ class VehiclePackImporterTest {
                 archive, temporaryDirectory.resolve("v2-imports"));
 
         String importedModel = Files.readString(imported.modelFile());
-        var texture = com.google.gson.JsonParser.parseString(importedModel).getAsJsonObject()
+        var texture = JsonParser.parseString(importedModel).getAsJsonObject()
                 .getAsJsonArray("textures").get(0).getAsJsonObject();
         assertEquals(EMBEDDED_PNG, texture.get("source").getAsString());
         assertTrue(texture.get("internal").getAsBoolean());

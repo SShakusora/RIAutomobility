@@ -1,6 +1,10 @@
 package com.sshakusora.riautomobility.editor;
 
+import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 public final class VehicleComponentItemData {
@@ -12,6 +16,7 @@ public final class VehicleComponentItemData {
 
     public static void setDisplayName(ItemStack stack, String displayName) {
         stack.getOrCreateTag().putString(DISPLAY_NAME_TAG, displayName);
+        stack.setHoverName(Component.literal(displayName).withStyle(Style.EMPTY.withItalic(false)));
     }
 
     public static String getDisplayName(ItemStack stack) {
@@ -28,5 +33,13 @@ public final class VehicleComponentItemData {
         var tag = stack.getTag();
         return tag != null && tag.contains(AUTHOR_TAG, Tag.TAG_STRING)
                 ? tag.getString(AUTHOR_TAG) : "";
+    }
+
+    public static void applyKnownMetadata(ItemStack stack, ResourceLocation componentId) {
+        CarPackArchiveStore.ItemMetadata metadata =
+                CarPackArchiveStore.findComponentMetadata(componentId);
+        if (metadata == null || stack.isEmpty()) return;
+        setDisplayName(stack, metadata.displayName());
+        setAuthor(stack, metadata.author());
     }
 }

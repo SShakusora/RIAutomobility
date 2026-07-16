@@ -1,10 +1,7 @@
 package com.sshakusora.riautomobility.editor.upload;
 
 import com.google.gson.JsonObject;
-import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
-import com.sshakusora.riautomobility.carpack.CarPackEvents;
-import com.sshakusora.riautomobility.carpack.CarPackManager;
-import com.sshakusora.riautomobility.carpack.CarPackRuntime;
+import com.sshakusora.riautomobility.carpack.*;
 import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
@@ -15,6 +12,7 @@ import com.sshakusora.riautomobility.network.packet.BeginCarPackUploadPacket;
 import com.sshakusora.riautomobility.network.packet.CarPackUploadChunkPacket;
 import com.sshakusora.riautomobility.network.packet.CarPackUploadResultPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.GsonHelper;
 import net.minecraftforge.network.NetworkDirection;
@@ -30,6 +28,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -37,13 +37,22 @@ public final class CarPackUploadService {
     public static final long MAX_UPLOAD_SIZE = 64L * 1024L * 1024L;
     private static final long UPLOAD_TIMEOUT_MILLIS = 60_000L;
     private static final Map<UUID, Upload> UPLOADS = new HashMap<>();
+    private static final ExecutorService UPLOAD_IO = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "RIAutomobility car pack upload I/O");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private CarPackUploadService() {
     }
 
     public static void begin(ServerPlayer player, BeginCarPackUploadPacket request) {
+        if (rejectUnauthorized(player, request.uploadId())) return;
+        UPLOAD_IO.execute(() -> beginIo(player, request));
+    }
+
+    private static void beginIo(ServerPlayer player, BeginCarPackUploadPacket request) {
         try {
-            requirePermission(player);
             validateMetadata(request);
             discardPlayerUpload(player.getUUID());
             Path directory = CarPackManager.getRootDirectory().resolve("cache").resolve("uploads");
@@ -57,13 +66,17 @@ public final class CarPackUploadService {
     }
 
     public static void chunk(ServerPlayer player, CarPackUploadChunkPacket packet) {
+        if (rejectUnauthorized(player, packet.uploadId())) return;
+        UPLOAD_IO.execute(() -> chunkIo(player, packet));
+    }
+
+    private static void chunkIo(ServerPlayer player, CarPackUploadChunkPacket packet) {
         Upload upload = UPLOADS.get(packet.uploadId());
         if (upload == null || !upload.playerId.equals(player.getUUID())) {
             fail(player, packet.uploadId(), "No matching upload session");
             return;
         }
         try {
-            requirePermission(player);
             if (packet.index() != upload.nextChunk) throw new IOException("Upload chunks arrived out of order");
             if (upload.written + packet.data().length > upload.request.archiveSize())
                 throw new IOException("Upload exceeds declared size");
@@ -78,13 +91,17 @@ public final class CarPackUploadService {
     }
 
     public static void complete(ServerPlayer player, UUID uploadId) {
+        if (rejectUnauthorized(player, uploadId)) return;
+        UPLOAD_IO.execute(() -> completeIo(player, uploadId));
+    }
+
+    private static void completeIo(ServerPlayer player, UUID uploadId) {
         Upload upload = UPLOADS.remove(uploadId);
         if (upload == null || !upload.playerId.equals(player.getUUID())) {
             fail(player, uploadId, "No matching upload session");
             return;
         }
         try {
-            requirePermission(player);
             upload.output.close();
             if (upload.written != upload.request.archiveSize())
                 throw new IOException("Uploaded size does not match declaration");
@@ -99,14 +116,8 @@ public final class CarPackUploadService {
             if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize()))
                 throw new IOException("Invalid target path");
             installAtomically(upload.temporary, target, upload.request.overwrite(),
-                    () -> {
-                        CarPackRuntime.reloadServer();
-                        CarPackEvents.CommonEvents.syncAll(player.server);
-                    },
-                    () -> {
-                        CarPackRuntime.reloadServer();
-                        CarPackEvents.CommonEvents.syncAll(player.server);
-                    });
+                    () -> reloadServer(player.server),
+                    () -> reloadServer(player.server));
             success(player, uploadId, "Installed " + target.getFileName());
         } catch (Exception exception) {
             abort(upload);
@@ -200,8 +211,19 @@ public final class CarPackUploadService {
         }
     }
 
-    private static void requirePermission(ServerPlayer player) throws IOException {
-        if (!player.hasPermissions(2)) throw new IOException("Server operator permission is required");
+    private static boolean rejectUnauthorized(ServerPlayer player, UUID uploadId) {
+        if (player.hasPermissions(2)) return false;
+        fail(player, uploadId, "Server operator permission is required");
+        return true;
+    }
+
+    private static void reloadServer(MinecraftServer server) throws Exception {
+        CarPackComponentDataLoader.LoadedContent content = CarPackRuntime.loadServerContent();
+        CarPackArchiveStore.prepareManifest();
+        server.submit(() -> {
+            CarPackComponentDataLoader.apply(content);
+            CarPackEvents.CommonEvents.syncAll(server);
+        }).get();
     }
 
     static void installAtomically(Path source, Path target, boolean overwrite,
@@ -233,7 +255,6 @@ public final class CarPackUploadService {
                 }
                 if (backupCreated) {
                     moveAtomically(backup, target);
-                    backupCreated = false;
                 }
                 rollback.run();
             } catch (Exception rollbackFailure) {
@@ -256,12 +277,15 @@ public final class CarPackUploadService {
     }
 
     public static void abortPlayer(UUID playerId) {
-        discardPlayerUpload(playerId);
+        UPLOAD_IO.execute(() -> discardPlayerUpload(playerId));
     }
 
     public static void expireStaleUploads() {
-        long cutoff = System.currentTimeMillis() - UPLOAD_TIMEOUT_MILLIS;
-        UPLOADS.values().stream().filter(upload -> upload.lastActivity < cutoff).toList().forEach(CarPackUploadService::abort);
+        UPLOAD_IO.execute(() -> {
+            long cutoff = System.currentTimeMillis() - UPLOAD_TIMEOUT_MILLIS;
+            UPLOADS.values().stream().filter(upload -> upload.lastActivity < cutoff).toList()
+                    .forEach(CarPackUploadService::abort);
+        });
     }
 
     private static void abort(Upload upload) {
@@ -285,7 +309,8 @@ public final class CarPackUploadService {
     }
 
     private static void send(ServerPlayer player, Object packet) {
-        RIAutomobilityNetwork.CHANNEL.sendTo(packet, player.connection.connection, NetworkDirection.PLAY_TO_CLIENT);
+        player.server.execute(() -> RIAutomobilityNetwork.CHANNEL.sendTo(
+                packet, player.connection.connection, NetworkDirection.PLAY_TO_CLIENT));
     }
 
     private static final class Upload {

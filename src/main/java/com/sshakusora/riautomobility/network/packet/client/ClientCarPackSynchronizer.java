@@ -97,6 +97,7 @@ public final class ClientCarPackSynchronizer {
 
         Session previous = session;
         session = next;
+        CarPackArchiveStore.installComponentMetadata(next.manifest);
         if (previous != null && !previous.ready.isDone()) {
             previous.ready.completeExceptionally(new IllegalStateException("Car pack catalog was superseded"));
         }
@@ -267,7 +268,7 @@ public final class ClientCarPackSynchronizer {
         if (!isCurrent(current)) return;
         try {
             current.mounted.putAll(current.initialMounted);
-            installMounted(current);
+            installMounted(current, true);
             SyncCustomComponentsClientHandler.applyComponents(
                     Minecraft.getInstance(), current.frames, current.wheels, current.engines);
             current.ready.complete(null);
@@ -342,21 +343,22 @@ public final class ClientCarPackSynchronizer {
             List<CarPackManager.CarPack> added = packs.stream()
                     .filter(pack -> current.mounted.putIfAbsent(pack.id(), pack) == null).toList();
             if (added.isEmpty()) return;
+            Set<ResourceLocation> affectedComponents = componentsForPacks(current, added);
             long now = System.nanoTime();
             added.forEach(pack -> current.lastNeededNanos.put(pack.id(), now));
             try {
-                installMounted(current);
-                SyncCustomComponentsClientHandler.applyComponents(
-                        Minecraft.getInstance(), current.frames, current.wheels, current.engines);
+                installMounted(current, false);
+                SyncCustomComponentsClientHandler.refreshMountedComponents(
+                        Minecraft.getInstance(), affectedComponents, current.frames, current.wheels, current.engines);
                 LOGGER.info("Mounted {} on-demand car pack(s); {} currently mounted", added.size(), current.mounted.size());
                 CACHE_IO.execute(() -> pruneCache(current));
             } catch (RuntimeException exception) {
                 added.forEach(pack -> current.mounted.remove(pack.id(), pack));
                 LOGGER.error("Unable to mount {} on-demand car pack(s)", added.size(), exception);
                 try {
-                    installMounted(current);
-                    SyncCustomComponentsClientHandler.applyComponents(
-                            Minecraft.getInstance(), current.frames, current.wheels, current.engines);
+                    installMounted(current, false);
+                    SyncCustomComponentsClientHandler.refreshMountedComponents(
+                            Minecraft.getInstance(), affectedComponents, current.frames, current.wheels, current.engines);
                 } catch (RuntimeException rollbackException) {
                     exception.addSuppressed(rollbackException);
                     LOGGER.error("Unable to restore the previous car pack mount", rollbackException);
@@ -385,10 +387,11 @@ public final class ClientCarPackSynchronizer {
                 }
             }
             if (removed.isEmpty()) return;
+            Set<ResourceLocation> affectedComponents = componentsForPackIds(current, removed.keySet());
             try {
-                installMounted(current);
-                SyncCustomComponentsClientHandler.applyComponents(
-                        Minecraft.getInstance(), current.frames, current.wheels, current.engines);
+                installMounted(current, false);
+                SyncCustomComponentsClientHandler.refreshMountedComponents(
+                        Minecraft.getInstance(), affectedComponents, current.frames, current.wheels, current.engines);
                 removed.keySet().forEach(current.lastNeededNanos::remove);
                 LOGGER.info("Unmounted {} idle car pack(s); {} currently mounted", removed.size(), current.mounted.size());
                 CACHE_IO.execute(() -> pruneCache(current));
@@ -396,9 +399,9 @@ public final class ClientCarPackSynchronizer {
                 current.mounted.putAll(removed);
                 LOGGER.error("Unable to unmount idle car packs; restoring the previous mount", exception);
                 try {
-                    installMounted(current);
-                    SyncCustomComponentsClientHandler.applyComponents(
-                            Minecraft.getInstance(), current.frames, current.wheels, current.engines);
+                    installMounted(current, false);
+                    SyncCustomComponentsClientHandler.refreshMountedComponents(
+                            Minecraft.getInstance(), affectedComponents, current.frames, current.wheels, current.engines);
                 } catch (RuntimeException rollbackException) {
                     exception.addSuppressed(rollbackException);
                     LOGGER.error("Unable to restore idle car pack mounts", rollbackException);
@@ -407,13 +410,33 @@ public final class ClientCarPackSynchronizer {
         });
     }
 
-    private static void installMounted(Session current) {
+    private static void installMounted(Session current, boolean fullReload) {
         List<CarPackManager.CarPack> selected = current.manifest.stream()
                 .map(entry -> current.mounted.get(entry.id()))
                 .filter(Objects::nonNull)
                 .toList();
         CarPackManager.setClientResourcePacks(selected);
-        ClientCarPackResources.install(CarPackManager.discoverClientResourcePacks());
+        if (fullReload) {
+            ClientCarPackResources.install(CarPackManager.discoverClientResourcePacks());
+        } else {
+            ClientCarPackResources.installIncremental(CarPackManager.discoverClientResourcePacks());
+        }
+    }
+
+    private static Set<ResourceLocation> componentsForPacks(Session current,
+                                                            Collection<CarPackManager.CarPack> packs) {
+        Set<String> ids = new HashSet<>();
+        packs.forEach(pack -> ids.add(pack.id()));
+        return componentsForPackIds(current, ids);
+    }
+
+    private static Set<ResourceLocation> componentsForPackIds(Session current, Collection<String> packIds) {
+        Set<ResourceLocation> components = new HashSet<>();
+        for (String packId : packIds) {
+            CarPackManifestEntry entry = current.catalog.get(packId);
+            if (entry != null) components.add(entry.component());
+        }
+        return components;
     }
 
     private static void requestAutomobile(RIAutomobileEntity automobile) {
@@ -566,7 +589,8 @@ public final class ClientCarPackSynchronizer {
     private static void failCatalog(Session current, String reason, Throwable error) {
         if (current != null && !isCurrent(current)) return;
         LOGGER.error("RIAutomobility car pack catalog failed: {}", reason, error);
-        if (current != null) current.ready.completeExceptionally(error == null ? new IllegalStateException(reason) : error);
+        if (current != null)
+            current.ready.completeExceptionally(error == null ? new IllegalStateException(reason) : error);
         Minecraft.getInstance().execute(() -> {
             var connection = Minecraft.getInstance().getConnection();
             if (connection != null) {

@@ -69,7 +69,7 @@ public final class BbInstancedRenderer {
         disabled = false;
         warnedUnsupported = false;
         event.registerShader(new ShaderInstance(
-                event.getResourceProvider(), RIAutomobility.rl("bbmodel_instanced"), SHADER_FORMAT),
+                        event.getResourceProvider(), RIAutomobility.rl("bbmodel_instanced"), SHADER_FORMAT),
                 loaded -> shader = loaded);
     }
 
@@ -127,6 +127,16 @@ public final class BbInstancedRenderer {
             return;
         }
         disposeGpuResources();
+    }
+
+    public static void clearModel(DynamicBbModel model) {
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(() -> clearModel(model));
+            return;
+        }
+        PENDING.remove(model);
+        GpuModel gpu = GPU_MODELS.remove(model);
+        if (gpu != null) gpu.close();
     }
 
     private static void flush(Matrix4f projectionMatrix) {

@@ -13,9 +13,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -28,6 +26,14 @@ public final class ClientCarPackResources {
     }
 
     public static void install(List<CarPackManager.CarPack> packs) {
+        install(packs, true);
+    }
+
+    public static void installIncremental(List<CarPackManager.CarPack> packs) {
+        install(packs, false);
+    }
+
+    private static void install(List<CarPackManager.CarPack> packs, boolean reloadAllGeckoResources) {
         Minecraft minecraft = Minecraft.getInstance();
         ReloadableResourceManager manager = (ReloadableResourceManager) minecraft.getResourceManager();
         String fingerprint = fingerprint(packs);
@@ -35,25 +41,33 @@ public final class ClientCarPackResources {
             return;
         }
 
-        Set<ResourceLocation> staleTextures = mount == null ? Set.of() : mount.textures;
+        Map<ResourceLocation, String> staleTextures = mount == null ? Map.of() : mount.textures;
         CloseableResourceManager base = detach(manager);
         CloseableResourceManager carResources = CarPackRuntime.open(PackType.CLIENT_RESOURCES, packs);
         OverlayCloseableResourceManager combined = new OverlayCloseableResourceManager(base, carResources);
-        Set<ResourceLocation> textures = textureIds(carResources);
+        Map<ResourceLocation, String> textures = textureSources(carResources, packs);
         mount = new Mount(fingerprint, combined, carResources, textures);
         manager.resources = combined;
 
-        Set<ResourceLocation> reset = new HashSet<>(staleTextures);
-        reset.addAll(textures);
-        reset.forEach(minecraft.getTextureManager()::release);
-        CarPackGeckoReloader.reload(carResources, manager);
+        if (reloadAllGeckoResources) {
+            Set<ResourceLocation> reset = new HashSet<>(staleTextures.keySet());
+            reset.addAll(textures.keySet());
+            reset.forEach(minecraft.getTextureManager()::release);
+        } else {
+            Set<ResourceLocation> candidates = new HashSet<>(staleTextures.keySet());
+            candidates.addAll(textures.keySet());
+            candidates.stream()
+                    .filter(id -> !Objects.equals(staleTextures.get(id), textures.get(id)))
+                    .forEach(minecraft.getTextureManager()::release);
+        }
+        if (reloadAllGeckoResources) CarPackGeckoReloader.reload(carResources, manager);
     }
 
     public static void uninstall() {
         Minecraft minecraft = Minecraft.getInstance();
         if (!(minecraft.getResourceManager() instanceof ReloadableResourceManager manager)) return;
         if (mount == null) return;
-        Set<ResourceLocation> textures = mount.textures;
+        Set<ResourceLocation> textures = mount.textures.keySet();
         detach(manager);
         mount = null;
         textures.forEach(minecraft.getTextureManager()::release);
@@ -81,8 +95,17 @@ public final class ClientCarPackResources {
         return base;
     }
 
-    private static Set<ResourceLocation> textureIds(CloseableResourceManager resources) {
-        return Set.copyOf(resources.listResources("textures", id -> id.getPath().endsWith(".png")).keySet());
+    private static Map<ResourceLocation, String> textureSources(CloseableResourceManager resources,
+                                                                List<CarPackManager.CarPack> packs) {
+        Map<String, String> digests = packs.stream().collect(Collectors.toMap(
+                CarPackManager.CarPack::id, CarPackManager.CarPack::digest));
+        Map<ResourceLocation, String> sources = new HashMap<>();
+        resources.listResources("textures", id -> id.getPath().endsWith(".png"))
+                .forEach((id, resource) -> {
+                    String source = resource.sourcePackId();
+                    sources.put(id, source + "=" + digests.getOrDefault(source, ""));
+                });
+        return Map.copyOf(sources);
     }
 
     private static String fingerprint(List<CarPackManager.CarPack> packs) {
@@ -90,6 +113,6 @@ public final class ClientCarPackResources {
     }
 
     private record Mount(String fingerprint, OverlayCloseableResourceManager resources,
-                         CloseableResourceManager carResources, Set<ResourceLocation> textures) {
+                         CloseableResourceManager carResources, Map<ResourceLocation, String> textures) {
     }
 }

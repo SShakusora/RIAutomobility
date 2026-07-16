@@ -17,7 +17,7 @@ class CarPackPacketCodecTest {
     @Test
     void manifestEntryRoundTrips() {
         CarPackManifestEntry expected = new CarPackManifestEntry(
-                "riautomobility/example", "Example", DIGEST, "b".repeat(64), 12345,
+                "riautomobility/example", "Example", "Test Author", DIGEST, "b".repeat(64), 12345,
                 new ResourceLocation("example", "buggy")
         );
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -47,7 +47,7 @@ class CarPackPacketCodecTest {
 
     @Test
     void chunkPacketRoundTripsAndEnforcesItsLimit() {
-        byte[] data = new byte[] {1, 2, 3, 4};
+        byte[] data = new byte[]{1, 2, 3, 4};
         CarPackChunkPacket expected = new CarPackChunkPacket(DIGEST, 7, data);
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {

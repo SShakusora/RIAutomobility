@@ -1,7 +1,9 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
+import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import net.minecraft.resources.ResourceLocation;
@@ -10,9 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipFile;
@@ -81,6 +86,20 @@ class VehiclePackBuilderTest {
     void exportFileNameReplacesCharactersUnsupportedByFileManagers() {
         assertEquals("My_Car_Test", VehicleImportScreen.exportFileStem(" My/Car:Test. "));
         assertEquals("_CON", VehicleImportScreen.exportFileStem("CON"));
+    }
+
+    @Test
+    void itemExportUsesAndCleansAUploadStagingFileInsteadOfExports() throws IOException {
+        Path root = temporaryDirectory.resolve("riautomobility");
+
+        Path staging = VehicleImportScreen.createItemUploadStagingPath(root, "generated-frame");
+
+        assertEquals(root.resolve(CarPackManager.CACHE_DIRECTORY_NAME).resolve("uploads"),
+                staging.getParent());
+        assertFalse(staging.startsWith(root.resolve("exports")));
+        assertTrue(Files.exists(staging));
+        VehicleImportScreen.cleanupItemUploadArchive(staging);
+        assertFalse(Files.exists(staging));
     }
 
     @Test
@@ -215,9 +234,9 @@ class VehiclePackBuilderTest {
         byte[] source = Files.readAllBytes(writeBbModel("v2-wheel.bbmodel"));
         var exported = BbModelRuntimeSanitizer.externalize(source, "test",
                 "textures/entity/automobile/wheel/test-wheel");
-        var component = new com.google.gson.JsonObject();
-        component.add("model", new com.google.gson.JsonObject());
-        Map<String, byte[]> entries = new java.util.LinkedHashMap<>();
+        var component = new JsonObject();
+        component.add("model", new JsonObject());
+        Map<String, byte[]> entries = new LinkedHashMap<>();
         VehiclePackBuilder.addV2ModelEntries(
                 entries, component, exported, "test", "wheel", "test-wheel");
         Path archive = temporaryDirectory.resolve("wheel-v2.riauto");
@@ -228,8 +247,8 @@ class VehiclePackBuilderTest {
 
             var modelEntry = zip.stream().filter(entry -> entry.getName().endsWith(".bbmodel"))
                     .findFirst().orElseThrow();
-            var model = JsonParser.parseReader(new java.io.InputStreamReader(
-                    zip.getInputStream(modelEntry), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            var model = JsonParser.parseReader(new InputStreamReader(
+                    zip.getInputStream(modelEntry), StandardCharsets.UTF_8)).getAsJsonObject();
             var texture = model.getAsJsonArray("textures").get(0).getAsJsonObject();
             assertFalse(texture.has("source"));
             String resource = texture.get("relative_path").getAsString();
@@ -240,11 +259,73 @@ class VehiclePackBuilderTest {
         }
     }
 
+    @Test
+    void buildsAValidArchiveFromAnImmutableExportRequest() throws IOException {
+        var component = new JsonObject();
+        component.addProperty("size", 1.0F);
+        component.addProperty("grip", 0.8F);
+        component.addProperty("radius", 5.0F);
+        component.addProperty("width", 3.0F);
+        component.addProperty("show_in_creative_tab", true);
+        component.add("model", new JsonObject());
+        String path = "auto_0123456789abcdef0123456789abcdef";
+        var request = new VehiclePackBuilder.ExportRequest(
+                VehicleEditorDraft.Target.WHEEL, writeBbModel("async-wheel.bbmodel"),
+                "riautomobility", path, "Async Wheel", "Test Author", component,
+                "riautomobility-" + path + "-wheel", false);
+
+        Path archive = VehiclePackBuilder.build(request, temporaryDirectory.resolve("async-wheel.riauto"));
+
+        assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
+        assertEquals("Test Author", CarPackArchiveStore.readAuthor(archive));
+    }
+
+    @Test
+    void asyncExportRecalculatesAutomaticWheelDimensions() throws IOException {
+        Path model = writeGeometryBbModel();
+        var component = new JsonObject();
+        component.addProperty("size", 1.0F);
+        component.addProperty("grip", 0.8F);
+        component.addProperty("radius", 99.0F);
+        component.addProperty("width", 99.0F);
+        component.addProperty("show_in_creative_tab", true);
+        component.add("model", new JsonObject());
+        String path = "auto_abcdef0123456789abcdef0123456789";
+        var request = new VehiclePackBuilder.ExportRequest(
+                VehicleEditorDraft.Target.WHEEL, model, "riautomobility", path,
+                "Automatic Wheel", "Test Author", component, "automatic-wheel", false,
+                false, true);
+
+        Path archive = VehiclePackBuilder.build(request, temporaryDirectory.resolve("automatic-wheel.riauto"));
+        VehicleEditorDraft.AutomaticWheelModelSize expected = VehicleEditorDraft.automaticWheelModelSize(
+                BbModelBounds.measure(VehiclePackBuilder.validateSource(model)).size());
+
+        try (ZipFile zip = new ZipFile(archive.toFile())) {
+            var entry = zip.getEntry("data/riautomobility/riautomobility/wheels/" + path + ".json");
+            var exported = JsonParser.parseReader(new InputStreamReader(
+                    zip.getInputStream(entry), StandardCharsets.UTF_8)).getAsJsonObject();
+            assertEquals(expected.radiusPx(), exported.get("radius").getAsFloat(), 0.001F);
+            assertEquals(expected.widthPx(), exported.get("width").getAsFloat(), 0.001F);
+            assertEquals(expected.rotationY(),
+                    exported.getAsJsonObject("model").get("rotation_y").getAsFloat(), 0.001F);
+        }
+    }
+
     private Path writeBbModel(String name) throws IOException {
         String json = "{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
                 + "\"textures\":[{\"name\":\"body.png\",\"source\":\"" + EMBEDDED_PNG + "\"}],"
                 + "\"elements\":[],\"outliner\":[]}";
         return Files.writeString(temporaryDirectory.resolve(name), json);
+    }
+
+    private Path writeGeometryBbModel() throws IOException {
+        String json = "{\"meta\":{\"format_version\":\"5.0\",\"model_format\":\"modded_entity\"},"
+                + "\"textures\":[{\"name\":\"body.png\",\"source\":\"" + EMBEDDED_PNG + "\"}],"
+                + "\"elements\":[{\"type\":\"cube\",\"uuid\":\"wheel\",\"name\":\"Wheel\","
+                + "\"from\":[-2,-5,-5],\"to\":[2,5,5],"
+                + "\"faces\":{\"north\":{\"uv\":[0,0,4,10],\"texture\":0}}}],"
+                + "\"outliner\":[\"wheel\"]}";
+        return Files.writeString(temporaryDirectory.resolve("automatic-wheel.bbmodel"), json);
     }
 
     private static BbModelData.Document document(String source) {

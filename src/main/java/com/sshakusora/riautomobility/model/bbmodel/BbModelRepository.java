@@ -27,7 +27,9 @@ public final class BbModelRepository {
     private static volatile Map<ResourceLocation, BbModelData.Document> MODELS = Map.of();
     private static volatile Map<String, ResourceLocation> EMBEDDED_TEXTURES = Map.of();
     private static volatile Map<ResourceLocation, PixelShape> TEXTURE_SHAPES = Map.of();
-    private static final List<ResourceLocation> DYNAMIC_TEXTURE_IDS = new ArrayList<>();
+    private static final Map<ResourceLocation, Set<String>> EMBEDDED_KEYS_BY_MODEL = new HashMap<>();
+    private static final Map<ResourceLocation, Set<ResourceLocation>> DYNAMIC_TEXTURE_IDS_BY_MODEL = new HashMap<>();
+    private static final Map<ResourceLocation, Set<ResourceLocation>> TEXTURE_SHAPE_IDS_BY_MODEL = new HashMap<>();
 
     private BbModelRepository() {
     }
@@ -69,29 +71,62 @@ public final class BbModelRepository {
         return specs != null && specs.stream().anyMatch(existing -> existing.modelId().equals(spec.modelId()));
     }
 
-    public static void reload(ResourceManager manager) {
+    public static synchronized void reload(ResourceManager manager) {
         BbAnimationPlayer.clearCache();
         Map<ResourceLocation, List<FrameSpec.ModelSpec>> registered = new LinkedHashMap<>();
-        synchronized (BbModelRepository.class) {
-            REGISTERED.forEach((location, specs) -> registered.put(location, List.copyOf(specs)));
-        }
+        REGISTERED.forEach((location, specs) -> registered.put(location, List.copyOf(specs)));
+
+        releaseDynamicTextures(DYNAMIC_TEXTURE_IDS_BY_MODEL.keySet());
+        EMBEDDED_KEYS_BY_MODEL.clear();
+        DYNAMIC_TEXTURE_IDS_BY_MODEL.clear();
+        TEXTURE_SHAPE_IDS_BY_MODEL.clear();
 
         Map<ResourceLocation, BbModelData.Document> loaded = new HashMap<>();
+        Map<String, ResourceLocation> embedded = new HashMap<>();
+        Map<ResourceLocation, PixelShape> shapes = new HashMap<>();
         for (ResourceLocation location : registered.keySet()) {
-            manager.getResource(location).ifPresentOrElse(resource -> {
-                try (Reader reader = resource.openAsReader()) {
-                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                    loaded.put(location, BbModelParser.parse(json));
-                } catch (Exception exception) {
-                    LOGGER.error("Failed to load Blockbench model {}", location, exception);
-                }
-            }, () -> LOGGER.error("Missing Blockbench model resource {}", location));
+            BbModelData.Document document = loadDocument(manager, location);
+            if (document == null) continue;
+            loaded.put(location, document);
+            loadModelAssets(manager, location, registered.get(location), document, embedded, shapes);
         }
 
-        Map<String, ResourceLocation> embedded = registerEmbeddedTextures(loaded);
-        TEXTURE_SHAPES = Map.copyOf(loadTextureShapes(manager, registered, loaded, embedded));
         MODELS = Map.copyOf(loaded);
         EMBEDDED_TEXTURES = Map.copyOf(embedded);
+        TEXTURE_SHAPES = Map.copyOf(shapes);
+    }
+
+    public static synchronized void reload(ResourceManager manager, Collection<ResourceLocation> resources) {
+        if (resources.isEmpty()) return;
+        BbAnimationPlayer.clearCache();
+
+        Map<ResourceLocation, BbModelData.Document> loaded = new HashMap<>(MODELS);
+        Map<String, ResourceLocation> embedded = new HashMap<>(EMBEDDED_TEXTURES);
+        Map<ResourceLocation, PixelShape> shapes = new HashMap<>(TEXTURE_SHAPES);
+        Set<ResourceLocation> unique = new LinkedHashSet<>(resources);
+        releaseDynamicTextures(unique);
+
+        for (ResourceLocation location : unique) {
+            loaded.remove(location);
+            Set<String> oldKeys = EMBEDDED_KEYS_BY_MODEL.remove(location);
+            if (oldKeys != null) oldKeys.forEach(embedded::remove);
+            Set<ResourceLocation> oldShapes = TEXTURE_SHAPE_IDS_BY_MODEL.remove(location);
+            if (oldShapes != null) {
+                oldShapes.stream().filter(shape -> !shapeUsedByAnotherModel(shape)).forEach(shapes::remove);
+            }
+            DYNAMIC_TEXTURE_IDS_BY_MODEL.remove(location);
+
+            List<FrameSpec.ModelSpec> specs = REGISTERED.get(location);
+            if (specs == null || specs.isEmpty()) continue;
+            BbModelData.Document document = loadDocument(manager, location);
+            if (document == null) continue;
+            loaded.put(location, document);
+            loadModelAssets(manager, location, List.copyOf(specs), document, embedded, shapes);
+        }
+
+        MODELS = Map.copyOf(loaded);
+        EMBEDDED_TEXTURES = Map.copyOf(embedded);
+        TEXTURE_SHAPES = Map.copyOf(shapes);
     }
 
     public static BbModelData.Document get(ResourceLocation location) {
@@ -202,81 +237,88 @@ public final class BbModelRepository {
         return String.join("/", result);
     }
 
-    private static Map<String, ResourceLocation> registerEmbeddedTextures(Map<ResourceLocation, BbModelData.Document> models) {
-        Minecraft minecraft = Minecraft.getInstance();
-        synchronized (DYNAMIC_TEXTURE_IDS) {
-            for (ResourceLocation id : DYNAMIC_TEXTURE_IDS) {
-                minecraft.getTextureManager().release(id);
-            }
-            DYNAMIC_TEXTURE_IDS.clear();
+    private static BbModelData.Document loadDocument(ResourceManager manager, ResourceLocation location) {
+        var resource = manager.getResource(location);
+        if (resource.isEmpty()) {
+            LOGGER.debug("Missing Blockbench model resource {}", location);
+            return null;
         }
+        try (Reader reader = resource.get().openAsReader()) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            return BbModelParser.parse(json);
+        } catch (Exception exception) {
+            LOGGER.error("Failed to load Blockbench model {}", location, exception);
+            return null;
+        }
+    }
 
-        Map<String, ResourceLocation> textures = new HashMap<>();
-        models.forEach((modelResource, document) -> document.textures().forEach(texture -> {
+    private static void loadModelAssets(ResourceManager manager, ResourceLocation modelResource,
+                                        List<FrameSpec.ModelSpec> specs, BbModelData.Document document,
+                                        Map<String, ResourceLocation> embedded,
+                                        Map<ResourceLocation, PixelShape> shapes) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Set<String> embeddedKeys = new HashSet<>();
+        Set<ResourceLocation> dynamicTextureIds = new HashSet<>();
+        Set<ResourceLocation> shapeIds = new HashSet<>();
+        for (BbModelData.Texture texture : document.textures()) {
             String source = texture.source();
             int comma = source == null ? -1 : source.indexOf(',');
             if (comma < 0 || !source.startsWith("data:image/")) {
-                return;
+                continue;
             }
             try {
                 byte[] bytes = Base64.getDecoder().decode(source.substring(comma + 1));
                 NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes));
                 ResourceLocation id = RIAutomobility.rl("bbmodel/embedded/" + sha256(modelResource + ":" + texture.uuid() + ":" + source.length()));
+                shapes.put(id, PixelShape.from(image));
                 minecraft.getTextureManager().register(id, new DynamicTexture(image));
-                textures.put(embeddedKey(modelResource, texture), id);
-                synchronized (DYNAMIC_TEXTURE_IDS) {
-                    DYNAMIC_TEXTURE_IDS.add(id);
-                }
+                String key = embeddedKey(modelResource, texture);
+                embedded.put(key, id);
+                embeddedKeys.add(key);
+                dynamicTextureIds.add(id);
+                shapeIds.add(id);
             } catch (Exception exception) {
                 LOGGER.error("Failed to decode embedded BBModel texture {} in {}", texture.name(), modelResource, exception);
             }
-        }));
-        return textures;
+        }
+
+        for (FrameSpec.ModelSpec spec : specs) {
+            for (BbModelData.Texture texture : document.textures()) {
+                ResourceLocation resolved = findOverride(spec, texture);
+                if (resolved == null) resolved = embedded.get(embeddedKey(modelResource, texture));
+                if (resolved == null) resolved = textureResource(modelResource, texture);
+                if (resolved == null) resolved = spec.texture();
+                if (shapes.containsKey(resolved)) {
+                    shapeIds.add(resolved);
+                    continue;
+                }
+                final ResourceLocation textureId = resolved;
+                manager.getResource(textureId).ifPresent(resource -> {
+                    try (var input = resource.open(); NativeImage image = NativeImage.read(input)) {
+                        shapes.put(textureId, PixelShape.from(image));
+                    } catch (Exception exception) {
+                        LOGGER.debug("Unable to read BBModel texture pixels from {}", textureId, exception);
+                    }
+                });
+                if (shapes.containsKey(resolved)) shapeIds.add(resolved);
+            }
+        }
+
+        EMBEDDED_KEYS_BY_MODEL.put(modelResource, Set.copyOf(embeddedKeys));
+        DYNAMIC_TEXTURE_IDS_BY_MODEL.put(modelResource, Set.copyOf(dynamicTextureIds));
+        TEXTURE_SHAPE_IDS_BY_MODEL.put(modelResource, Set.copyOf(shapeIds));
     }
 
-    private static Map<ResourceLocation, PixelShape> loadTextureShapes(ResourceManager manager, Map<ResourceLocation, List<FrameSpec.ModelSpec>> specs, Map<ResourceLocation, BbModelData.Document> models, Map<String, ResourceLocation> embedded) {
-        Map<ResourceLocation, PixelShape> shapes = new HashMap<>();
-        models.forEach((modelResource, document) -> {
-            List<FrameSpec.ModelSpec> modelSpecs = specs.get(modelResource);
-            if (modelSpecs == null) {
-                return;
-            }
-            for (FrameSpec.ModelSpec spec : modelSpecs) {
-                for (BbModelData.Texture texture : document.textures()) {
-                    ResourceLocation location = findOverride(spec, texture);
-                    if (location == null) {
-                        location = embedded.get(embeddedKey(modelResource, texture));
-                    }
-                    if (location == null) {
-                        location = textureResource(modelResource, texture);
-                    }
-                    if (location == null) {
-                        location = spec.texture();
-                    }
-                    final ResourceLocation resolved = location;
-                    try {
-                        if (texture.source() != null && texture.source().startsWith("data:image/")) {
-                            int comma = texture.source().indexOf(',');
-                            byte[] bytes = Base64.getDecoder().decode(texture.source().substring(comma + 1));
-                            try (NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes))) {
-                                shapes.put(resolved, PixelShape.from(image));
-                            }
-                        } else {
-                            manager.getResource(resolved).ifPresent(resource -> {
-                                try (var input = resource.open(); NativeImage image = NativeImage.read(input)) {
-                                    shapes.put(resolved, PixelShape.from(image));
-                                } catch (Exception exception) {
-                                    LOGGER.debug("Unable to read BBModel texture pixels from {}", resolved, exception);
-                                }
-                            });
-                        }
-                    } catch (Exception exception) {
-                        LOGGER.warn("Unable to build BBModel texture shape for {}", resolved, exception);
-                    }
-                }
-            }
-        });
-        return shapes;
+    private static void releaseDynamicTextures(Collection<ResourceLocation> modelResources) {
+        Minecraft minecraft = Minecraft.getInstance();
+        for (ResourceLocation modelResource : List.copyOf(modelResources)) {
+            Set<ResourceLocation> textures = DYNAMIC_TEXTURE_IDS_BY_MODEL.get(modelResource);
+            if (textures != null) textures.forEach(minecraft.getTextureManager()::release);
+        }
+    }
+
+    private static boolean shapeUsedByAnotherModel(ResourceLocation shape) {
+        return TEXTURE_SHAPE_IDS_BY_MODEL.values().stream().anyMatch(ids -> ids.contains(shape));
     }
 
     private static String embeddedKey(ResourceLocation model, BbModelData.Texture texture) {

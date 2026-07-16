@@ -44,6 +44,10 @@ class CarPackArchiveStoreTest {
 
         assertDoesNotThrow(() -> CarPackArchiveStore.validateRiautoArchive(archive));
         assertEquals("Test Author", CarPackArchiveStore.readAuthor(archive));
+        CarPackArchiveStore.ComponentMetadata metadata = CarPackArchiveStore.readComponentMetadata(archive);
+        assertEquals("Test Car", metadata.displayName());
+        assertEquals("Test Author", metadata.author());
+        assertEquals(new ResourceLocation("test", "car"), metadata.component().id());
     }
 
     @Test
@@ -78,7 +82,7 @@ class CarPackArchiveStoreTest {
 
         CarPackArchiveStore.validateRiautoArchive(archive);
         assertEquals(new CarPackArchiveStore.DeclaredComponent(
-                CarPackArchiveStore.ComponentKind.FRAME, new ResourceLocation("test", "frame")),
+                        CarPackArchiveStore.ComponentKind.FRAME, new ResourceLocation("test", "frame")),
                 CarPackArchiveStore.readDeclaredComponent(archive));
     }
 
@@ -243,20 +247,24 @@ class CarPackArchiveStoreTest {
     void validatesManifestBoundsAndDigests() {
         String digest = "a".repeat(64);
         assertDoesNotThrow(() -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024, new ResourceLocation("test", "frame")
+                "riautomobility/test", "test", "author", digest, digest, 1024,
+                new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "other/test", "test", digest, digest, 1024, new ResourceLocation("test", "frame")
+                "other/test", "test", "author", digest, digest, 1024,
+                new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", "invalid", digest, 1024, new ResourceLocation("test", "frame")
+                "riautomobility/test", "test", "author", "invalid", digest, 1024,
+                new ResourceLocation("test", "frame")
         ));
         assertThrows(IllegalArgumentException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, CarPackManifestEntry.MAX_ARCHIVE_SIZE + 1,
+                "riautomobility/test", "test", "author", digest, digest,
+                CarPackManifestEntry.MAX_ARCHIVE_SIZE + 1,
                 new ResourceLocation("test", "frame")
         ));
         assertThrows(NullPointerException.class, () -> new CarPackManifestEntry(
-                "riautomobility/test", "test", digest, digest, 1024, null
+                "riautomobility/test", "test", "author", digest, digest, 1024, null
         ));
     }
 

@@ -66,6 +66,9 @@ final class VehiclePreviewRenderer {
 
     private final VehicleEditorDraft draft;
     private final PreviewAutomobile preview;
+    private final Matrix4f orbitScale = new Matrix4f();
+    private final Quaternionf orbitXRotation = new Quaternionf();
+    private final Quaternionf orbitYRotation = new Quaternionf();
     private PlayerModel<AbstractClientPlayer> seatPlayerModel;
     private View view = View.FRAME;
     private int wheelPointIndex;
@@ -162,10 +165,12 @@ final class VehiclePreviewRenderer {
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate((x0 + x1) / 2.0F + panX, (y0 + y1) / 2.0F + 24 + panY, 160);
-        pose.mulPoseMatrix(new Matrix4f().scaling(zoom, zoom, -zoom));
+        // Keep preview scaling out of the normal matrix. The negative Z scale is a camera-space
+        // projection adjustment; applying it through PoseStack.scale flips the model lighting.
+        pose.mulPoseMatrix(orbitScale.scaling(zoom, zoom, -zoom));
         pose.mulPose(Axis.XP.rotationDegrees(180.0F));
-        pose.mulPose(new Quaternionf().rotationX((float) Math.toRadians(rotationX)));
-        pose.mulPose(new Quaternionf().rotationY((float) Math.toRadians(rotationY)));
+        pose.mulPose(orbitXRotation.rotationX((float) Math.toRadians(rotationX)));
+        pose.mulPose(orbitYRotation.rotationY((float) Math.toRadians(rotationY)));
         RenderSystem.enableDepthTest();
         Lighting.setupForEntityInInventory();
         MultiBufferSource.BufferSource buffers = graphics.bufferSource();

@@ -262,6 +262,21 @@ public class RIAutomobileModels {
         rebuildDynamicModels();
     }
 
+    public static void rebuildDynamicModelsNow(Collection<ResourceLocation> componentIds) {
+        if (renderContext == null || componentIds.isEmpty()) return;
+        Map<ResourceLocation, Function<EntityRendererProvider.Context, Model>> providers =
+                AutomobileModelsAccessor.riautomobility$getModelProviders();
+        Map<ResourceLocation, Model> models = AutomobileModelsAccessor.riautomobility$getModels();
+        for (ResourceLocation componentId : componentIds) {
+            FrameSpec.ModelSpec spec = CUSTOM_MODEL_SPECS.get(componentId);
+            if (spec == null) continue;
+            Model previous = models.get(spec.modelId());
+            if (previous instanceof DynamicBbModel bbModel) BbInstancedRenderer.clearModel(bbModel);
+            Function<EntityRendererProvider.Context, Model> provider = providers.get(spec.modelId());
+            if (provider != null) models.put(spec.modelId(), provider.apply(renderContext));
+        }
+    }
+
     public static void markMissingComponent(ResourceLocation componentId) {
         if (componentId != null) {
             MISSING_COMPONENTS.add(componentId);

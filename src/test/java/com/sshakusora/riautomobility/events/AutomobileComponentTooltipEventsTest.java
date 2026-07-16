@@ -15,6 +15,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AutomobileComponentTooltipEventsTest {
     @Test
+    void importedItemUsesTheAutomobilityItemTypeOnTheFirstLine() {
+        List<Component> tooltip = new ArrayList<>(List.of(
+                Component.literal("Imported Frame").withStyle(ChatFormatting.AQUA, ChatFormatting.ITALIC),
+                Component.literal("Weight: 0.9")
+        ));
+
+        AutomobileComponentTooltipEvents.replaceItemTypeName(
+                tooltip, Component.translatable("item.automobility.automobile_frame"));
+
+        TranslatableContents itemType = (TranslatableContents) tooltip.get(0).getContents();
+        assertEquals("item.automobility.automobile_frame", itemType.getKey());
+        assertEquals(ChatFormatting.AQUA.getColor(), tooltip.get(0).getStyle().getColor().getValue());
+        assertFalse(tooltip.get(0).getStyle().isItalic());
+    }
+
+    @Test
     void importedComponentNameReplacesTranslationAndStaysOnSecondLine() {
         List<Component> tooltip = new ArrayList<>(List.of(
                 Component.literal("Automobile Frame"),

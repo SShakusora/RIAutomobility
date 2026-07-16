@@ -163,6 +163,7 @@
   "editor.riautomobility.vehicle_import.validation.invalid_resource_id": "%s contains an invalid resource ID: %s",
   "editor.riautomobility.vehicle_import.validation.item_length": "Item display length must be greater than zero",
   "editor.riautomobility.vehicle_import.validation.seat_camera_positions": "Seat and camera positions must contain finite numbers",
+  "gui.riautomobility.scrollbar": "Scrollbar",
   "entity.riautomobility.hitbox": "RIAutomobile",
   "entity.riautomobility.riautomobile": "RIAutomobile",
   "frame.riautomobility.bejeweled_doublemotorcar": "Bejeweled DoubleMotorcar",

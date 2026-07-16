@@ -545,6 +545,14 @@ public final class VehicleEditorDraft {
         wheelRotationY = size.rotationY();
     }
 
+    boolean usesAutomaticFrameModelSize() {
+        return automaticFrameModelSize;
+    }
+
+    boolean usesAutomaticWheelModelSize() {
+        return automaticWheelModelSize;
+    }
+
     void setManualWheelRadius(float value) {
         wheelRadius = value;
         automaticWheelModelSize = false;

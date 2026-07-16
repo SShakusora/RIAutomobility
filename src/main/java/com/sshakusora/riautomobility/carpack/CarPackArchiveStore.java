@@ -30,6 +30,7 @@ public final class CarPackArchiveStore {
     private static final String COMPONENT_DATA_PATTERN =
             "data/[a-z0-9_.-]+/riautomobility/(frames|wheels|engines)/[a-z0-9/._-]+\\.json";
     private static volatile Map<String, TransferPack> transferPacks = Map.of();
+    private static volatile Map<ResourceLocation, ItemMetadata> componentMetadata = Map.of();
 
     private CarPackArchiveStore() {
     }
@@ -37,6 +38,7 @@ public final class CarPackArchiveStore {
     public static synchronized List<CarPackManifestEntry> prepareManifest() {
         Map<String, TransferPack> prepared = new LinkedHashMap<>();
         Map<ResourceLocation, String> componentOwners = new HashMap<>();
+        Map<ResourceLocation, ItemMetadata> preparedMetadata = new HashMap<>();
         for (CarPackManager.CarPack pack : CarPackManager.discoverCarPacks()) {
             try {
                 TransferPack transferPack = prepare(pack);
@@ -46,6 +48,7 @@ public final class CarPackArchiveStore {
                     throw new IOException("Component " + component + " is declared by both " + previous + " and " + pack.id());
                 }
                 prepared.put(pack.id(), transferPack);
+                preparedMetadata.put(component, transferPack.metadata().itemMetadata());
             } catch (IOException exception) {
                 throw new IllegalStateException("Unable to prepare car pack " + pack.id() + " for network transfer", exception);
             }
@@ -54,12 +57,29 @@ public final class CarPackArchiveStore {
             throw new IllegalStateException("Too many car packs for network synchronization: " + prepared.size());
         }
         transferPacks = Map.copyOf(prepared);
+        componentMetadata = Map.copyOf(preparedMetadata);
         return prepared.values().stream().map(TransferPack::manifest).toList();
     }
 
     public static TransferPack find(String id, String archiveDigest) {
         TransferPack pack = transferPacks.get(id);
         return pack != null && pack.manifest().archiveDigest().equals(archiveDigest) ? pack : null;
+    }
+
+    public static ItemMetadata findComponentMetadata(ResourceLocation component) {
+        return componentMetadata.get(component);
+    }
+
+    public static synchronized void installComponentMetadata(Collection<CarPackManifestEntry> manifest) {
+        Map<ResourceLocation, ItemMetadata> installed = new HashMap<>();
+        for (CarPackManifestEntry entry : manifest) {
+            ItemMetadata previous = installed.put(entry.component(),
+                    new ItemMetadata(entry.displayName(), entry.author()));
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate component metadata: " + entry.component());
+            }
+        }
+        componentMetadata = Map.copyOf(installed);
     }
 
     private static TransferPack prepare(CarPackManager.CarPack pack) throws IOException {
@@ -82,14 +102,25 @@ public final class CarPackArchiveStore {
             throw new IOException("Car pack archive exceeds " + CarPackManifestEntry.MAX_ARCHIVE_SIZE + " bytes");
         }
         String archiveDigest = sha256(archive);
+        ComponentMetadata metadata = readComponentMetadata(archive);
         return new TransferPack(
-                new CarPackManifestEntry(pack.id(), pack.displayName(), pack.digest(), archiveDigest, size,
-                        readDeclaredComponent(archive).id()),
-                archive
+                new CarPackManifestEntry(pack.id(), metadata.displayName(), metadata.author(),
+                        pack.digest(), archiveDigest, size,
+                        metadata.component().id()),
+                archive,
+                metadata
         );
     }
 
     public static DeclaredComponent readDeclaredComponent(Path archive) throws IOException {
+        return readComponentMetadata(archive).component();
+    }
+
+    public static String readAuthor(Path archive) throws IOException {
+        return readComponentMetadata(archive).author();
+    }
+
+    public static ComponentMetadata readComponentMetadata(Path archive) throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
             if (metadataEntry == null || metadataEntry.isDirectory()) {
@@ -99,37 +130,29 @@ public final class CarPackArchiveStore {
             try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
                 metadata = JsonParser.parseReader(reader).getAsJsonObject();
             }
-            List<DeclaredComponent> declared = new ArrayList<>();
-            JsonObject components = metadata.getAsJsonObject("components");
-            for (ComponentKind kind : ComponentKind.values()) {
-                if (!components.has(kind.collection)) continue;
-                for (JsonElement element : components.getAsJsonArray(kind.collection)) {
-                    ResourceLocation id = ResourceLocation.tryParse(element.getAsString());
-                    if (id == null) throw new IOException("RIAuto metadata contains an invalid component id");
-                    declared.add(new DeclaredComponent(kind, id));
-                }
-            }
-            if (declared.size() != 1) {
-                throw new IOException("RIAuto metadata must declare exactly one component");
-            }
-            return declared.get(0);
+            validateRiautoMetadata(metadata);
+            return new ComponentMetadata(readDeclaredComponent(metadata),
+                    requireString(metadata, "name"), metadataAuthor(metadata));
         } catch (RuntimeException exception) {
             throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
     }
 
-    public static String readAuthor(Path archive) throws IOException {
-        try (ZipFile zip = new ZipFile(archive.toFile())) {
-            ZipEntry metadataEntry = zip.getEntry(RIAUTO_METADATA_FILE);
-            if (metadataEntry == null || metadataEntry.isDirectory()) {
-                throw new IOException("RIAuto archive does not contain a root " + RIAUTO_METADATA_FILE);
+    private static DeclaredComponent readDeclaredComponent(JsonObject metadata) throws IOException {
+        List<DeclaredComponent> declared = new ArrayList<>();
+        JsonObject components = metadata.getAsJsonObject("components");
+        for (ComponentKind kind : ComponentKind.values()) {
+            if (!components.has(kind.collection)) continue;
+            for (JsonElement element : components.getAsJsonArray(kind.collection)) {
+                ResourceLocation id = ResourceLocation.tryParse(element.getAsString());
+                if (id == null) throw new IOException("RIAuto metadata contains an invalid component id");
+                declared.add(new DeclaredComponent(kind, id));
             }
-            try (var reader = new InputStreamReader(zip.getInputStream(metadataEntry), StandardCharsets.UTF_8)) {
-                return metadataAuthor(JsonParser.parseReader(reader).getAsJsonObject());
-            }
-        } catch (RuntimeException exception) {
-            throw new IOException("Invalid " + RIAUTO_METADATA_FILE + ": " + exception.getMessage(), exception);
         }
+        if (declared.size() != 1) {
+            throw new IOException("RIAuto metadata must declare exactly one component");
+        }
+        return declared.get(0);
     }
 
     private static void createArchive(Path root, Path target) throws IOException {
@@ -416,7 +439,26 @@ public final class CarPackArchiveStore {
         return result.toString();
     }
 
-    public record TransferPack(CarPackManifestEntry manifest, Path archive) {
+    public record TransferPack(CarPackManifestEntry manifest, Path archive, ComponentMetadata metadata) {
+    }
+
+    public record ComponentMetadata(DeclaredComponent component, String displayName, String author) {
+        public ComponentMetadata {
+            Objects.requireNonNull(component, "component");
+            Objects.requireNonNull(displayName, "displayName");
+            Objects.requireNonNull(author, "author");
+        }
+
+        public ItemMetadata itemMetadata() {
+            return new ItemMetadata(displayName, author);
+        }
+    }
+
+    public record ItemMetadata(String displayName, String author) {
+        public ItemMetadata {
+            Objects.requireNonNull(displayName, "displayName");
+            Objects.requireNonNull(author, "author");
+        }
     }
 
     public enum ComponentKind {

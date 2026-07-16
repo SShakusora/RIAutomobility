@@ -14,6 +14,7 @@ import java.util.function.DoubleSupplier;
 public final class BbAnimationPlayer {
     private static final Map<String, MolangValue> EXPRESSIONS = new ConcurrentHashMap<>();
     private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
+    private static final Map<RenderableAutomobile, SampleCache> SAMPLE_CACHES = new WeakHashMap<>();
     private static final QueryState QUERY_STATE = new QueryState();
     private static final DoubleSupplier ANIMATION_TIME = () -> QUERY_STATE.animationTime;
     private static final DoubleSupplier LIFE_TIME = () -> QUERY_STATE.lifeTime;
@@ -24,6 +25,7 @@ public final class BbAnimationPlayer {
     private static final DoubleSupplier TURBO_CHARGE = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getTurboCharge();
     private static final DoubleSupplier BOOST_TIMER = () -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getBoostTimer();
     private static final ThreadLocal<AnimationScratch> SAMPLE_SCRATCH = ThreadLocal.withInitial(AnimationScratch::new);
+    private static final ThreadLocal<SampleCache> FALLBACK_SAMPLE_CACHE = ThreadLocal.withInitial(SampleCache::new);
 
     private BbAnimationPlayer() {
     }
@@ -39,7 +41,7 @@ public final class BbAnimationPlayer {
     }
 
     static Map<String, Transform> sampleUncached(BbModelData.Document document, String requestedAnimation,
-                                                  BbRenderContext context) {
+                                                 BbRenderContext context) {
         BbModelData.Animation animation = selectAnimation(document, requestedAnimation);
         if (animation == null) {
             return Map.of();
@@ -52,20 +54,25 @@ public final class BbAnimationPlayer {
         configureMolang(automobile, time, absoluteTime, tickDelta);
 
         List<PreparedAnimator> animators = prepared(animation);
-        Map<String, Transform> sampled = new HashMap<>(Math.max(4, animators.size() * 2));
-        for (PreparedAnimator animator : animators) {
-            Vector3f position = sampleChannel(animator.position(), time, new Vector3f());
-            Vector3f rotation = sampleChannel(animator.rotation(), time, new Vector3f());
-            Vector3f scale = sampleChannel(animator.scale(), time, new Vector3f(1, 1, 1));
-            sampled.put(animator.target(), new Transform(position, rotation, scale));
+        SampleCache cache;
+        if (automobile == null) {
+            cache = FALLBACK_SAMPLE_CACHE.get();
+        } else {
+            synchronized (SAMPLE_CACHES) {
+                cache = SAMPLE_CACHES.computeIfAbsent(automobile, ignored -> new SampleCache());
+            }
         }
-        return Map.copyOf(sampled);
+        return cache.sample(document, requestedAnimation, animation, animators, time, absoluteTime, tickDelta);
     }
 
     static void clearCache() {
         synchronized (PREPARED) {
             PREPARED.clear();
         }
+        synchronized (SAMPLE_CACHES) {
+            SAMPLE_CACHES.clear();
+        }
+        FALLBACK_SAMPLE_CACHE.remove();
     }
 
     private static List<PreparedAnimator> prepared(BbModelData.Animation animation) {
@@ -206,7 +213,7 @@ public final class BbAnimationPlayer {
     }
 
     private static Vector3f catmullRomInto(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3,
-                                          float t, Vector3f output) {
+                                           float t, Vector3f output) {
         float t2 = t * t;
         float t3 = t2 * t;
         return output.set(
@@ -293,6 +300,60 @@ public final class BbAnimationPlayer {
         private final Vector3f b = new Vector3f();
         private final Vector3f c = new Vector3f();
         private final Vector3f d = new Vector3f();
+    }
+
+    private static final class SampleCache {
+        private final Map<BbModelData.Document, Map<String, SampledAnimation>> documents = new IdentityHashMap<>();
+
+        Map<String, Transform> sample(BbModelData.Document document, String requestedAnimation,
+                                      BbModelData.Animation animation, List<PreparedAnimator> animators,
+                                      float time, float absoluteTime, float tickDelta) {
+            String key = requestedAnimation == null ? "" : requestedAnimation;
+            Map<String, SampledAnimation> animations = documents.computeIfAbsent(document, ignored -> new HashMap<>());
+            SampledAnimation sampled = animations.computeIfAbsent(key, ignored -> new SampledAnimation());
+            return sampled.sample(animation, animators, time, absoluteTime, tickDelta);
+        }
+    }
+
+    private static final class SampledAnimation {
+        private BbModelData.Animation animation;
+        private final Map<String, Transform> mutable = new HashMap<>();
+        private Map<String, Transform> view = Map.of();
+        private int timeBits;
+        private int absoluteTimeBits;
+        private int tickDeltaBits;
+        private boolean sampled;
+
+        Map<String, Transform> sample(BbModelData.Animation animation, List<PreparedAnimator> animators,
+                                      float time, float absoluteTime, float tickDelta) {
+            int nextTimeBits = Float.floatToIntBits(time);
+            int nextAbsoluteTimeBits = Float.floatToIntBits(absoluteTime);
+            int nextTickDeltaBits = Float.floatToIntBits(tickDelta);
+            if (sampled && this.animation == animation && timeBits == nextTimeBits
+                    && absoluteTimeBits == nextAbsoluteTimeBits && tickDeltaBits == nextTickDeltaBits) {
+                return view;
+            }
+            if (this.animation != animation) {
+                this.animation = animation;
+                mutable.clear();
+                for (PreparedAnimator animator : animators) {
+                    mutable.put(animator.target(), new Transform(
+                            new Vector3f(), new Vector3f(), new Vector3f(1, 1, 1)));
+                }
+                view = Collections.unmodifiableMap(mutable);
+            }
+            for (PreparedAnimator animator : animators) {
+                Transform transform = mutable.get(animator.target());
+                sampleChannel(animator.position(), time, transform.position().zero());
+                sampleChannel(animator.rotation(), time, transform.rotation().zero());
+                sampleChannel(animator.scale(), time, transform.scale().set(1, 1, 1));
+            }
+            timeBits = nextTimeBits;
+            absoluteTimeBits = nextAbsoluteTimeBits;
+            tickDeltaBits = nextTickDeltaBits;
+            sampled = true;
+            return view;
+        }
     }
 
     private static final class InvalidMolangException extends RuntimeException {

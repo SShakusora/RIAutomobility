@@ -268,6 +268,26 @@ class BbModelParserTest {
     }
 
     @Test
+    void reusesAnimationSampleStorage() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "elements":[],
+                  "animations":[{"name":"cached","animators":{"bone":{"type":"bone","keyframes":[
+                    {"channel":"position","time":0,"data_points":[{"x":1,"y":2,"z":3}]}
+                  ]}}}]
+                }
+                """).getAsJsonObject());
+
+        Map<String, BbAnimationPlayer.Transform> first = BbAnimationPlayer.sample(document, "cached", null);
+        Map<String, BbAnimationPlayer.Transform> second = BbAnimationPlayer.sample(document, "cached", null);
+
+        assertSame(first, second);
+        assertSame(first.get("bone"), second.get("bone"));
+        assertSame(first.get("bone").position(), second.get("bone").position());
+    }
+
+    @Test
     void bezierInterpolationUsesRelativeValueAndTimeHandles() {
         BbModelData.Keyframe before = keyframe(0.0F, new float[]{0.8F, 0.8F, 0.8F}, new float[]{1, 1, 1}, new float[0], new float[0]);
         BbModelData.Keyframe after = keyframe(1.0F, new float[0], new float[0], new float[]{-0.1F, -0.1F, -0.1F}, new float[]{1, 1, 1});

@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.carpack.CarPackArchiveStore;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
+import net.minecraft.world.phys.Vec3;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,10 @@ import java.util.Base64;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -22,6 +27,11 @@ public final class VehiclePackBuilder {
     public static final long MAX_SOURCE_FILE_SIZE = 32L * 1024L * 1024L;
     private static final String EMBEDDED_PNG_PREFIX = "data:image/png;base64,";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final ExecutorService BUILD_IO = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "RIAutomobility vehicle pack builder");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private VehiclePackBuilder() {
     }
@@ -73,6 +83,100 @@ public final class VehiclePackBuilder {
         return destination;
     }
 
+    public static ExportRequest capture(VehicleEditorDraft draft, String author) throws IOException {
+        author = validateAuthor(author);
+        String validation = draft.validationError();
+        if (!validation.isBlank()) throw new IOException(validation);
+        Path modelFile = draft.modelFile();
+        if (modelFile == null) throw new IOException("Source model is unavailable");
+        JsonObject component = switch (draft.target) {
+            case FRAME -> draft.frameSpec(false).toJson();
+            case WHEEL -> draft.wheelSpec(false).toJson();
+            case ENGINE -> draft.engineSpec(false).toJson();
+        };
+        return new ExportRequest(draft.target, modelFile, draft.namespace(), draft.componentPath(),
+                draft.displayName(), author, component.deepCopy(), draft.packName(), draft.overwrite,
+                draft.usesAutomaticFrameModelSize(), draft.usesAutomaticWheelModelSize());
+    }
+
+    public static CompletableFuture<Path> buildAsync(ExportRequest request, Path destination) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return build(request, destination);
+            } catch (IOException exception) {
+                throw new CompletionException(exception);
+            }
+        }, BUILD_IO);
+    }
+
+    static Path build(ExportRequest request, Path destination) throws IOException {
+        byte[] sourceBytes = readLimited(request.modelFile());
+        BbModelData.Document sourceDocument = validateSource(sourceBytes);
+        String textureBasePath = "textures/entity/automobile/" + request.target().path + "/" + request.componentPath();
+        BbModelRuntimeSanitizer.ExportedModel exported = BbModelRuntimeSanitizer.externalize(
+                sourceBytes, request.namespace(), textureBasePath);
+        BbModelParser.requireExternalPngTextures(parseSource(exported.modelBytes()));
+        Files.createDirectories(destination.getParent());
+
+        String declaredComponentId = request.namespace() + ":" + request.componentPath();
+        JsonObject metadata = new JsonObject();
+        metadata.addProperty("format", CarPackArchiveStore.RIAUTO_FORMAT_VERSION);
+        metadata.addProperty("id", declaredComponentId);
+        metadata.addProperty("name", request.displayName());
+        metadata.addProperty("author", request.author());
+        JsonObject components = new JsonObject();
+        components.add("frames", componentArray(request.target() == VehicleEditorDraft.Target.FRAME, declaredComponentId));
+        components.add("wheels", componentArray(request.target() == VehicleEditorDraft.Target.WHEEL, declaredComponentId));
+        components.add("engines", componentArray(request.target() == VehicleEditorDraft.Target.ENGINE, declaredComponentId));
+        metadata.add("components", components);
+
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put(CarPackArchiveStore.RIAUTO_METADATA_FILE,
+                GSON.toJson(metadata).getBytes(StandardCharsets.UTF_8));
+        JsonObject component = request.component().deepCopy();
+        applyAutomaticModelSize(request, component, sourceDocument);
+        addV2ModelEntries(entries, component, exported, request.namespace(), request.target().path, request.componentPath());
+        entries.put("data/" + request.namespace() + "/riautomobility/" + request.target().path + "s/"
+                + request.componentPath() + ".json", GSON.toJson(component).getBytes(StandardCharsets.UTF_8));
+        writeArchive(destination, entries);
+        return destination;
+    }
+
+    private static void applyAutomaticModelSize(ExportRequest request, JsonObject component,
+                                                BbModelData.Document sourceDocument) {
+        if (request.target() == VehicleEditorDraft.Target.FRAME && request.automaticFrameModelSize()) {
+            BbModelBounds.Measurement measurement = BbModelBounds.measure(sourceDocument);
+            component.addProperty("length_px", measurement.frameItemLengthPx());
+            BbModelBounds.Size size = measurement.size();
+            Vec3 offset = VehicleEditorDraft.automaticThirdPersonCameraOffset(
+                    size.widthPx(), size.heightPx(), size.depthPx());
+            JsonArray seats = component.getAsJsonArray("seats");
+            JsonArray cameras = new JsonArray();
+            int cameraCount = Math.max(1, seats == null ? 0 : seats.size());
+            for (int index = 0; index < cameraCount; index++) {
+                JsonObject camera = new JsonObject();
+                camera.addProperty("x", offset.x);
+                camera.addProperty("y", offset.y);
+                camera.addProperty("z", offset.z);
+                cameras.add(camera);
+            }
+            component.add("camera_positions", cameras);
+        } else if (request.target() == VehicleEditorDraft.Target.WHEEL && request.automaticWheelModelSize()) {
+            BbModelBounds.Measurement measurement = BbModelBounds.measure(sourceDocument);
+            VehicleEditorDraft.AutomaticWheelModelSize size =
+                    VehicleEditorDraft.automaticWheelModelSize(measurement.size());
+            component.addProperty("radius", size.radiusPx());
+            component.addProperty("width", size.widthPx());
+            component.getAsJsonObject("model").addProperty("rotation_y", size.rotationY());
+        }
+    }
+
+    private static JsonArray componentArray(boolean include, String componentId) {
+        JsonArray values = new JsonArray();
+        if (include) values.add(componentId);
+        return values;
+    }
+
     static Path buildPreview(VehicleEditorDraft draft, Path destination) throws IOException {
         Map<VehicleEditorDraft.Target, Path> modelFiles = new EnumMap<>(VehicleEditorDraft.Target.class);
         Map<VehicleEditorDraft.Target, String> previewKeys = new EnumMap<>(VehicleEditorDraft.Target.class);
@@ -90,9 +194,10 @@ public final class VehiclePackBuilder {
     }
 
     static Path buildPreview(Map<VehicleEditorDraft.Target, Path> modelFiles,
-                              Map<VehicleEditorDraft.Target, String> previewKeys,
-                              Path destination) throws IOException {
-        return buildPreview(modelFiles, previewKeys, destination, (target, document) -> {});
+                             Map<VehicleEditorDraft.Target, String> previewKeys,
+                             Path destination) throws IOException {
+        return buildPreview(modelFiles, previewKeys, destination, (target, document) -> {
+        });
     }
 
     private static Path buildPreview(Map<VehicleEditorDraft.Target, Path> modelFiles,
@@ -229,5 +334,17 @@ public final class VehiclePackBuilder {
     }
 
     private record ValidatedModel(BbModelRuntimeSanitizer.ExportedModel exported) {
+    }
+
+    public record ExportRequest(VehicleEditorDraft.Target target, Path modelFile, String namespace,
+                                String componentPath, String displayName, String author,
+                                JsonObject component, String packName, boolean overwrite,
+                                boolean automaticFrameModelSize, boolean automaticWheelModelSize) {
+        public ExportRequest(VehicleEditorDraft.Target target, Path modelFile, String namespace,
+                             String componentPath, String displayName, String author,
+                             JsonObject component, String packName, boolean overwrite) {
+            this(target, modelFile, namespace, componentPath, displayName, author, component, packName,
+                    overwrite, false, false);
+        }
     }
 }

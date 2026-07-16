@@ -63,10 +63,14 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private final List<HitboxEntity> hitboxes = new ArrayList<>();
     private final UUID[] persistedSeatPassengers = new UUID[MAX_TRACKED_SEATS];
+    private final int[] seatAssignmentScratch = new int[MAX_TRACKED_SEATS];
 
-    @Nullable private ResourceLocation unresolvedFrameId;
-    @Nullable private ResourceLocation unresolvedWheelId;
-    @Nullable private ResourceLocation unresolvedEngineId;
+    @Nullable
+    private ResourceLocation unresolvedFrameId;
+    @Nullable
+    private ResourceLocation unresolvedWheelId;
+    @Nullable
+    private ResourceLocation unresolvedEngineId;
 
     private boolean changed = false;
     private int collisionWarmupTicks = 0;
@@ -697,23 +701,37 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private void receiveVehicleCollisions() {
-        if (isDecorative() || collisionWarmupTicks > 0) {
+        if (isDecorative() || collisionWarmupTicks > 0
+                || level().isClientSide() && !isControlledByLocalInstance()) {
             return;
         }
 
-        var collisions = new HashMap<AutomobileEntity, IncomingCollision>();
-
+        AABB searchBox = null;
         for (HitboxEntity box : this.hitboxes) {
-            if (!box.isCollisionReady()) {
-                continue;
-            }
+            if (!box.isCollisionReady()) continue;
+            AABB candidate = box.getBoundingBox().inflate(0.15);
+            searchBox = searchBox == null ? candidate : searchBox.minmax(candidate);
+        }
+        if (searchBox == null) return;
+
+        List<HitboxEntity> nearby = this.level().getEntities(
+                EntityTypeTest.forClass(HitboxEntity.class), searchBox,
+                hitbox -> hitbox.isCollisionReady() && hitbox.getAutomobile() != this);
+        if (nearby.isEmpty()) return;
+
+        Map<AutomobileEntity, IncomingCollision> collisions = new IdentityHashMap<>();
+        for (HitboxEntity box : this.hitboxes) {
+            if (!box.isCollisionReady()) continue;
             AABB bbox = box.getBoundingBox().inflate(0.15);
-            for (HitboxEntity hitbox : this.level().getEntities(EntityTypeTest.forClass(HitboxEntity.class), bbox, h -> h.isCollisionReady() && h.getAutomobile() != this)) {
+            for (HitboxEntity hitbox : nearby) {
+                if (!bbox.intersects(hitbox.getBoundingBox())) continue;
                 AutomobileEntity auto = hitbox.getAutomobile();
+                if (auto == null) continue;
                 AABB intersect = hitbox.getBoundingBox().inflate(0.15).intersect(bbox);
                 Vec3 collDepth = new Vec3(intersect.getXsize(), 0, intersect.getZsize());
 
-                if (auto == null || collisions.containsKey(auto) && collisions.get(auto).depth().lengthSqr() > collDepth.lengthSqr()) {
+                IncomingCollision previous = collisions.get(auto);
+                if (previous != null && previous.depth().lengthSqr() > collDepth.lengthSqr()) {
                     continue;
                 }
 
@@ -829,7 +847,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
     private void reconcileSeatAssignments() {
         int seatCount = getSeatCount();
-        Set<Integer> assignedPassengers = new HashSet<>();
+        int assignedCount = 0;
 
         for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
             if (i >= seatCount) {
@@ -838,8 +856,18 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
             }
 
             Entity passenger = getSeatPassenger(i);
-            if (passenger == null || !assignedPassengers.add(passenger.getId())) {
+            int passengerId = passenger == null ? -1 : passenger.getId();
+            boolean duplicate = false;
+            for (int assignedIndex = 0; assignedIndex < assignedCount; assignedIndex++) {
+                if (seatAssignmentScratch[assignedIndex] == passengerId) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (passenger == null || duplicate) {
                 setTrackedSeatPassengerId(i, -1);
+            } else {
+                seatAssignmentScratch[assignedCount++] = passengerId;
             }
         }
 

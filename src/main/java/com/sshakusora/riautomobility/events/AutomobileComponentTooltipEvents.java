@@ -32,13 +32,9 @@ public final class AutomobileComponentTooltipEvents {
         if (displayName.isBlank() && stack.hasCustomHoverName()
                 && isGeneratedComponent(component.getId())) {
             displayName = stack.getHoverName().getString();
-            if (!event.getToolTip().isEmpty()) {
-                Component itemTypeName = stack.getItem().getName(stack).copy()
-                        .withStyle(event.getToolTip().get(0).getStyle());
-                event.getToolTip().set(0, itemTypeName);
-            }
         }
         if (!displayName.isBlank()) {
+            replaceItemTypeName(event.getToolTip(), stack.getItem().getName(stack));
             replaceComponentName(event.getToolTip(), component.getId(), displayName);
         }
         String author = VehicleComponentItemData.getAuthor(stack);
@@ -49,6 +45,11 @@ public final class AutomobileComponentTooltipEvents {
             event.getToolTip().add(Component.translatable(
                     "tooltip.riautomobility.missing_car_pack_resources").withStyle(ChatFormatting.RED));
         }
+    }
+
+    static void replaceItemTypeName(List<Component> tooltip, Component itemTypeName) {
+        if (tooltip.isEmpty()) return;
+        tooltip.set(0, itemTypeName.copy().withStyle(tooltip.get(0).getStyle().withItalic(false)));
     }
 
     static void replaceComponentName(List<Component> tooltip, ResourceLocation componentId, String displayName) {

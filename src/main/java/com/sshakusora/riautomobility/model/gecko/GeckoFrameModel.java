@@ -1,10 +1,10 @@
 package com.sshakusora.riautomobility.model.gecko;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.model.PlaceholderAutomobileModel;
+import com.sshakusora.riautomobility.model.bbmodel.BbRenderContext;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -25,6 +25,7 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
     private final Model fallbackModel;
     private final ResourceLocation missingComponentId;
     private final Consumer<ResourceLocation> missingComponentCallback;
+    private final DirectBufferSource directBuffers = new DirectBufferSource();
     private boolean broken;
     private boolean loggedBroken;
 
@@ -46,28 +47,24 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
         this.missingComponentCallback = missingComponentCallback;
     }
 
-//    @Override
-//    public RenderType renderType(ResourceLocation texture) {
-//        return geoRenderer.getRenderType(animatable, texture, null, 0);
-//    }
-
     @Override
     public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         if (this.broken) {
-            renderFallback(poseStack, packedLight, packedOverlay, red, green, blue, alpha);
+            renderFallback(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
             return;
         }
 
         poseStack.pushPose();
         poseStack.scale(-1, -1, 1);
-        MultiBufferSource.BufferSource fakeBufferSource = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+        BbRenderContext context = BbRenderContext.current();
+        MultiBufferSource bufferSource = context == null ? directBuffers.bind(buffer) : context.buffers();
 
         try {
             geoRenderer.defaultRender(
                     poseStack,
                     animatable,
-                    fakeBufferSource,
-                    geoRenderer.getRenderType(animatable, geoRenderer.getTextureLocation(animatable), fakeBufferSource, 0),
+                    bufferSource,
+                    geoRenderer.getRenderType(animatable, geoRenderer.getTextureLocation(animatable), bufferSource, 0),
                     buffer,
                     0,
                     0,
@@ -82,24 +79,45 @@ public class GeckoFrameModel<T extends GeoAnimatable> extends Model {
                 this.loggedBroken = true;
                 LOGGER.error("Failed to render GeckoLib automobile model {}; falling back to placeholder", geoModel.getClass().getName(), exception);
             }
-            renderFallback(poseStack, packedLight, packedOverlay, red, green, blue, alpha);
+            renderFallback(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+        } finally {
+            if (context == null) directBuffers.clear();
         }
 
-        fakeBufferSource.endBatch();
         poseStack.popPose();
     }
 
-    private void renderFallback(PoseStack poseStack, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+    private void renderFallback(PoseStack poseStack, VertexConsumer defaultBuffer, int packedLight, int packedOverlay,
+                                float red, float green, float blue, float alpha) {
         if (this.fallbackModel == null) {
             return;
         }
 
         poseStack.pushPose();
         poseStack.scale(-1, -1, 1);
-        MultiBufferSource.BufferSource fallbackBuffers = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-        VertexConsumer fallbackConsumer = fallbackBuffers.getBuffer(this.fallbackModel.renderType(PlaceholderAutomobileModel.TEXTURE));
+        BbRenderContext context = BbRenderContext.current();
+        VertexConsumer fallbackConsumer = context == null ? defaultBuffer
+                : context.buffers().getBuffer(this.fallbackModel.renderType(PlaceholderAutomobileModel.TEXTURE));
         this.fallbackModel.renderToBuffer(poseStack, fallbackConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-        fallbackBuffers.endBatch();
         poseStack.popPose();
+    }
+
+    private static final class DirectBufferSource implements MultiBufferSource {
+        private VertexConsumer buffer;
+
+        DirectBufferSource bind(VertexConsumer buffer) {
+            this.buffer = buffer;
+            return this;
+        }
+
+        void clear() {
+            this.buffer = null;
+        }
+
+        @Override
+        public VertexConsumer getBuffer(RenderType renderType) {
+            if (buffer == null) throw new IllegalStateException("Gecko render buffer is not bound");
+            return buffer;
+        }
     }
 }

@@ -11,6 +11,8 @@ import net.minecraft.resources.ResourceLocation;
 import org.joml.Quaternionf;
 
 public class RIAutomobileEntityRenderer extends EntityRenderer<RIAutomobileEntity> {
+    private final Quaternionf rotation = new Quaternionf();
+
     public RIAutomobileEntityRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
     }
@@ -28,7 +30,7 @@ public class RIAutomobileEntityRenderer extends EntityRenderer<RIAutomobileEntit
         float offsetY = entity.getDisplacement().getVertical(tickDelta);
 
         pose.translate(0, offsetY, 0);
-        pose.mulPose(new Quaternionf().rotationXYZ((float) Math.toRadians(angX), 0, (float) Math.toRadians(angZ)));
+        pose.mulPose(rotation.rotationXYZ((float) Math.toRadians(angX), 0, (float) Math.toRadians(angZ)));
 
         AutomobileRenderer.render(pose, buffers, light, OverlayTexture.NO_OVERLAY, tickDelta, entity);
         pose.popPose();

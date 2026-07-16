@@ -3,19 +3,18 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import net.minecraft.client.renderer.MultiBufferSource;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public final class BbRenderContext {
-    private static final ThreadLocal<Deque<BbRenderContext>> CURRENT =
-            ThreadLocal.withInitial(ArrayDeque::new);
+    private static final ThreadLocal<ContextStack> CURRENT = ThreadLocal.withInitial(ContextStack::new);
 
-    private final MultiBufferSource buffers;
-    private final RenderableAutomobile automobile;
-    private final float tickDelta;
-    private final Map<BbModelData.Document, Map<String, Map<String, BbAnimationPlayer.Transform>>> animationSamples =
-            new IdentityHashMap<>();
+    private MultiBufferSource buffers;
+    private RenderableAutomobile automobile;
+    private float tickDelta;
 
-    private BbRenderContext(MultiBufferSource buffers, RenderableAutomobile automobile, float tickDelta) {
+    private void set(MultiBufferSource buffers, RenderableAutomobile automobile, float tickDelta) {
         this.buffers = buffers;
         this.automobile = automobile;
         this.tickDelta = tickDelta;
@@ -35,28 +34,40 @@ public final class BbRenderContext {
 
     Map<String, BbAnimationPlayer.Transform> animationSample(
             BbModelData.Document document, String requestedAnimation) {
-        Map<String, Map<String, BbAnimationPlayer.Transform>> byAnimation =
-                animationSamples.computeIfAbsent(document, ignored -> new HashMap<>());
-        String key = requestedAnimation == null ? "" : requestedAnimation;
-        Map<String, BbAnimationPlayer.Transform> cached = byAnimation.get(key);
-        if (cached != null) return cached;
-        Map<String, BbAnimationPlayer.Transform> sampled =
-                BbAnimationPlayer.sampleUncached(document, requestedAnimation, this);
-        byAnimation.put(key, sampled);
-        return sampled;
+        return BbAnimationPlayer.sampleUncached(document, requestedAnimation, this);
     }
 
     public static void begin(MultiBufferSource buffers, RenderableAutomobile automobile, float tickDelta) {
-        CURRENT.get().push(new BbRenderContext(buffers, automobile, tickDelta));
+        CURRENT.get().push(buffers, automobile, tickDelta);
     }
 
     public static BbRenderContext current() {
-        return CURRENT.get().peek();
+        return CURRENT.get().current();
     }
 
     public static void end() {
-        Deque<BbRenderContext> contexts = CURRENT.get();
-        if (!contexts.isEmpty()) contexts.pop();
-        if (contexts.isEmpty()) CURRENT.remove();
+        CURRENT.get().pop();
+    }
+
+    private static final class ContextStack {
+        private final List<BbRenderContext> contexts = new ArrayList<>(2);
+        private int depth;
+
+        void push(MultiBufferSource buffers, RenderableAutomobile automobile, float tickDelta) {
+            if (depth == contexts.size()) contexts.add(new BbRenderContext());
+            contexts.get(depth++).set(buffers, automobile, tickDelta);
+        }
+
+        BbRenderContext current() {
+            return depth == 0 ? null : contexts.get(depth - 1);
+        }
+
+        void pop() {
+            if (depth == 0) return;
+            BbRenderContext context = contexts.get(--depth);
+            context.buffers = null;
+            context.automobile = null;
+            context.tickDelta = 0.0F;
+        }
     }
 }
