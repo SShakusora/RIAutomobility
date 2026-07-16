@@ -163,20 +163,34 @@ public final class ClientCarPackSynchronizer {
         enqueue(current -> {
             Transfer transfer = current.transfers.remove(archiveDigest);
             if (transfer == null) throw new IOException("Completed an unknown car pack transfer");
-            transfer.close();
-            if (transfer.received != transfer.manifest.archiveSize()) {
-                throw new IOException("Car pack transfer size mismatch for " + transfer.manifest.id());
+            try {
+                transfer.close();
+                if (transfer.received != transfer.manifest.archiveSize()) {
+                    throw new IOException("Car pack transfer size mismatch for " + transfer.manifest.id());
+                }
+                if (!CarPackArchiveStore.sha256(transfer.temporary).equals(transfer.manifest.archiveDigest())) {
+                    throw new IOException("Car pack checksum mismatch for " + transfer.manifest.id());
+                }
+                CarPackArchiveStore.validateArchive(transfer.temporary);
+                moveAtomically(transfer.temporary, transfer.target);
+                Files.setLastModifiedTime(transfer.target, FileTime.fromMillis(System.currentTimeMillis()));
+                CarPackManager.CarPack pack = CarPackManager.cachedCarPack(transfer.manifest, transfer.target);
+                current.resolved.put(transfer.manifest.id(), pack);
+                current.requested.remove(transfer.manifest.id());
+                mount(current, pack);
+            } catch (Exception failure) {
+                try {
+                    transfer.close();
+                } catch (IOException cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+                try {
+                    Files.deleteIfExists(transfer.temporary);
+                } catch (IOException cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+                throw failure;
             }
-            if (!CarPackArchiveStore.sha256(transfer.temporary).equals(transfer.manifest.archiveDigest())) {
-                throw new IOException("Car pack checksum mismatch for " + transfer.manifest.id());
-            }
-            CarPackArchiveStore.validateArchive(transfer.temporary);
-            moveAtomically(transfer.temporary, transfer.target);
-            Files.setLastModifiedTime(transfer.target, FileTime.fromMillis(System.currentTimeMillis()));
-            CarPackManager.CarPack pack = CarPackManager.cachedCarPack(transfer.manifest, transfer.target);
-            current.resolved.put(transfer.manifest.id(), pack);
-            current.requested.remove(transfer.manifest.id());
-            mount(current, pack);
         });
     }
 
@@ -605,9 +619,13 @@ public final class ClientCarPackSynchronizer {
         for (Transfer transfer : current.transfers.values()) {
             try {
                 transfer.close();
+            } catch (IOException exception) {
+                LOGGER.debug("Unable to close partial car pack transfer {}", transfer.temporary, exception);
+            }
+            try {
                 Files.deleteIfExists(transfer.temporary);
             } catch (IOException exception) {
-                LOGGER.debug("Unable to clean up partial car pack transfer {}", transfer.temporary, exception);
+                LOGGER.debug("Unable to delete partial car pack transfer {}", transfer.temporary, exception);
             }
         }
         current.transfers.clear();

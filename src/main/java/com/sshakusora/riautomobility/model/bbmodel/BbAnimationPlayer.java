@@ -11,7 +11,7 @@ public final class BbAnimationPlayer {
     private static final Map<String, MolangExpression.Expression> EXPRESSIONS = new ConcurrentHashMap<>();
     private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
     private static final Map<RenderableAutomobile, SampleCache> SAMPLE_CACHES = new WeakHashMap<>();
-    private static final QueryState QUERY_STATE = new QueryState();
+    private static final ThreadLocal<QueryState> QUERY_STATE = ThreadLocal.withInitial(QueryState::new);
     private static final ThreadLocal<AnimationScratch> SAMPLE_SCRATCH = ThreadLocal.withInitial(AnimationScratch::new);
     private static final ThreadLocal<SampleCache> FALLBACK_SAMPLE_CACHE = ThreadLocal.withInitial(SampleCache::new);
 
@@ -39,21 +39,26 @@ public final class BbAnimationPlayer {
         float tickDelta = context == null ? 0.0F : context.tickDelta();
         float absoluteTime = automobile == null ? 0.0F : (automobile.getTime() + tickDelta) / 20.0F;
         float time = animationTime(animation, absoluteTime);
-        configureQueries(automobile, time, absoluteTime, tickDelta);
-
-        List<PreparedAnimator> animators = prepared(animation);
-        SampleCache cache;
-        if (automobile == null) {
-            cache = FALLBACK_SAMPLE_CACHE.get();
-        } else {
-            synchronized (SAMPLE_CACHES) {
-                cache = SAMPLE_CACHES.computeIfAbsent(automobile, ignored -> new SampleCache());
+        QueryState queryState = QUERY_STATE.get();
+        queryState.set(automobile, time, absoluteTime, tickDelta);
+        try {
+            List<PreparedAnimator> animators = prepared(animation);
+            SampleCache cache;
+            if (automobile == null) {
+                cache = FALLBACK_SAMPLE_CACHE.get();
+            } else {
+                synchronized (SAMPLE_CACHES) {
+                    cache = SAMPLE_CACHES.computeIfAbsent(automobile, ignored -> new SampleCache());
+                }
             }
+            return cache.sample(document, requestedAnimation, animation, animators, time, absoluteTime, tickDelta);
+        } finally {
+            queryState.clear();
         }
-        return cache.sample(document, requestedAnimation, animation, animators, time, absoluteTime, tickDelta);
     }
 
     static void clearCache() {
+        EXPRESSIONS.clear();
         synchronized (PREPARED) {
             PREPARED.clear();
         }
@@ -61,6 +66,7 @@ public final class BbAnimationPlayer {
             SAMPLE_CACHES.clear();
         }
         FALLBACK_SAMPLE_CACHE.remove();
+        QUERY_STATE.remove();
     }
 
     private static List<PreparedAnimator> prepared(BbModelData.Animation animation) {
@@ -110,13 +116,6 @@ public final class BbAnimationPlayer {
             return time % animation.length();
         }
         return Math.min(time, animation.length());
-    }
-
-    private static void configureQueries(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
-        QUERY_STATE.automobile = automobile;
-        QUERY_STATE.animationTime = animationTime;
-        QUERY_STATE.lifeTime = lifeTime;
-        QUERY_STATE.tickDelta = tickDelta;
     }
 
     static Vector3f sampleChannel(List<BbModelData.Keyframe> keyframes, float time, Vector3f defaultValue) {
@@ -186,15 +185,16 @@ public final class BbAnimationPlayer {
     }
 
     private static double queryValue(String name) {
+        QueryState queryState = QUERY_STATE.get();
         return switch (name) {
-            case "query.anim_time" -> QUERY_STATE.animationTime;
-            case "query.life_time" -> QUERY_STATE.lifeTime;
-            case "query.is_on_ground" -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.automobileOnGround() ? 1 : 0;
-            case "query.vehicle_steering" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getSteering(QUERY_STATE.tickDelta);
-            case "query.vehicle_wheel_angle" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getWheelAngle(QUERY_STATE.tickDelta);
-            case "query.vehicle_engine_running" -> QUERY_STATE.automobile != null && QUERY_STATE.automobile.engineRunning() ? 1 : 0;
-            case "query.vehicle_turbo_charge" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getTurboCharge();
-            case "query.vehicle_boost_timer" -> QUERY_STATE.automobile == null ? 0 : QUERY_STATE.automobile.getBoostTimer();
+            case "query.anim_time" -> queryState.animationTime;
+            case "query.life_time" -> queryState.lifeTime;
+            case "query.is_on_ground" -> queryState.automobile != null && queryState.automobile.automobileOnGround() ? 1 : 0;
+            case "query.vehicle_steering" -> queryState.automobile == null ? 0 : queryState.automobile.getSteering(queryState.tickDelta);
+            case "query.vehicle_wheel_angle" -> queryState.automobile == null ? 0 : queryState.automobile.getWheelAngle(queryState.tickDelta);
+            case "query.vehicle_engine_running" -> queryState.automobile != null && queryState.automobile.engineRunning() ? 1 : 0;
+            case "query.vehicle_turbo_charge" -> queryState.automobile == null ? 0 : queryState.automobile.getTurboCharge();
+            case "query.vehicle_boost_timer" -> queryState.automobile == null ? 0 : queryState.automobile.getBoostTimer();
             default -> 0.0D;
         };
     }
@@ -280,6 +280,20 @@ public final class BbAnimationPlayer {
         private float animationTime;
         private float lifeTime;
         private float tickDelta;
+
+        private void set(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
+            this.automobile = automobile;
+            this.animationTime = animationTime;
+            this.lifeTime = lifeTime;
+            this.tickDelta = tickDelta;
+        }
+
+        private void clear() {
+            this.automobile = null;
+            this.animationTime = 0.0F;
+            this.lifeTime = 0.0F;
+            this.tickDelta = 0.0F;
+        }
     }
 
     private static final class AnimationScratch {

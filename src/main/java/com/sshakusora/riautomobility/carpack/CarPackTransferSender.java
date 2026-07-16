@@ -11,16 +11,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.LockSupport;
 
 public final class CarPackTransferSender {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<UUID> ACTIVE_TRANSFERS = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, ArrayDeque<List<CarPackArchiveStore.TransferPack>>> QUEUED_TRANSFERS = new HashMap<>();
-    private static final Semaphore TRANSFER_SLOTS = new Semaphore(4);
+    private static final int MAX_CONCURRENT_TRANSFERS = 4;
+    private static final int MAX_PENDING_PLAYER_TRANSFERS = 128;
+    private static final ThreadPoolExecutor TRANSFER_EXECUTOR = new ThreadPoolExecutor(
+            MAX_CONCURRENT_TRANSFERS,
+            MAX_CONCURRENT_TRANSFERS,
+            0L,
+            TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(MAX_PENDING_PLAYER_TRANSFERS),
+            runnable -> {
+                Thread thread = new Thread(runnable, "RIAutomobility car pack sender");
+                thread.setDaemon(true);
+                return thread;
+            },
+            new ThreadPoolExecutor.AbortPolicy());
     private static final int MAX_QUEUED_BATCHES_PER_PLAYER = 32;
     private static final long BYTES_PER_SECOND = 16L * 1024L * 1024L;
 
@@ -56,15 +67,20 @@ public final class CarPackTransferSender {
             queue.addLast(packs);
             if (!ACTIVE_TRANSFERS.add(playerId)) return;
         }
-        CompletableFuture.runAsync(() -> drain(player, playerId));
+        try {
+            TRANSFER_EXECUTOR.execute(() -> drain(player, playerId));
+        } catch (RejectedExecutionException exception) {
+            synchronized (QUEUED_TRANSFERS) {
+                QUEUED_TRANSFERS.remove(playerId);
+                ACTIVE_TRANSFERS.remove(playerId);
+            }
+            sendFailure(player, "Car pack transfer queue is full");
+        }
     }
 
     private static void drain(ServerPlayer player, UUID playerId) {
-        boolean acquired = false;
         boolean completed = false;
         try {
-            TRANSFER_SLOTS.acquire();
-            acquired = true;
             while (true) {
                 List<CarPackArchiveStore.TransferPack> packs;
                 synchronized (QUEUED_TRANSFERS) {
@@ -79,14 +95,10 @@ public final class CarPackTransferSender {
                 }
                 for (CarPackArchiveStore.TransferPack pack : packs) sendPack(player, pack);
             }
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            sendFailure(player, "Car pack transfer was interrupted");
         } catch (Exception exception) {
             LOGGER.warn("Failed to send RIAutomobility car packs to {}", player.getGameProfile().getName(), exception);
             sendFailure(player, "Car pack transfer failed: " + exception.getMessage());
         } finally {
-            if (acquired) TRANSFER_SLOTS.release();
             if (!completed) {
                 synchronized (QUEUED_TRANSFERS) {
                     QUEUED_TRANSFERS.remove(playerId);

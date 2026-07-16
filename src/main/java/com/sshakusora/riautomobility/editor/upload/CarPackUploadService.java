@@ -55,6 +55,9 @@ public final class CarPackUploadService {
         try {
             validateMetadata(request);
             discardPlayerUpload(player.getUUID());
+            if (UPLOADS.containsKey(request.uploadId())) {
+                throw new IOException("An upload with this id is already active");
+            }
             Path directory = CarPackManager.getRootDirectory().resolve("cache").resolve("uploads");
             Files.createDirectories(directory);
             Path temporary = directory.resolve(request.uploadId() + ".part");
@@ -96,9 +99,13 @@ public final class CarPackUploadService {
     }
 
     private static void completeIo(ServerPlayer player, UUID uploadId) {
-        Upload upload = UPLOADS.remove(uploadId);
+        Upload upload = UPLOADS.get(uploadId);
         if (upload == null || !upload.playerId.equals(player.getUUID())) {
             fail(player, uploadId, "No matching upload session");
+            return;
+        }
+        if (!UPLOADS.remove(uploadId, upload)) {
+            fail(player, uploadId, "Upload session changed before completion");
             return;
         }
         try {
@@ -294,7 +301,7 @@ public final class CarPackUploadService {
     }
 
     private static void abort(Upload upload) {
-        UPLOADS.remove(upload.request.uploadId());
+        UPLOADS.remove(upload.request.uploadId(), upload);
         try {
             upload.output.close();
         } catch (IOException ignored) {

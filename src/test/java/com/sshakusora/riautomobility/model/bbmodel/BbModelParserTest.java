@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.sshakusora.riautomobility.content.FrameSpec;
+import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -251,12 +254,77 @@ class BbModelParserTest {
     }
 
     @Test
+    void clearCacheReleasesCompiledMolangExpressions() throws ReflectiveOperationException {
+        BbAnimationPlayer.clearCache();
+        BbModelData.Document document = animationDocument("math.sin(90)");
+
+        BbAnimationPlayer.sample(document, "cached", null);
+
+        assertFalse(expressionCache().isEmpty());
+        BbAnimationPlayer.clearCache();
+        assertTrue(expressionCache().isEmpty());
+    }
+
+    @Test
+    void animationSamplingDoesNotRetainAutomobileQueryContext() throws ReflectiveOperationException {
+        RenderableAutomobile automobile = (RenderableAutomobile) Proxy.newProxyInstance(
+                RenderableAutomobile.class.getClassLoader(),
+                new Class<?>[]{RenderableAutomobile.class},
+                (proxy, method, arguments) -> defaultValue(method.getReturnType()));
+        BbRenderContext.begin(null, automobile, 0.0F);
+        try {
+            BbAnimationPlayer.sample(animationDocument("query.life_time"), "cached", BbRenderContext.current());
+        } finally {
+            BbRenderContext.end();
+        }
+
+        Field queryStateField = BbAnimationPlayer.class.getDeclaredField("QUERY_STATE");
+        queryStateField.setAccessible(true);
+        Object queryState = ((ThreadLocal<?>) queryStateField.get(null)).get();
+        Field automobileField = queryState.getClass().getDeclaredField("automobile");
+        automobileField.setAccessible(true);
+        assertNull(automobileField.get(queryState));
+    }
+
+    @Test
     void evaluatesMolangQueriesOperatorsFunctionsAndConditionals() {
         MolangExpression.Expression expression = MolangExpression.compile(
                 "query.anim_time > 1 ? math.lerp(2, math.clamp(10, 0, 6), 0.5) + 2 * 3 : 0");
 
         assertEquals(10.0D, expression.evaluate(name -> name.equals("query.anim_time") ? 2.0D : 0.0D), 0.0001D);
         assertEquals(0.0D, expression.evaluate(name -> 0.5D), 0.0001D);
+    }
+
+    private static BbModelData.Document animationDocument(String expression) {
+        return BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "elements":[],
+                  "animations":[{"name":"cached","animators":{"bone":{"type":"bone","keyframes":[
+                    {"channel":"position","time":0,"data_points":[{"x":"%s","y":0,"z":0}]}
+                  ]}}}]
+                }
+                """.formatted(expression)).getAsJsonObject());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, MolangExpression.Expression> expressionCache() throws ReflectiveOperationException {
+        Field field = BbAnimationPlayer.class.getDeclaredField("EXPRESSIONS");
+        field.setAccessible(true);
+        return (Map<String, MolangExpression.Expression>) field.get(null);
+    }
+
+    private static Object defaultValue(Class<?> type) {
+        if (!type.isPrimitive()) return null;
+        if (type == boolean.class) return false;
+        if (type == byte.class) return (byte) 0;
+        if (type == short.class) return (short) 0;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == float.class) return 0.0F;
+        if (type == double.class) return 0.0D;
+        if (type == char.class) return '\0';
+        return null;
     }
 
     @Test

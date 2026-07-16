@@ -30,6 +30,8 @@ public final class BbInstancedRenderer {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int STATIC_VERTEX_STRIDE = 8 * Float.BYTES;
     private static final int INSTANCE_STRIDE = 36 * Float.BYTES;
+    private static final int MIN_RETAINED_INSTANCES = 64;
+    private static final int CACHE_SHRINK_DELAY_FRAMES = 120;
     private static final int[] TRIANGLE_VERTICES = {0, 1, 2, 2, 3, 0};
 
     private static final VertexFormatElement FLOAT_NORMAL = new VertexFormatElement(
@@ -375,7 +377,7 @@ public final class BbInstancedRenderer {
         }
 
         void resetCounts() {
-            for (InstanceBucket bucket : buckets) bucket.size = 0;
+            for (InstanceBucket bucket : buckets) bucket.finishFrame();
         }
 
         void reset() {
@@ -387,11 +389,25 @@ public final class BbInstancedRenderer {
     private static final class InstanceBucket {
         private final List<Instance> values = new ArrayList<>();
         private int size;
+        private int underusedFrames;
 
         void add(Matrix4f model, Matrix3f normal, int light, int overlay,
                  float red, float green, float blue, float alpha) {
             if (size == values.size()) values.add(new Instance());
             values.get(size++).set(model, normal, light, overlay, red, green, blue, alpha);
+        }
+
+        void finishFrame() {
+            int used = size;
+            size = 0;
+            if (values.size() <= MIN_RETAINED_INSTANCES || used * 4 >= values.size()) {
+                underusedFrames = 0;
+                return;
+            }
+            if (++underusedFrames < CACHE_SHRINK_DELAY_FRAMES) return;
+            int retained = Math.max(MIN_RETAINED_INSTANCES, used * 2);
+            values.subList(retained, values.size()).clear();
+            underusedFrames = 0;
         }
     }
 
