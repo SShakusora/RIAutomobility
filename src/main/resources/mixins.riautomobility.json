@@ -16,7 +16,6 @@
   ],
   "mixins": [
     "AutoMechanicTableRecipeMixin",
-    "AutoMechanicTableRecipeSerializerMixin",
     "AutomobileAssemblerBlockEntityMixin",
     "AutomobileComponentItemMixin",
     "AutomobileEntityCollisionMixin",

@@ -3,8 +3,8 @@
   "category": "automobility:frames",
   "sortnum": 5,
   "ingredients": [
-    {"item": "automobility:automobile_frame", "component": "automobility:standard_white"},
-    {"item": "automobility:automobile_frame", "component": "automobility:standard_white"},
+    {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:standard_white"},
+    {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:standard_white"},
     {"item": "minecraft:iron_block"},
     {"item": "minecraft:iron_block"},
     {"item": "minecraft:iron_block"},

@@ -3,8 +3,8 @@
     "category": "automobility:frames",
     "sortnum": 2,
     "ingredients": [
-        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
-        {"item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"}
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"},
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:steel_motorcar"}
     ],
     "result": {
         "item": "automobility:automobile_frame",

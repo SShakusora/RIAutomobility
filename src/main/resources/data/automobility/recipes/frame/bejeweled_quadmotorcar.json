@@ -3,10 +3,10 @@
     "category": "automobility:frames",
     "sortnum": 4,
     "ingredients": [
-        {"item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
-        {"item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
-        {"item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
-        {"item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"}
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"},
+        {"type": "riautomobility:automobile_component", "item": "automobility:automobile_frame", "component": "automobility:bejeweled_motorcar"}
     ],
     "result": {
         "item": "automobility:automobile_frame",
