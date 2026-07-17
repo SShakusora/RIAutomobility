@@ -36,11 +36,11 @@ public final class CarPackArchiveStore {
     private CarPackArchiveStore() {
     }
 
-    public static synchronized List<CarPackManifestEntry> prepareManifest() {
+    static PreparedCatalog prepareCatalog(List<CarPackManager.CarPack> packs) {
         Map<String, TransferPack> prepared = new LinkedHashMap<>();
         Map<ResourceLocation, String> componentOwners = new HashMap<>();
         Map<ResourceLocation, ItemMetadata> preparedMetadata = new HashMap<>();
-        for (CarPackManager.CarPack pack : CarPackManager.discoverCarPacks()) {
+        for (CarPackManager.CarPack pack : packs) {
             try {
                 TransferPack transferPack = prepare(pack);
                 ResourceLocation component = transferPack.manifest().component();
@@ -57,9 +57,20 @@ public final class CarPackArchiveStore {
         if (prepared.size() > CarPackManifestEntry.MAX_PACKS) {
             throw new IllegalStateException("Too many car packs for network synchronization: " + prepared.size());
         }
-        transferPacks = Map.copyOf(prepared);
-        componentMetadata = Map.copyOf(preparedMetadata);
-        return prepared.values().stream().map(TransferPack::manifest).toList();
+        return new PreparedCatalog(prepared, preparedMetadata);
+    }
+
+    public static synchronized void installPreparedCatalog(PreparedCatalog catalog) {
+        transferPacks = catalog.transferPacks();
+        componentMetadata = catalog.componentMetadata();
+    }
+
+    public static List<CarPackManifestEntry> currentManifest() {
+        return transferPacks.values().stream().map(TransferPack::manifest).toList();
+    }
+
+    static PreparedCatalog currentCatalog() {
+        return new PreparedCatalog(transferPacks, componentMetadata);
     }
 
     public static TransferPack find(String id, String archiveDigest) {
@@ -94,7 +105,7 @@ public final class CarPackArchiveStore {
                 createArchive(source, archive);
             }
         } else {
-            archive = source;
+            archive = snapshotArchive(source);
         }
 
         validateArchive(archive);
@@ -103,14 +114,37 @@ public final class CarPackArchiveStore {
             throw new IOException("Car pack archive exceeds " + CarPackManifestEntry.MAX_ARCHIVE_SIZE + " bytes");
         }
         String archiveDigest = sha256(archive);
+        String contentDigest = CarPackManager.digest(archive);
         ComponentMetadata metadata = readComponentMetadata(archive);
         return new TransferPack(
                 new CarPackManifestEntry(pack.id(), metadata.displayName(), metadata.author(),
-                        pack.digest(), archiveDigest, size,
+                        contentDigest, archiveDigest, size,
                         metadata.component().id()),
                 archive,
                 metadata
         );
+    }
+
+    private static Path snapshotArchive(Path source) throws IOException {
+        return snapshotArchive(source, CarPackManager.getTransferCacheDirectory());
+    }
+
+    static Path snapshotArchive(Path source, Path cache) throws IOException {
+        Files.createDirectories(cache);
+        Path temporary = cache.resolve("snapshot-" + UUID.randomUUID() + ".part");
+        try {
+            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING);
+            String digest = sha256(temporary);
+            Path snapshot = cache.resolve(digest + CarPackManager.CAR_PACK_EXTENSION);
+            if (Files.isRegularFile(snapshot, LinkOption.NOFOLLOW_LINKS)
+                    && digest.equals(sha256(snapshot))) {
+                return snapshot;
+            }
+            moveAtomically(temporary, snapshot);
+            return snapshot;
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
     }
 
     public static DeclaredComponent readDeclaredComponent(Path archive) throws IOException {
@@ -495,6 +529,18 @@ public final class CarPackArchiveStore {
     }
 
     public record TransferPack(CarPackManifestEntry manifest, Path archive, ComponentMetadata metadata) {
+    }
+
+    public record PreparedCatalog(Map<String, TransferPack> transferPacks,
+                                  Map<ResourceLocation, ItemMetadata> componentMetadata) {
+        public PreparedCatalog {
+            transferPacks = Map.copyOf(transferPacks);
+            componentMetadata = Map.copyOf(componentMetadata);
+        }
+
+        public List<CarPackManifestEntry> manifest() {
+            return transferPacks.values().stream().map(TransferPack::manifest).toList();
+        }
     }
 
     public record ComponentMetadata(DeclaredComponent component, String displayName, String author) {

@@ -38,6 +38,10 @@ English | [中文](#中文)
 
 `.riauto` is an editor-generated exchange format. Handwritten component definitions and manually packaged RIAuto archives are not supported.
 
+### Multi-Server Car Pack Directory
+
+Dedicated servers on the same machine can share their authoritative `.riauto` files. Set the same absolute `carPacks.sharedDirectory` in every instance's `config/riautomobility-common.toml`. Each instance keeps its own cache, polls the shared directory, hot-reloads changes, and synchronizes online players. Shared writes use an inter-process lock and atomic publication.
+
 ### Screenshot
 
 <div align="center">
@@ -81,6 +85,10 @@ RIAutomobility is available under the MIT License.
 5. 接收者通过车辆导入台导入 `.riauto`，再导出为游戏内物品。
 
 `.riauto` 是由导入台生成的交换格式。不支持手写组件定义或手工打包 RIAuto 归档。
+
+### 多服务器车包目录
+
+同一台机器上的多个独立服务器可以共享权威 `.riauto` 文件。在每个实例的 `config/riautomobility-common.toml` 中，将 `carPacks.sharedDirectory` 设置为同一个绝对路径。每个实例仍使用自己的缓存，并会检测共享目录、热重载变更和同步在线玩家；共享写入由跨进程锁与原子发布保护。
 
 ### 截图
 

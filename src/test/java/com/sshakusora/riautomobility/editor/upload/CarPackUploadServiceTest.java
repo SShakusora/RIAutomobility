@@ -41,6 +41,7 @@ class CarPackUploadServiceTest {
 
         assertEquals("new", Files.readString(target));
         assertFalse(Files.exists(source));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve(".riautomobility.revision")));
         assertNoBackupFiles();
     }
 
@@ -164,7 +165,10 @@ class CarPackUploadServiceTest {
 
     private void assertNoBackupFiles() throws IOException {
         try (var files = Files.list(temporaryDirectory)) {
-            assertTrue(files.noneMatch(path -> path.getFileName().toString().endsWith(".backup")));
+            assertTrue(files.noneMatch(path -> {
+                String name = path.getFileName().toString();
+                return name.endsWith(".backup") || name.endsWith(".part");
+            }));
         }
     }
 }

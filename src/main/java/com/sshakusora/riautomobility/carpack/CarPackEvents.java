@@ -9,6 +9,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.OnDatapackSyncEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.NetworkDirection;
@@ -28,7 +30,21 @@ public final class CarPackEvents {
 
         @SubscribeEvent
         public static void loadCarPacks(ServerAboutToStartEvent event) {
-            CarPackRuntime.reloadServer();
+            CarPackSharedDirectoryMonitor.DirectoryState initialState =
+                    CarPackRuntime.reloadServerAndCaptureState();
+            CarPackSharedDirectoryMonitor.start(event.getServer(), initialState);
+        }
+
+        @SubscribeEvent
+        public static void pollSharedCarPacks(TickEvent.ServerTickEvent event) {
+            if (event.phase == TickEvent.Phase.END) {
+                CarPackSharedDirectoryMonitor.tick(event.getServer());
+            }
+        }
+
+        @SubscribeEvent
+        public static void stopSharedCarPackMonitor(ServerStoppedEvent event) {
+            CarPackSharedDirectoryMonitor.stop(event.getServer());
         }
 
         @SubscribeEvent

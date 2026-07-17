@@ -12,7 +12,6 @@ import com.sshakusora.riautomobility.network.packet.BeginCarPackUploadPacket;
 import com.sshakusora.riautomobility.network.packet.CarPackUploadChunkPacket;
 import com.sshakusora.riautomobility.network.packet.CarPackUploadResultPacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.GsonHelper;
 import net.minecraftforge.network.NetworkDirection;
@@ -118,13 +117,15 @@ public final class CarPackUploadService {
             CarPackArchiveStore.validateRiautoArchive(upload.temporary);
             validateEditorArchive(upload.temporary, upload.request);
 
-            Path target = CarPackManager.getRootDirectory()
-                    .resolve(upload.request.packName() + CarPackManager.CAR_PACK_EXTENSION).normalize();
-            if (!target.getParent().equals(CarPackManager.getRootDirectory().normalize()))
+            Path packDirectory = CarPackManager.getServerCarPackDirectory();
+            Path target = packDirectory.resolve(upload.request.packName() + CarPackManager.CAR_PACK_EXTENSION).normalize();
+            if (!target.getParent().equals(packDirectory.normalize()))
                 throw new IOException("Invalid target path");
-            installAtomically(upload.temporary, target, upload.request.overwrite(),
-                    () -> reloadServer(player.server),
-                    () -> reloadServer(player.server));
+            Path installedTarget = target;
+            CarPackDirectoryLock.withExclusive(packDirectory, () ->
+                    installAtomically(upload.temporary, installedTarget, upload.request.overwrite(),
+                            () -> CarPackRuntime.reloadServerAndSync(player.server),
+                            () -> CarPackRuntime.reloadServerAndSync(player.server)));
             success(player, uploadId, "Installed " + target.getFileName());
         } catch (Exception exception) {
             abort(upload);
@@ -229,15 +230,6 @@ public final class CarPackUploadService {
         return true;
     }
 
-    private static void reloadServer(MinecraftServer server) throws Exception {
-        CarPackComponentDataLoader.LoadedContent content = CarPackRuntime.loadServerContent();
-        CarPackArchiveStore.prepareManifest();
-        server.submit(() -> {
-            CarPackComponentDataLoader.apply(content);
-            CarPackEvents.CommonEvents.syncAll(server);
-        }).get();
-    }
-
     static void installAtomically(Path source, Path target, boolean overwrite,
                                   CheckedAction apply, CheckedAction rollback) throws Exception {
         boolean targetExists = Files.exists(target);
@@ -245,17 +237,22 @@ public final class CarPackUploadService {
             throw new IOException("A car pack with this name already exists");
         }
 
-        Path backup = target.resolveSibling(target.getFileName() + "." + UUID.randomUUID() + ".backup");
+        Files.createDirectories(target.getParent());
+        Path staged = target.resolveSibling("." + target.getFileName() + "." + UUID.randomUUID() + ".part");
+        Path backup = target.resolveSibling("." + target.getFileName() + "." + UUID.randomUUID() + ".backup");
         boolean backupCreated = false;
         boolean installed = false;
         try {
             if (targetExists) {
-                moveAtomically(target, backup);
+                Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
                 backupCreated = true;
             }
-            moveAtomically(source, target);
+            Files.copy(source, staged, StandardCopyOption.REPLACE_EXISTING);
+            moveAtomically(staged, target);
             installed = true;
             apply.run();
+            signalDirectoryChange(target.getParent());
+            CarPackSharedDirectoryMonitor.acknowledgeLocalChange(target.getParent());
             if (backupCreated) {
                 Files.delete(backup);
                 backupCreated = false;
@@ -273,6 +270,24 @@ public final class CarPackUploadService {
                 failure.addSuppressed(rollbackFailure);
             }
             throw failure;
+        } finally {
+            Files.deleteIfExists(staged);
+            if (installed || backupCreated) {
+                Files.deleteIfExists(source);
+            }
+            Files.deleteIfExists(backup);
+        }
+    }
+
+    static void signalDirectoryChange(Path directory) throws IOException {
+        Path target = directory.resolve(CarPackSharedDirectoryMonitor.REVISION_FILE_NAME);
+        Path temporary = directory.resolve("." + CarPackSharedDirectoryMonitor.REVISION_FILE_NAME
+                + "." + UUID.randomUUID() + ".part");
+        try {
+            Files.writeString(temporary, UUID.randomUUID().toString(), StandardCharsets.UTF_8);
+            moveAtomically(temporary, target);
+        } finally {
+            Files.deleteIfExists(temporary);
         }
     }
 

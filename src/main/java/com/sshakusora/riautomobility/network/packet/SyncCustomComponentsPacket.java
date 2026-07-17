@@ -38,7 +38,7 @@ public class SyncCustomComponentsPacket {
                 RIAutomobilityComponentManager.getCustomFrames(),
                 RIAutomobilityComponentManager.getCustomWheels(),
                 RIAutomobilityComponentManager.getCustomEngines(),
-                CarPackArchiveStore.prepareManifest()
+                CarPackArchiveStore.currentManifest()
         );
     }
 

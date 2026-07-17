@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.carpack;
 
 import com.mojang.logging.LogUtils;
+import com.sshakusora.riautomobility.Config;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import net.minecraft.server.packs.FilePackResources;
 import net.minecraft.server.packs.repository.Pack;
@@ -41,6 +42,14 @@ public final class CarPackManager {
         return FMLPaths.GAMEDIR.get().resolve("riautomobility");
     }
 
+    /**
+     * The server-authoritative pack directory. This may be shared by multiple server processes.
+     * Client caches and temporary files deliberately continue to use {@link #getRootDirectory()}.
+     */
+    public static Path getServerCarPackDirectory() {
+        return Config.getServerCarPackDirectory();
+    }
+
     public static Path getClientPackCacheDirectory() {
         return getRootDirectory().resolve(CACHE_DIRECTORY_NAME).resolve("packs");
     }
@@ -50,7 +59,14 @@ public final class CarPackManager {
     }
 
     public static List<CarPack> discoverCarPacks() {
-        Path root = getRootDirectory();
+        return discoverCarPacks(getRootDirectory());
+    }
+
+    public static List<CarPack> discoverServerCarPacks() {
+        return discoverCarPacks(getServerCarPackDirectory());
+    }
+
+    static List<CarPack> discoverCarPacks(Path root) {
         List<CarPack> packs = new ArrayList<>();
         try {
             Files.createDirectories(root);
@@ -164,7 +180,7 @@ public final class CarPackManager {
         }
     }
 
-    private static String digest(Path path) throws IOException {
+    static String digest(Path path) throws IOException {
         MessageDigest digest;
         try {
             digest = MessageDigest.getInstance("SHA-256");

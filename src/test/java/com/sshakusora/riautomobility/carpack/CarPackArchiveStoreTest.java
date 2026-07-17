@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -247,6 +248,24 @@ class CarPackArchiveStoreTest {
     }
 
     @Test
+    void transferSnapshotRemainsImmutableWhenTheSharedSourceChanges() throws Exception {
+        Path source = createZip(Map.of(
+                "riauto.json", "{\"format\":1,\"id\":\"test:car\",\"name\":\"Version One\"," +
+                        "\"components\":{\"frames\":[\"test:car\"],\"wheels\":[],\"engines\":[]}}",
+                "data/test/riautomobility/frames/car.json", "{}"
+        ));
+        Path cache = temporaryDirectory.resolve("transfer-cache");
+        Path snapshot = CarPackArchiveStore.snapshotArchive(source, cache);
+        String snapshotDigest = CarPackArchiveStore.sha256(snapshot);
+
+        Files.writeString(source, "replaced shared file");
+
+        assertTrue(snapshot.startsWith(cache));
+        assertEquals(snapshotDigest, CarPackArchiveStore.sha256(snapshot));
+        assertNotEquals(CarPackArchiveStore.sha256(source), CarPackArchiveStore.sha256(snapshot));
+    }
+
+    @Test
     void validatesManifestBoundsAndDigests() {
         String digest = "a".repeat(64);
         assertDoesNotThrow(() -> new CarPackManifestEntry(
@@ -269,6 +288,29 @@ class CarPackArchiveStoreTest {
         assertThrows(NullPointerException.class, () -> new CarPackManifestEntry(
                 "riautomobility/test", "test", "author", digest, digest, 1024, null
         ));
+    }
+
+    @Test
+    void installedCatalogProvidesAStableManifestWithoutRescanningSharedFiles() {
+        String digest = "a".repeat(64);
+        CarPackManifestEntry manifest = new CarPackManifestEntry(
+                "riautomobility/stable", "Stable", "Author", digest, digest, 12,
+                new ResourceLocation("test", "stable"));
+        CarPackArchiveStore.TransferPack transfer = new CarPackArchiveStore.TransferPack(
+                manifest, temporaryDirectory.resolve("immutable.riauto"),
+                new CarPackArchiveStore.ComponentMetadata(
+                        new CarPackArchiveStore.DeclaredComponent(
+                                CarPackArchiveStore.ComponentKind.FRAME, new ResourceLocation("test", "stable")),
+                        "Stable", "Author"));
+        try {
+            CarPackArchiveStore.installPreparedCatalog(new CarPackArchiveStore.PreparedCatalog(
+                    Map.of(manifest.id(), transfer),
+                    Map.of(manifest.component(), transfer.metadata().itemMetadata())));
+
+            assertEquals(List.of(manifest), CarPackArchiveStore.currentManifest());
+        } finally {
+            CarPackArchiveStore.installPreparedCatalog(new CarPackArchiveStore.PreparedCatalog(Map.of(), Map.of()));
+        }
     }
 
     private Path createZip(Map<String, String> entries) throws IOException {

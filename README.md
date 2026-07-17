@@ -63,6 +63,22 @@ The source `.bbmodel` is never modified. The first `.riauto` export records the 
 
 `.riauto` is an editor-generated exchange format. Handwritten RIAuto archives, handwritten component JSON, and manually packaged model resources are not supported.
 
+### Sharing Car Packs Between Servers
+
+Several dedicated servers on the same machine can use one authoritative car-pack directory while keeping their caches local. After the first launch, edit `config/riautomobility-common.toml` in every server instance:
+
+```toml
+[carPacks]
+sharedDirectory = "D:/MinecraftShared/RIAutomobility/packs"
+scanIntervalSeconds = 3
+```
+
+Use the same absolute directory on every server. Forward slashes are recommended in Windows TOML paths. An empty `sharedDirectory` keeps the legacy `<game directory>/riautomobility` location.
+
+Only published `.riauto` archives are shared. Upload temporary files, downloaded packs, editor previews, and transfer snapshots remain under each instance's own `<game directory>/riautomobility/cache`. Publishing is protected by an inter-process file lock and an atomic same-directory rename. Other running servers detect the revision, transactionally reload component data and the matching manifest, then synchronize their online players automatically.
+
+To migrate existing servers, stop all instances, create the shared directory, move the existing top-level `.riauto` files into it, configure every instance, and then start the servers. Do not merge duplicate pack filenames or duplicate component IDs.
+
 ### Screenshots
 
 <div align="center">
@@ -125,6 +141,22 @@ RIAutomobility 仅支持通过车辆导入台制作自定义部件：
 3. 检查部件并将其导出为游戏内物品。
 
 `.riauto` 是由导入台生成的交换格式。不支持手写 RIAuto 归档、手写组件 JSON 或手工打包模型资源。
+
+### 多服务器共享车包
+
+同一台机器上的多个独立服务器可以共用一个权威车包目录，同时继续使用各自的本地缓存。首次启动后，在每个服务器实例的 `config/riautomobility-common.toml` 中填写相同配置：
+
+```toml
+[carPacks]
+sharedDirectory = "D:/MinecraftShared/RIAutomobility/packs"
+scanIntervalSeconds = 3
+```
+
+所有服务器必须填写同一个绝对路径；Windows 的 TOML 路径建议使用正斜杠。`sharedDirectory` 留空时仍使用原来的 `<游戏目录>/riautomobility`。
+
+共享目录只存放已经发布的 `.riauto` 车包。上传临时文件、客户端下载、编辑器预览和传输快照仍保存在各实例自己的 `<游戏目录>/riautomobility/cache` 下。发布过程使用跨进程文件锁和同目录原子重命名；其他运行中的服务器检测到版本变化后，会以事务方式同时更新组件数据与对应清单，并自动同步在线玩家。
+
+迁移已有服务器时，请先停止全部实例，创建共享目录，将原目录顶层的 `.riauto` 文件移动进去，完成所有实例的配置后再启动。不要合并同名车包或声明相同组件 ID 的不同车包。
 
 ### 截图
 
