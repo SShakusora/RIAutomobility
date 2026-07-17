@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -78,5 +79,22 @@ public final class ClientVehicleViewEvents {
         }
 
         camera.setPosition(targetPosition);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onComputeFov(ViewportEvent.ComputeFov event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (player == null || !(player.getVehicle() instanceof AutomobileEntity automobile)) {
+            return;
+        }
+        if (!RIAutomobileFrame.isRIAutomobileFrame(automobile.getFrame())
+                || player == automobile.getControllingPassenger()) {
+            return;
+        }
+
+        double boostFov = Math.sqrt(automobile.getBoostSpeed((float) event.getPartialTick()))
+                * 18.0D * minecraft.options.fovEffectScale().get();
+        event.setFOV(event.getFOV() - boostFov);
     }
 }

@@ -9,11 +9,13 @@ import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.model.RIAForgeSlopeBakedModel;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
+import io.github.foundationgames.automobility.block.model.SlopeBakedModel;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -66,6 +68,7 @@ public class RIAutomobility
         public static void onClientSetup(final FMLClientSetupEvent event){
             RIAutomobileModels.init();
             MinecraftForge.EVENT_BUS.addListener(BbInstancedRenderer::onRenderLevelStage);
+            event.enqueueWork(() -> SlopeBakedModel.impl = RIAForgeSlopeBakedModel::new);
             event.enqueueWork(() -> MenuScreens.register(
                     VehicleImportRegistries.VEHICLE_IMPORT_MENU.get(),
                     VehicleImportScreen::new));

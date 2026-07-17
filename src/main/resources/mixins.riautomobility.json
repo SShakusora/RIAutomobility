@@ -7,12 +7,9 @@
   "server": [
   ],
   "client": [
-    "AutoMechanicTableScreenMixin",
     "AutomobileHudMixin",
     "AutomobileRendererMixin",
-    "AutomobilityClientMixin",
     "BEWLRsMixin",
-    "ForgeGeometryBuilderMixin",
     "accessor.AutoMechanicTableRecipeAccessor",
     "accessor.AutoMechanicTableScreenAccessor",
     "accessor.AutomobileModelsAccessor"

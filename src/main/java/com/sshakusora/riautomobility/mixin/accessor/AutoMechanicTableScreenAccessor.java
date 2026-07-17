@@ -7,5 +7,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(AutoMechanicTableScreen.class)
 public interface AutoMechanicTableScreenAccessor {
     @Accessor("time")
-    long getTime();
+    long riautomobility$getTime();
 }

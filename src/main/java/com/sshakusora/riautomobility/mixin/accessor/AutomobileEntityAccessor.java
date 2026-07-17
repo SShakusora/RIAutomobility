@@ -7,12 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(AutomobileEntity.class)
 public interface AutomobileEntityAccessor {
-    @Accessor("hSpeed")
-    float getHSpeed();
-
-    @Accessor("lastPosForDisplacement")
-    Vec3 getLastPosForDisplacement();
-
     @Accessor("decorative")
     boolean isDecorative();
 
@@ -27,13 +21,4 @@ public interface AutomobileEntityAccessor {
 
     @Accessor("engineSpeed")
     void setEngineSpeed(float engineSpeed);
-
-    @Accessor("accelerating")
-    boolean isAccelerating();
-
-    @Accessor("holdingDrift")
-    boolean isHoldingDrift();
-
-    @Accessor("prevHoldDrift")
-    boolean wasHoldingDrift();
 }

@@ -48,6 +48,8 @@ import java.util.function.Consumer;
 public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private static final int INVENTORY_SIZE = 54;
     private static final int MAX_TRACKED_SEATS = 8;
+    private static final int INPUT_DRIFT_MASK = 1;
+    private static final int INPUT_ACCELERATING_MASK = 1 << 4;
     private static final List<EntityDataAccessor<Integer>> TRACKED_SEATS = List.of(
             SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
             SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
@@ -77,6 +79,8 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     private float prevYawForRotate = 0.0F;
     private float clientPassengerYawDelta = 0.0F;
     private boolean preAccelerating = false;
+    private boolean previousHoldingDrift = false;
+    private Vec3 movementTickStartPosition = Vec3.ZERO;
     private int driftedReadyBoostCounter = Integer.MAX_VALUE;
     private int hadVehicleCollision = 0;
     private boolean dimensionsNeedRefresh = false;
@@ -232,6 +236,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     public void tick() {
         if (!usesRIASeats()) {
             super.tick();
+            previousHoldingDrift = isHoldingDrift();
             return;
         }
 
@@ -250,6 +255,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         }
 
         super.tick();
+        previousHoldingDrift = isHoldingDrift();
         if (level().isClientSide()) {
             clientPassengerYawDelta = Mth.wrapDegrees(this.getYRot() - prevYawForRotate);
             this.yRotO = prevYawForRotate;
@@ -264,6 +270,12 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
                 hitbox.syncPosition(this);
             }
         }
+    }
+
+    @Override
+    public void movementTick() {
+        movementTickStartPosition = this.position();
+        super.movementTick();
     }
 
     @Override
@@ -382,7 +394,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         for (Entity entity : level().getEntities(EntityTypeTest.forClass(Entity.class), frontBox, entity -> entity != this && !isOnRIAutomobile(entity))) {
             if (!entity.isInvulnerable() && entity instanceof LivingEntity living && entity.getVehicle() != this) {
-                AutomobilityEntities.automobileDamageSource(level()).ifPresent(dmg -> living.hurt(dmg, getHorizontalSpeed() * 10.0F));
+                AutomobilityEntities.automobileDamageSource(level()).ifPresent(dmg -> living.hurt(dmg, getHSpeed() * 10.0F));
                 entity.push(velAdd.x, velAdd.y, velAdd.z);
             }
         }
@@ -674,11 +686,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private void driftedReadyBoost() {
-        if (this.isDrifting() && wasHoldingDrift() && !isHoldingDrift()) {
+        if (this.isDrifting() && previousHoldingDrift && !isHoldingDrift()) {
             driftedReadyBoostCounter = 0;
         }
 
-        if (!this.isDrifting() && !wasHoldingDrift() && !isHoldingDrift()) {
+        if (!this.isDrifting() && !previousHoldingDrift && !isHoldingDrift()) {
             if (driftedReadyBoostCounter >= 3) {
                 return;
             }
@@ -770,7 +782,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private Vec3 getMeasuredMovement() {
-        return this.position().subtract(getLastPosForDisplacement());
+        return this.position().subtract(movementTickStartPosition);
     }
 
     private void updateCullingBox() {
@@ -998,14 +1010,6 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
         return ((AutomobileEntityAccessor) this).isDecorative();
     }
 
-    private float getHorizontalSpeed() {
-        return ((AutomobileEntityAccessor) this).getHSpeed();
-    }
-
-    private Vec3 getLastPosForDisplacement() {
-        return ((AutomobileEntityAccessor) this).getLastPosForDisplacement();
-    }
-
     private Vec3 getAddedVelocity() {
         return ((AutomobileEntityAccessor) this).getAddedVelocity();
     }
@@ -1023,15 +1027,11 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
     }
 
     private boolean isAccelerating() {
-        return ((AutomobileEntityAccessor) this).isAccelerating();
+        return (compactInputData() & INPUT_ACCELERATING_MASK) != 0;
     }
 
     private boolean isHoldingDrift() {
-        return ((AutomobileEntityAccessor) this).isHoldingDrift();
-    }
-
-    private boolean wasHoldingDrift() {
-        return ((AutomobileEntityAccessor) this).wasHoldingDrift();
+        return (compactInputData() & INPUT_DRIFT_MASK) != 0;
     }
 
     private record IncomingCollision(Vec3 depth, Vec3 velocity, Vec3 origin, float inertia) {
