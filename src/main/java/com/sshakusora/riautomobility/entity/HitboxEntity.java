@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.entity;
 
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
+import com.sshakusora.riautomobility.item.VehicleKeyAccess;
 import com.sshakusora.riautomobility.util.RIAutomobileTransformUtil;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.core.NonNullList;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -110,7 +112,21 @@ public class HitboxEntity extends Entity{
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
+        var automobile = getAutomobile();
+        if (automobile == null) return super.interact(player, hand);
+
+        ItemStack heldStack = player.getItemInHand(hand);
+        if (automobile instanceof RIAutomobileEntity riautomobile
+                && heldStack.is(Items.NAME_TAG)
+                && heldStack.hasCustomHoverName()) {
+            return riautomobile.interact(player, hand);
+        }
+
         if (this.hasContainer()) {
+            if (automobile instanceof RIAutomobileEntity riautomobile && !riautomobile.canPlayerAccess(player)) {
+                VehicleKeyAccess.deny(player);
+                return InteractionResult.sidedSuccess(this.level().isClientSide());
+            }
             if (!this.level().isClientSide() && this.entityData.get(HAS_CONTAINER)) {
                 this.level().playSound(
                         null,
@@ -120,15 +136,13 @@ public class HitboxEntity extends Entity{
                         1.0F
                         );
                 player.openMenu(new SimpleMenuProvider(
-                        (syncId, inv, p) -> ChestMenu.sixRows(syncId, inv, (Container) this.getAutomobile()),
+                        (syncId, inv, p) -> ChestMenu.sixRows(syncId, inv, (Container) automobile),
                         Component.translatable("container.riautomobility.hitbox")
                 ));
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide());
         }
 
-        var automobile = getAutomobile();
-        if (automobile == null) return super.interact(player, hand);
         if (automobile.getPassengers().contains(player)) return InteractionResult.PASS;
 
         return automobile.interact(player, hand);

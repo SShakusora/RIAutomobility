@@ -4,6 +4,7 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.content.RIAutomobilityComponentManager;
 import com.sshakusora.riautomobility.editor.VehicleImportRegistries;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.item.RIAutomobilityItems;
 import io.github.foundationgames.automobility.automobile.AutomobileComponent;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
@@ -24,6 +25,7 @@ public final class RIAutomobilityCreativeTabs {
             .icon(() -> AutomobilityItems.AUTOMOBILE_FRAME.require().createStack(RIAutomobileFrame.BEJEWELED_DOUBLEMOTORCAR))
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .displayItems((params, output) -> {
+                output.accept(RIAutomobilityItems.VEHICLE_KEY.get());
                 output.accept(VehicleImportRegistries.VEHICLE_IMPORT_TABLE_ITEM.get());
                 AutomobileFrame.REGISTRY.forEach(frame -> {
                     if (isBuiltInRIAComponent(frame) && !frame.isEmpty()) {

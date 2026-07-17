@@ -24,7 +24,10 @@ public class PassengerDriverSwitchPacket {
             Entity entity = player.getVehicle();
             if (entity == null) return;
 
-            if(entity instanceof RIAutomobileEntity auto && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) {
+            if (entity instanceof RIAutomobileEntity auto
+                    && player.isAlive()
+                    && auto.hasPassenger(player)
+                    && RIAutomobileFrame.isRIAutomobileFrame(auto.getFrame())) {
                 auto.cycleSeat(player);
             }
         });

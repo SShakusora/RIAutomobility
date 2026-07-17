@@ -1,6 +1,7 @@
 package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
+import com.sshakusora.riautomobility.item.VehicleKeyAccess;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
@@ -13,6 +14,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -23,15 +27,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import javax.annotation.Nullable;
 
 @Mixin(AutomobileAssemblerBlockEntity.class)
 public class AutomobileAssemblerBlockEntityMixin {
     @Unique private final TagKey<Item> FORGE_WRENCH = TagKey.create(Registries.ITEM, new ResourceLocation("forge", "tools/wrench"));
+    @Unique @Nullable private Player riautomobility$interactingPlayer;
 
     @Shadow protected AutomobileFrame frame;
     @Shadow protected AutomobileEngine engine;
     @Shadow protected AutomobileWheel wheel;
-    @Shadow protected int wheelCount;
 
     @Shadow protected Vec3 centerPos() { return Vec3.ZERO; }
     @Shadow public float getAutomobileYaw(float tickDelta) { return 0; }
@@ -41,6 +48,16 @@ public class AutomobileAssemblerBlockEntityMixin {
     @Redirect(method = "handleItemInteract", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z", ordinal = 0))
     private boolean allowForgeWrench(ItemStack stack, Item item) {
         return stack.is(item) || stack.is(FORGE_WRENCH);
+    }
+
+    @Inject(method = "interact", at = @At("HEAD"), remap = false)
+    private void captureConstructingPlayer(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        this.riautomobility$interactingPlayer = player;
+    }
+
+    @Inject(method = "interact", at = @At("RETURN"), remap = false)
+    private void clearConstructingPlayer(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        this.riautomobility$interactingPlayer = null;
     }
 
     @Inject(method = "tryConstructAutomobile", at = @At("HEAD"), cancellable = true, remap = false)
@@ -58,7 +75,11 @@ public class AutomobileAssemblerBlockEntityMixin {
         RIAutomobileEntity auto = new RIAutomobileEntity(self.getLevel());
         auto.moveTo(pos.x, pos.y, pos.z, this.getAutomobileYaw(0), 0);
         auto.setComponents(this.frame, this.wheel, this.engine);
-        self.getLevel().addFreshEntity(auto);
+        if (!self.getLevel().addFreshEntity(auto)) {
+            ci.cancel();
+            return;
+        }
+        VehicleKeyAccess.tryBindOffhandKey(this.riautomobility$interactingPlayer, auto);
 
         self.getLevel().players().forEach(player -> {
             if (player instanceof ServerPlayer serverPlayer && player.blockPosition().distSqr(self.getBlockPos()) < 80000) {

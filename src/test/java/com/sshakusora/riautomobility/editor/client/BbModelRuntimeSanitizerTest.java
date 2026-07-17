@@ -12,6 +12,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -120,7 +121,7 @@ class BbModelRuntimeSanitizerTest {
                 project().toString().getBytes(StandardCharsets.UTF_8), "test",
                 "textures/entity/automobile/frame/car");
         byte[] optimized = exported.textureEntries().values().iterator().next();
-        byte[] original = java.util.Base64.getDecoder().decode(
+        byte[] original = Base64.getDecoder().decode(
                 EMBEDDED_PNG.substring("data:image/png;base64,".length()));
 
         BufferedImage expected = ImageIO.read(new ByteArrayInputStream(original));
@@ -160,7 +161,7 @@ class BbModelRuntimeSanitizerTest {
         assertEquals(originalDocument.animations().size(), compactDocument.animations().size());
     }
 
-    private static int countNodes(java.util.List<BbModelData.Node> nodes) {
+    private static int countNodes(List<BbModelData.Node> nodes) {
         int count = 0;
         for (BbModelData.Node node : nodes) {
             count++;

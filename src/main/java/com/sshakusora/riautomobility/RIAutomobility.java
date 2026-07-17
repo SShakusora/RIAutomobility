@@ -9,6 +9,7 @@ import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.entity.RIAutomobilityEntities;
 import com.sshakusora.riautomobility.entity.render.RendererRegistry;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
+import com.sshakusora.riautomobility.item.RIAutomobilityItems;
 import com.sshakusora.riautomobility.model.RIAForgeSlopeBakedModel;
 import com.sshakusora.riautomobility.model.RIAutomobileModels;
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
@@ -33,6 +34,7 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
@@ -48,7 +50,12 @@ public class RIAutomobility
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         RIAutomobilityCreativeTabs.TABS.register(modEventBus);
+        modEventBus.addListener(this::onCommonSetup);
         registerAll(modEventBus);
+    }
+
+    private void onCommonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(RIAutomobilityNetwork::registerAutomobilityInputGuard);
     }
 
     public static ResourceLocation rl(String path){
@@ -60,6 +67,7 @@ public class RIAutomobility
         RIAutomobileFrame.init();
         RIAutomobileWheel.init();
         RIAutomobilityEntities.ENTITIES.register(bus);
+        RIAutomobilityItems.ITEMS.register(bus);
         VehicleImportRegistries.BLOCKS.register(bus);
         VehicleImportRegistries.ITEMS.register(bus);
         VehicleImportRegistries.MENUS.register(bus);

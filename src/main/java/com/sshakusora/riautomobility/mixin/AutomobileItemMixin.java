@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.mixin;
 
 import com.sshakusora.riautomobility.editor.AutomobileItemTooltips;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
+import com.sshakusora.riautomobility.item.VehicleKeyAccess;
 import io.github.foundationgames.automobility.automobile.AutomobileData;
 import io.github.foundationgames.automobility.item.AutomobileItem;
 import net.minecraft.network.chat.Component;
@@ -38,8 +39,10 @@ public class AutomobileItemMixin {
         var pos = context.getClickLocation();
         entity.moveTo(pos.x, pos.y, pos.z, context.getHorizontalDirection().toYRot(), 0);
         entity.setComponents(riautomobility$data.getFrame(), riautomobility$data.getWheel(), riautomobility$data.getEngine());
-        context.getLevel().addFreshEntity(entity);
-        stack.shrink(1);
+        if (context.getLevel().addFreshEntity(entity)) {
+            VehicleKeyAccess.tryBindOffhandKey(context.getPlayer(), entity);
+            stack.shrink(1);
+        }
         cir.setReturnValue(InteractionResult.PASS);
     }
 
