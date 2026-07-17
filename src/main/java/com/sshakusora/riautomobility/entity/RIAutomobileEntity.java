@@ -493,11 +493,14 @@ public class RIAutomobileEntity extends AutomobileEntity implements Container {
 
         Vec3 seatPos = local.pos();
         Vec3 pos = this.position()
-                .add(0.0F, vert + passenger.getMyRidingOffset(), 0.0F)
-                .add(new Vec3(seatPos.x, this.getPassengersRidingOffset() + seatPos.y, seatPos.z)
-                        .yRot(-this.getYRot() * Mth.DEG_TO_RAD)
-                        .xRot(-pitch * Mth.DEG_TO_RAD)
-                        .zRot(-roll * Mth.DEG_TO_RAD));
+                .add(0.0F, vert, 0.0F)
+                .add(RIAutomobileTransformUtil.rotateLocalOffset(
+                        new Vec3(
+                                seatPos.x,
+                                this.getPassengersRidingOffset() + seatPos.y + passenger.getMyRidingOffset(),
+                                seatPos.z
+                        ),
+                        this.getYRot(), pitch, roll));
 
         moveFunc.accept(passenger, pos.x, pos.y, pos.z);
 

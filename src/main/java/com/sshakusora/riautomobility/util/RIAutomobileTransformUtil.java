@@ -14,9 +14,17 @@ public final class RIAutomobileTransformUtil {
 
         return auto.position()
                 .add(0.0F, vert, 0.0F)
-                .add(new Vec3(position.x, position.y, position.z)
-                        .yRot(-auto.getYRot() * Mth.DEG_TO_RAD)
-                        .xRot(-pitch * Mth.DEG_TO_RAD)
-                        .zRot(-roll * Mth.DEG_TO_RAD));
+                .add(rotateLocalOffset(position, auto.getYRot(), pitch, roll));
+    }
+
+    /**
+     * Applies the same physical rotation matrix as the renderer: the vehicle yaw is
+     * inside the renderer's {@code rotationXYZ(pitch, 0, roll)} tilt.
+     */
+    public static Vec3 rotateLocalOffset(Vec3 position, float yaw, float pitch, float roll) {
+        return position
+                .yRot(-yaw * Mth.DEG_TO_RAD)
+                .zRot(-roll * Mth.DEG_TO_RAD)
+                .xRot(-pitch * Mth.DEG_TO_RAD);
     }
 }

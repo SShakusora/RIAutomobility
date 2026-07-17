@@ -4,6 +4,7 @@ import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import com.sshakusora.riautomobility.frame.RIAutomobileFrame;
 import com.sshakusora.riautomobility.util.RIAutomobileCameraRegistry;
+import com.sshakusora.riautomobility.util.RIAutomobileCameraTransformUtil;
 import com.sshakusora.riautomobility.util.RIAutomobileSeatRegistry;
 import io.github.foundationgames.automobility.entity.AutomobileEntity;
 import net.minecraft.client.Camera;
@@ -19,6 +20,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.joml.Vector3f;
 
 @Mod.EventBusSubscriber(modid = RIAutomobility.MODID, value = Dist.CLIENT)
 public final class ClientVehicleViewEvents {
@@ -47,12 +49,36 @@ public final class ClientVehicleViewEvents {
             return;
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
-            return;
-        }
         if (!(player.getVehicle() instanceof AutomobileEntity automobile)
                 || !RIAutomobileFrame.isRIAutomobileFrame(automobile.getFrame())) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        CameraType cameraType = minecraft.options.getCameraType();
+        if (cameraType.isFirstPerson()) {
+            float partialTick = (float) event.getPartialTick();
+            float pitch = automobile.getDisplacement().getAngularX(partialTick);
+            float roll = automobile.getDisplacement().getAngularZ(partialTick);
+
+            RIAutomobileCameraTransformUtil.CameraAngles angles =
+                    RIAutomobileCameraTransformUtil.applyVehicleTilt(
+                            event.getYaw(), event.getPitch(), event.getRoll(), pitch, roll);
+            event.setYaw(angles.yaw());
+            event.setPitch(angles.pitch());
+            event.setRoll(angles.roll());
+
+            float eyeHeight = player.getEyeHeight();
+            Vector3f eyeOffset = RIAutomobileCameraTransformUtil.rotateEyeOffset(eyeHeight, pitch, roll);
+            Vec3 vanillaEyePosition = player.getEyePosition(partialTick);
+            camera.setPosition(vanillaEyePosition.add(
+                    eyeOffset.x,
+                    eyeOffset.y - eyeHeight,
+                    eyeOffset.z
+            ));
+            return;
+        }
+        if (cameraType != CameraType.THIRD_PERSON_BACK) {
             return;
         }
 
