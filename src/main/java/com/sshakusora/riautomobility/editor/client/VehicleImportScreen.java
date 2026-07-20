@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 public final class VehicleImportScreen extends AbstractContainerScreen<VehicleImportMenu> {
     private static final int TAB_WIDTH = 62;
     private static final int PARAM_WIDTH = 226;
+    private static final int GUI_WIDTH = 512;
     private static final int GUI_HEIGHT = 300;
     private static final int CONTROL_ROW_STEP = 24;
     private static final int DENSE_CONTROL_ROW_STEP = 20;
@@ -90,7 +91,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         draft = new VehicleEditorDraft(components.defaultFrame(), components.defaultWheel(), components.defaultEngine());
         preview = new PreviewAutomobile(draft);
         previewRenderer = new VehiclePreviewRenderer(draft, preview);
-        imageWidth = 620;
+        imageWidth = GUI_WIDTH;
         imageHeight = GUI_HEIGHT;
     }
 
@@ -99,7 +100,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         positionDropdown = null;
         hitboxScrollArea = null;
         hitboxScrollBar = null;
-        imageWidth = Math.max(420, Math.min(620, width - 16));
+        imageWidth = GUI_WIDTH;
         imageHeight = GUI_HEIGHT;
         super.init();
         menu.setSlotsActive(selectionType == null);
@@ -1144,12 +1145,24 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SCREEN,
-                leftPos, topPos, imageWidth, imageHeight);
         if (selectionType != null) {
-            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SELECTION,
-                    leftPos + 5, topPos + 22, imageWidth - 10, imageHeight - 27);
-        } else {
+            if (!VehicleGuiTextures.blitSelectionBackground(g, leftPos, topPos, imageWidth, imageHeight)) {
+                boolean tableBackground = VehicleGuiTextures.blitTableBackground(
+                        g, leftPos, topPos, imageWidth, imageHeight);
+                if (!tableBackground) {
+                    VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SCREEN,
+                            leftPos, topPos, imageWidth, imageHeight);
+                }
+                VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SELECTION,
+                        leftPos + 5, topPos + 22, imageWidth - 10, imageHeight - 27);
+            }
+            return;
+        }
+
+        boolean tableBackground = VehicleGuiTextures.blitTableBackground(g, leftPos, topPos, imageWidth, imageHeight);
+        if (!tableBackground) {
+            VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SCREEN,
+                    leftPos, topPos, imageWidth, imageHeight);
             VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.SIDEBAR,
                     leftPos + 4, topPos + 22, TAB_WIDTH - 4, imageHeight - 27);
             VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.CONTROLS,
@@ -1157,8 +1170,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             VehicleGuiTextures.blitNineSliced(g, VehicleImportGuiAtlas.Sprite.PREVIEW,
                     previewX0(), topPos + 22, leftPos + imageWidth - 5 - previewX0(), imageHeight - 27);
             if (hasCurrentPartPreview()) renderVehicle(g, partialTick);
+        } else if (hasCurrentPartPreview()) {
+            renderVehicle(g, partialTick);
         }
-        if (selectionType == null) renderInventoryBackground(g);
+        if (!tableBackground) renderInventoryBackground(g);
     }
 
     private void renderInventoryBackground(GuiGraphics g) {

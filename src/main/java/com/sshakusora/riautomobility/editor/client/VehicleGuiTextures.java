@@ -13,15 +13,50 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import org.joml.Matrix4f;
 
 final class VehicleGuiTextures {
+    private static final ResourceLocation TABLE_BACKGROUND = new ResourceLocation(
+            RIAutomobility.MODID, "textures/gui/vehicle_import_table.png");
+    private static final ResourceLocation SELECTION_BACKGROUND = new ResourceLocation(
+            RIAutomobility.MODID, "textures/gui/vehicle_import_selection.png");
+    private static final int TABLE_BACKGROUND_WIDTH = 512;
+    private static final int TABLE_BACKGROUND_HEIGHT = 300;
     private static final ResourceLocation FINAL_TEXTURE = new ResourceLocation(
             RIAutomobility.MODID, "textures/gui/vehicle_import.png");
     private static final ResourceLocation TEMPLATE_TEXTURE = new ResourceLocation(
             RIAutomobility.MODID, "textures/gui/vehicle_import_template.png");
+    private static ResourceManager cachedBackgroundManager;
+    private static boolean tableBackgroundAvailable;
+    private static boolean selectionBackgroundAvailable;
     private static ResourceManager cachedManager;
     private static ResourceLocation cachedTexture = TEMPLATE_TEXTURE;
     private static long nextTextureCheck;
 
     private VehicleGuiTextures() {
+    }
+
+    static boolean blitTableBackground(GuiGraphics graphics, int x, int y, int width, int height) {
+        refreshBackgroundAvailability();
+        if (!tableBackgroundAvailable) return false;
+        graphics.blit(TABLE_BACKGROUND, x, y, width, height, 0, 0,
+                TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT,
+                TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT);
+        return true;
+    }
+
+    static boolean blitSelectionBackground(GuiGraphics graphics, int x, int y, int width, int height) {
+        refreshBackgroundAvailability();
+        if (!selectionBackgroundAvailable) return false;
+        graphics.blit(SELECTION_BACKGROUND, x, y, width, height, 0, 0,
+                TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT,
+                TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT);
+        return true;
+    }
+
+    private static void refreshBackgroundAvailability() {
+        ResourceManager manager = Minecraft.getInstance().getResourceManager();
+        if (manager == cachedBackgroundManager) return;
+        cachedBackgroundManager = manager;
+        tableBackgroundAvailable = manager.getResource(TABLE_BACKGROUND).isPresent();
+        selectionBackgroundAvailable = manager.getResource(SELECTION_BACKGROUND).isPresent();
     }
 
     static void blit(GuiGraphics graphics, VehicleImportGuiAtlas.Sprite sprite,
