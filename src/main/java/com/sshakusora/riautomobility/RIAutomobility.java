@@ -73,6 +73,7 @@ public class RIAutomobility
         VehicleImportRegistries.BLOCKS.register(bus);
         VehicleImportRegistries.ITEMS.register(bus);
         VehicleImportRegistries.MENUS.register(bus);
+        VehicleImportRegistries.BLOCK_ENTITIES.register(bus);
         RIAutomobilityNetwork.register();
     }
 

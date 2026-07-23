@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import com.sshakusora.riautomobility.editor.VehicleImportMenu;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.ExportVehicleComponentItemPacket;
+import com.sshakusora.riautomobility.network.packet.UpdateVehicleImportDraftPacket;
 import com.sshakusora.riautomobility.network.packet.client.ClientCarPackSynchronizer;
 import com.sshakusora.riautomobility.network.packet.client.ClientCarPackUploader;
 import net.minecraft.client.Minecraft;
@@ -15,6 +16,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -87,10 +90,19 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private double frontAttachmentListScroll;
     private double rearAttachmentListScroll;
     private String status = "";
+    private CompoundTag lastSentEditorState = new CompoundTag();
+    private int draftSyncTicks;
+    private boolean restorePreviewPending;
 
     public VehicleImportScreen(VehicleImportMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         draft = new VehicleEditorDraft(components.defaultFrame(), components.defaultWheel(), components.defaultEngine());
+        CompoundTag editorState = menu.initialEditorState();
+        loadEditorState(editorState);
+        resolveRestoredModelFiles();
+        lastSentEditorState = editorState.copy();
+        restorePreviewPending = Arrays.stream(VehicleEditorDraft.Target.values())
+                .anyMatch(target -> draft.modelFile(target) != null && Files.isRegularFile(draft.modelFile(target)));
         preview = new PreviewAutomobile(draft);
         previewRenderer = new VehiclePreviewRenderer(draft, preview);
         imageWidth = GUI_WIDTH;
@@ -112,6 +124,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         attachmentIconLists.clear();
         numberControls.clear();
         availableWithoutPreview.clear();
+        if (restorePreviewPending) {
+            restorePreviewPending = false;
+            loadRestoredPreview();
+        }
         if (selectionType != null) {
             addSelectionControls();
             return;
@@ -143,6 +159,97 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         resetViewButton.active = hasCurrentPartPreview();
         addRenderableWidget(resetViewButton);
         disableUnavailablePartControls(panelX);
+    }
+
+    private void loadEditorState(CompoundTag state) {
+        if (state == null || state.isEmpty()) return;
+        if (state.contains("Draft", Tag.TAG_COMPOUND)) draft.load(state.getCompound("Draft"));
+        page = readEnum(Page.class, state.getString("Page"), Page.forTarget(draft.target));
+        frameTab = readEnum(FrameTab.class, state.getString("FrameTab"), FrameTab.BASIC);
+        wheelTab = readEnum(WheelTab.class, state.getString("WheelTab"), WheelTab.BASIC);
+        wheelPointIndex = Math.max(0, state.getInt("WheelPointIndex"));
+        seatIndex = Math.max(0, state.getInt("SeatIndex"));
+        hitboxIndex = state.contains("HitboxIndex") ? state.getInt("HitboxIndex") : -1;
+        seatFirstPerson = state.getBoolean("SeatFirstPerson");
+        selectionPage = Math.max(0, state.getInt("SelectionPage"));
+        wheelPositionDropdownScroll = Math.max(0, state.getInt("WheelPositionDropdownScroll"));
+        seatPositionDropdownScroll = Math.max(0, state.getInt("SeatPositionDropdownScroll"));
+        collisionDropdownScroll = Math.max(0, state.getInt("CollisionDropdownScroll"));
+        hitboxControlScroll = Math.max(0, state.getInt("HitboxControlScroll"));
+        frontAttachmentListScroll = state.getDouble("FrontAttachmentListScroll");
+        rearAttachmentListScroll = state.getDouble("RearAttachmentListScroll");
+        draft.target = page.target;
+    }
+
+    private void resolveRestoredModelFiles() {
+        Path importDirectory = editorImportDirectory();
+        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
+            Path stored = draft.modelFile(target);
+            Path resolved = null;
+            if (stored != null && !stored.isAbsolute() && stored.getNameCount() == 1) {
+                Path candidate = importDirectory.resolve(stored).toAbsolutePath().normalize();
+                if (candidate.startsWith(importDirectory) && Files.isRegularFile(candidate)) resolved = candidate;
+            }
+            draft.restoreModelFile(target, resolved);
+            if (resolved != null) extractedImportFiles.put(target, resolved);
+        }
+    }
+
+    private static Path editorImportDirectory() {
+        return CarPackManager.getRootDirectory().resolve("cache").resolve("editor").resolve("imports")
+                .toAbsolutePath().normalize();
+    }
+
+    private CompoundTag saveEditorState() {
+        CompoundTag state = new CompoundTag();
+        state.put("Draft", draft.save());
+        state.putString("Page", page.name());
+        state.putString("FrameTab", frameTab.name());
+        state.putString("WheelTab", wheelTab.name());
+        state.putInt("WheelPointIndex", wheelPointIndex);
+        state.putInt("SeatIndex", seatIndex);
+        state.putInt("HitboxIndex", hitboxIndex);
+        state.putBoolean("SeatFirstPerson", seatFirstPerson);
+        state.putInt("SelectionPage", selectionPage);
+        state.putInt("WheelPositionDropdownScroll", wheelPositionDropdownScroll);
+        state.putInt("SeatPositionDropdownScroll", seatPositionDropdownScroll);
+        state.putInt("CollisionDropdownScroll", collisionDropdownScroll);
+        state.putInt("HitboxControlScroll", hitboxControlScroll);
+        state.putDouble("FrontAttachmentListScroll", frontAttachmentListScroll);
+        state.putDouble("RearAttachmentListScroll", rearAttachmentListScroll);
+        return state;
+    }
+
+    private void syncEditorState(boolean force) {
+        if (minecraft == null || minecraft.getConnection() == null) return;
+        CompoundTag state = saveEditorState();
+        if (!force && state.equals(lastSentEditorState)) return;
+        RIAutomobilityNetwork.CHANNEL.sendToServer(
+                new UpdateVehicleImportDraftPacket(menu.blockPos(), state));
+        lastSentEditorState = state;
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (++draftSyncTicks >= 10) {
+            draftSyncTicks = 0;
+            syncEditorState(false);
+        }
+    }
+
+    @Override
+    public void onClose() {
+        syncEditorState(true);
+        super.onClose();
+    }
+
+    private static <E extends Enum<E>> E readEnum(Class<E> type, String name, E fallback) {
+        try {
+            return Enum.valueOf(type, name);
+        } catch (IllegalArgumentException exception) {
+            return fallback;
+        }
     }
 
     private void setTargetForPage() {
@@ -795,9 +902,17 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         Path selected = Path.of(chosen);
         String fileName = selected.getFileName().toString().toLowerCase(Locale.ROOT);
         if (fileName.endsWith(".bbmodel")) {
-            replaceExtractedImportFile(draft.target, null);
-            draft.setModelFile(draft.target, selected);
-            loadPreview();
+            try {
+                Files.createDirectories(editorImportDirectory());
+                Path cached = editorImportDirectory().resolve("model-"
+                        + UUID.randomUUID().toString().replace("-", "") + ".bbmodel");
+                Files.copy(selected, cached);
+                replaceExtractedImportFile(draft.target, cached);
+                draft.setModelFile(draft.target, cached);
+                loadPreview();
+            } catch (IOException exception) {
+                status = VehicleImportText.string("status.import_failed", exception.getMessage());
+            }
             return;
         }
         if (!fileName.endsWith(CarPackManager.CAR_PACK_EXTENSION)) {
@@ -805,9 +920,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             return;
         }
         try {
-            Path extractionDirectory = CarPackManager.getRootDirectory().resolve("cache").resolve("editor").resolve("imports");
             VehiclePackImporter.ImportedComponent imported =
-                    VehiclePackImporter.importComponent(selected, extractionDirectory);
+                    VehiclePackImporter.importComponent(selected, editorImportDirectory());
             imported.applyTo(draft);
             replaceExtractedImportFile(imported.target(), imported.modelFile());
             page = Page.forTarget(imported.target());
@@ -838,6 +952,30 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             }));
         } catch (IOException e) {
             status = VehicleImportText.string("status.preview_failed", e.getMessage());
+        }
+    }
+
+    private void loadRestoredPreview() {
+        VehicleEditorDraft.Target restoredTarget = draft.target;
+        status = VehicleImportText.string("status.loading_preview");
+        try {
+            previewSession.load(draft).whenComplete((unused, error) -> Minecraft.getInstance().execute(() -> {
+                if (error == null) {
+                    for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
+                        if (draft.modelFile(target) != null && Files.isRegularFile(draft.modelFile(target))) {
+                            draft.setPreviewReady(target, true);
+                            draft.showPart(target);
+                        }
+                    }
+                    draft.target = restoredTarget;
+                    status = VehicleImportText.string("status.preview_loaded");
+                    if (Minecraft.getInstance().screen == this) resetWidgets();
+                } else {
+                    status = VehicleImportText.string("status.preview_failed", rootMessage(error));
+                }
+            }));
+        } catch (IOException exception) {
+            status = VehicleImportText.string("status.preview_failed", exception.getMessage());
         }
     }
 
@@ -1408,13 +1546,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public void removed() {
+        syncEditorState(true);
         previewSession.close();
-        for (Path extracted : extractedImportFiles.values()) {
-            try {
-                Files.deleteIfExists(extracted);
-            } catch (IOException ignored) {
-            }
-        }
         extractedImportFiles.clear();
         super.removed();
     }

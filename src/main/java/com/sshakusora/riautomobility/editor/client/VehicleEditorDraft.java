@@ -11,6 +11,9 @@ import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.Vec3;
 
 import java.nio.file.Path;
@@ -115,6 +118,261 @@ public final class VehicleEditorDraft {
         loadEngine(engine);
     }
 
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("Target", target.name());
+        if (previewTarget != null) tag.putString("PreviewTarget", previewTarget.name());
+        tag.putBoolean("Overwrite", overwrite);
+        tag.putBoolean("ShowInCreativeTab", showInCreativeTab);
+        tag.putBoolean("AutomaticFrameModelSize", automaticFrameModelSize);
+        tag.putBoolean("AutomaticWheelModelSize", automaticWheelModelSize);
+        if (automaticCameraOffset != null) tag.put("AutomaticCameraOffset", saveVec3(automaticCameraOffset));
+
+        CompoundTag parts = new CompoundTag();
+        for (Target part : Target.values()) {
+            CompoundTag partTag = new CompoundTag();
+            Path modelFile = modelFiles.get(part);
+            if (modelFile != null && modelFile.getFileName() != null) {
+                partTag.putString("ModelFile", modelFile.getFileName().toString());
+            }
+            partTag.putString("DisplayName", displayNames.getOrDefault(part, ""));
+            partTag.putString("Author", authors.getOrDefault(part, ""));
+            partTag.putString("PreviewKey", previewKeys.get(part));
+            partTag.putString("ComponentPath", componentPaths.get(part));
+            partTag.putBoolean("Visible", visibleParts.contains(part));
+            parts.put(part.name(), partTag);
+        }
+        tag.put("Parts", parts);
+        tag.putString("SelectedFrame", selectedFrame.getId().toString());
+        tag.putString("SelectedWheel", selectedWheel.getId().toString());
+        tag.putString("SelectedEngine", selectedEngine.getId().toString());
+
+        tag.putFloat("Weight", weight);
+        tag.putFloat("LengthPx", lengthPx);
+        tag.putFloat("EnginePosBack", enginePosBack);
+        tag.putFloat("EnginePosUp", enginePosUp);
+        tag.putFloat("RearAttachmentPos", rearAttachmentPos);
+        tag.putFloat("FrontAttachmentPos", frontAttachmentPos);
+        tag.putFloat("WidthBlocks", widthBlocks);
+        tag.putFloat("HeightBlocks", heightBlocks);
+        tag.putBoolean("HideEngine", hideEngine);
+        tag.putBoolean("FrontAttachmentEnabled", frontAttachmentEnabled);
+        tag.putBoolean("RearAttachmentEnabled", rearAttachmentEnabled);
+        tag.putBoolean("FrontAttachmentWhitelistMode", frontAttachmentWhitelistMode);
+        tag.putBoolean("RearAttachmentWhitelistMode", rearAttachmentWhitelistMode);
+        tag.putString("FrontAttachmentList", frontAttachmentListText);
+        tag.putString("RearAttachmentList", rearAttachmentListText);
+        tag.put("WheelPoints", saveWheelPoints());
+        tag.put("Seats", saveVec3List(seats));
+        tag.put("CameraPositions", saveVec3List(cameraPositions));
+        tag.put("Hitboxes", saveHitboxes());
+
+        tag.putFloat("WheelSize", wheelSize);
+        tag.putFloat("WheelGrip", wheelGrip);
+        tag.putFloat("WheelRadius", wheelRadius);
+        tag.putFloat("WheelWidth", wheelWidth);
+        tag.putFloat("WheelRotationY", wheelRotationY);
+        tag.putFloat("EngineRotationY", engineRotationY);
+        tag.putFloat("EngineTorque", engineTorque);
+        tag.putFloat("EngineSpeed", engineSpeed);
+        tag.put("Exhausts", saveExhausts());
+        return tag;
+    }
+
+    public void load(CompoundTag tag) {
+        if (tag == null || tag.isEmpty()) return;
+        target = readTarget(tag.getString("Target"), Target.FRAME);
+        previewTarget = tag.contains("PreviewTarget", Tag.TAG_STRING)
+                ? readTarget(tag.getString("PreviewTarget"), null) : null;
+        overwrite = tag.getBoolean("Overwrite");
+        showInCreativeTab = !tag.contains("ShowInCreativeTab") || tag.getBoolean("ShowInCreativeTab");
+        automaticFrameModelSize = tag.getBoolean("AutomaticFrameModelSize");
+        automaticWheelModelSize = tag.getBoolean("AutomaticWheelModelSize");
+        automaticCameraOffset = tag.contains("AutomaticCameraOffset", Tag.TAG_COMPOUND)
+                ? loadVec3(tag.getCompound("AutomaticCameraOffset")) : null;
+
+        CompoundTag parts = tag.getCompound("Parts");
+        visibleParts.clear();
+        for (Target part : Target.values()) {
+            CompoundTag partTag = parts.getCompound(part.name());
+            if (partTag.contains("ModelFile", Tag.TAG_STRING)) {
+                try {
+                    modelFiles.put(part, Path.of(partTag.getString("ModelFile")));
+                } catch (RuntimeException ignored) {
+                    modelFiles.remove(part);
+                }
+            } else {
+                modelFiles.remove(part);
+            }
+            displayNames.put(part, limited(partTag.getString("DisplayName"), 1024));
+            authors.put(part, limited(partTag.getString("Author"), 256));
+            String previewKey = partTag.getString("PreviewKey");
+            if (previewKey.matches("[0-9a-f]{32}")) previewKeys.put(part, previewKey);
+            String componentPath = partTag.getString("ComponentPath");
+            if (componentPath.matches(GENERATED_COMPONENT_PREFIX + "[0-9a-f]{32}")) {
+                componentPaths.put(part, componentPath);
+            }
+            previewReady.put(part, false);
+            if (partTag.getBoolean("Visible")) visibleParts.add(part);
+        }
+
+        selectedFrame = AutomobileFrame.REGISTRY.getOrDefault(readId(tag.getString("SelectedFrame"), selectedFrame.getId()));
+        selectedWheel = AutomobileWheel.REGISTRY.getOrDefault(readId(tag.getString("SelectedWheel"), selectedWheel.getId()));
+        selectedEngine = AutomobileEngine.REGISTRY.getOrDefault(readId(tag.getString("SelectedEngine"), selectedEngine.getId()));
+
+        weight = tag.getFloat("Weight");
+        lengthPx = tag.getFloat("LengthPx");
+        enginePosBack = tag.getFloat("EnginePosBack");
+        enginePosUp = tag.getFloat("EnginePosUp");
+        rearAttachmentPos = tag.getFloat("RearAttachmentPos");
+        frontAttachmentPos = tag.getFloat("FrontAttachmentPos");
+        widthBlocks = tag.getFloat("WidthBlocks");
+        heightBlocks = tag.getFloat("HeightBlocks");
+        hideEngine = tag.getBoolean("HideEngine");
+        frontAttachmentEnabled = tag.getBoolean("FrontAttachmentEnabled");
+        rearAttachmentEnabled = tag.getBoolean("RearAttachmentEnabled");
+        frontAttachmentWhitelistMode = tag.getBoolean("FrontAttachmentWhitelistMode");
+        rearAttachmentWhitelistMode = tag.getBoolean("RearAttachmentWhitelistMode");
+        frontAttachmentListText = limited(tag.getString("FrontAttachmentList"), 4096);
+        rearAttachmentListText = limited(tag.getString("RearAttachmentList"), 4096);
+        loadWheelPoints(tag.getList("WheelPoints", Tag.TAG_COMPOUND));
+        loadVec3List(tag.getList("Seats", Tag.TAG_COMPOUND), seats);
+        if (seats.isEmpty()) seats.add(defaultSeatPosition());
+        loadVec3List(tag.getList("CameraPositions", Tag.TAG_COMPOUND), cameraPositions);
+        if (cameraPositions.isEmpty()) cameraPositions.add(Vec3.ZERO);
+        loadHitboxes(tag.getList("Hitboxes", Tag.TAG_COMPOUND));
+
+        wheelSize = tag.getFloat("WheelSize");
+        wheelGrip = tag.getFloat("WheelGrip");
+        wheelRadius = tag.getFloat("WheelRadius");
+        wheelWidth = tag.getFloat("WheelWidth");
+        wheelRotationY = tag.getFloat("WheelRotationY");
+        engineRotationY = tag.getFloat("EngineRotationY");
+        engineTorque = tag.getFloat("EngineTorque");
+        engineSpeed = tag.getFloat("EngineSpeed");
+        loadExhausts(tag.getList("Exhausts", Tag.TAG_COMPOUND));
+        modelError = "";
+        clearPreviewCaches();
+    }
+
+    private ListTag saveWheelPoints() {
+        ListTag list = new ListTag();
+        wheelPoints.forEach(point -> {
+            CompoundTag value = new CompoundTag();
+            value.putFloat("Forward", point.forward);
+            value.putFloat("Right", point.right);
+            value.putFloat("Scale", point.scale);
+            value.putFloat("Yaw", point.yaw);
+            value.putString("End", point.end);
+            value.putString("Side", point.side);
+            list.add(value);
+        });
+        return list;
+    }
+
+    private void loadWheelPoints(ListTag list) {
+        wheelPoints.clear();
+        for (int index = 0; index < Math.min(list.size(), 256); index++) {
+            CompoundTag value = list.getCompound(index);
+            wheelPoints.add(new WheelPoint(value.getFloat("Forward"), value.getFloat("Right"),
+                    value.getFloat("Scale"), value.getFloat("Yaw"),
+                    limited(value.getString("End"), 16), limited(value.getString("Side"), 16)));
+        }
+    }
+
+    private static ListTag saveVec3List(List<Vec3> values) {
+        ListTag list = new ListTag();
+        values.forEach(value -> list.add(saveVec3(value)));
+        return list;
+    }
+
+    private static CompoundTag saveVec3(Vec3 value) {
+        CompoundTag tag = new CompoundTag();
+        tag.putDouble("X", value.x);
+        tag.putDouble("Y", value.y);
+        tag.putDouble("Z", value.z);
+        return tag;
+    }
+
+    private static Vec3 loadVec3(CompoundTag tag) {
+        return new Vec3(tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"));
+    }
+
+    private static void loadVec3List(ListTag list, List<Vec3> target) {
+        target.clear();
+        for (int index = 0; index < Math.min(list.size(), 256); index++) {
+            target.add(loadVec3(list.getCompound(index)));
+        }
+    }
+
+    private ListTag saveHitboxes() {
+        ListTag list = new ListTag();
+        hitboxes.forEach(hitbox -> {
+            CompoundTag value = saveVec3(hitbox.origin);
+            value.putFloat("Width", hitbox.width);
+            value.putFloat("Height", hitbox.height);
+            value.putBoolean("HasContainer", hitbox.hasContainer);
+            list.add(value);
+        });
+        return list;
+    }
+
+    private void loadHitboxes(ListTag list) {
+        hitboxes.clear();
+        for (int index = 0; index < Math.min(list.size(), 256); index++) {
+            CompoundTag value = list.getCompound(index);
+            hitboxes.add(new HitboxPoint(loadVec3(value), value.getFloat("Width"),
+                    value.getFloat("Height"), value.getBoolean("HasContainer")));
+        }
+    }
+
+    private ListTag saveExhausts() {
+        ListTag list = new ListTag();
+        exhausts.forEach(exhaust -> {
+            CompoundTag value = new CompoundTag();
+            value.putFloat("X", exhaust.x());
+            value.putFloat("Y", exhaust.y());
+            value.putFloat("Z", exhaust.z());
+            value.putFloat("Pitch", exhaust.pitch());
+            value.putFloat("Yaw", exhaust.yaw());
+            list.add(value);
+        });
+        return list;
+    }
+
+    private void loadExhausts(ListTag list) {
+        exhausts.clear();
+        for (int index = 0; index < Math.min(list.size(), 256); index++) {
+            CompoundTag value = list.getCompound(index);
+            exhausts.add(new EngineSpec.ExhaustSpec(value.getFloat("X"), value.getFloat("Y"),
+                    value.getFloat("Z"), value.getFloat("Pitch"), value.getFloat("Yaw")));
+        }
+    }
+
+    private void clearPreviewCaches() {
+        cachedPreviewFrame = null;
+        cachedPreviewSupportFrame = null;
+        cachedPreviewWheel = null;
+        cachedPreviewEngine = null;
+    }
+
+    private static Target readTarget(String value, Target fallback) {
+        try {
+            return Target.valueOf(value);
+        } catch (IllegalArgumentException exception) {
+            return fallback;
+        }
+    }
+
+    private static ResourceLocation readId(String value, ResourceLocation fallback) {
+        ResourceLocation id = ResourceLocation.tryParse(value);
+        return id == null ? fallback : id;
+    }
+
+    private static String limited(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
     public Path modelFile() {
         return modelFiles.get(target);
     }
@@ -141,6 +399,12 @@ public final class VehicleEditorDraft {
         previewReady.put(part, false);
         if (part == Target.FRAME) automaticFrameModelSize = true;
         if (part == Target.WHEEL) automaticWheelModelSize = true;
+    }
+
+    void restoreModelFile(Target part, Path path) {
+        if (path == null) modelFiles.remove(part);
+        else modelFiles.put(part, path);
+        previewReady.put(part, false);
     }
 
     private void setImportedModelFile(Target part, Path path) {

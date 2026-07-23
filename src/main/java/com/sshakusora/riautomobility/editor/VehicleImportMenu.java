@@ -6,8 +6,11 @@ import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.item.AutomobilityItems;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -28,23 +31,37 @@ public final class VehicleImportMenu extends AbstractContainerMenu {
     private static final int PLAYER_SLOTS_END = PLAYER_HOTBAR_START + 9;
 
     private final ContainerLevelAccess access;
+    private final BlockPos blockPos;
     private final boolean canPublish;
-    private final SimpleContainer output = new SimpleContainer(1);
+    private final Container output;
+    private final CompoundTag initialEditorState;
     private boolean slotsActive = true;
 
     public VehicleImportMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {
-        this(
-                containerId,
-                inventory,
-                ContainerLevelAccess.create(inventory.player.level(), buffer.readBlockPos()),
-                buffer.readBoolean()
-        );
+        this(containerId, inventory, readClientData(buffer));
     }
 
-    public VehicleImportMenu(int containerId, Inventory inventory, ContainerLevelAccess access, boolean canPublish) {
+    private VehicleImportMenu(int containerId, Inventory inventory, ClientData data) {
+        this(containerId, inventory, ContainerLevelAccess.create(inventory.player.level(), data.pos),
+                data.pos, data.canPublish, new SimpleContainer(1), data.editorState);
+    }
+
+    public VehicleImportMenu(int containerId, Inventory inventory,
+                             VehicleImportTableBlockEntity blockEntity, boolean canPublish) {
+        this(containerId, inventory,
+                ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()),
+                blockEntity.getBlockPos(), canPublish, blockEntity, blockEntity.getEditorState());
+    }
+
+    private VehicleImportMenu(int containerId, Inventory inventory, ContainerLevelAccess access,
+                              BlockPos blockPos, boolean canPublish, Container output,
+                              CompoundTag initialEditorState) {
         super(VehicleImportRegistries.VEHICLE_IMPORT_MENU.get(), containerId);
         this.access = access;
+        this.blockPos = blockPos;
         this.canPublish = canPublish;
+        this.output = output;
+        this.initialEditorState = initialEditorState == null ? new CompoundTag() : initialEditorState.copy();
         this.addSlot(new Slot(this.output, 0, OUTPUT_SLOT_X, OUTPUT_SLOT_Y) {
             @Override public boolean mayPlace(ItemStack stack) { return false; }
             @Override public boolean isActive() { return VehicleImportMenu.this.slotsActive; }
@@ -58,6 +75,21 @@ public final class VehicleImportMenu extends AbstractContainerMenu {
         for (int column = 0; column < 9; column++) {
             this.addSlot(this.playerSlot(inventory, column, INVENTORY_X + column * 18, INVENTORY_Y + 58));
         }
+    }
+
+    private static ClientData readClientData(FriendlyByteBuf buffer) {
+        BlockPos pos = buffer.readBlockPos();
+        boolean canPublish = buffer.readBoolean();
+        CompoundTag editorState = buffer.readNbt();
+        return new ClientData(pos, canPublish, editorState == null ? new CompoundTag() : editorState);
+    }
+
+    public BlockPos blockPos() {
+        return this.blockPos;
+    }
+
+    public CompoundTag initialEditorState() {
+        return this.initialEditorState.copy();
     }
 
     private Slot playerSlot(Inventory inventory, int index, int x, int y) {
@@ -143,9 +175,5 @@ public final class VehicleImportMenu extends AbstractContainerMenu {
         return original;
     }
 
-    @Override
-    public void removed(Player player) {
-        super.removed(player);
-        if (!player.level().isClientSide()) this.clearContainer(player, this.output);
-    }
+    private record ClientData(BlockPos pos, boolean canPublish, CompoundTag editorState) {}
 }

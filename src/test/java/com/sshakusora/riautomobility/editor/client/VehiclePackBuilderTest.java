@@ -7,6 +7,11 @@ import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelData;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelParser;
+import io.github.foundationgames.automobility.automobile.AutomobileEngine;
+import io.github.foundationgames.automobility.automobile.AutomobileFrame;
+import io.github.foundationgames.automobility.automobile.AutomobileWheel;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
@@ -68,6 +73,43 @@ class VehiclePackBuilderTest {
         assertTrue(first.matches("auto_[0-9a-f]{32}"));
         assertTrue(second.matches("auto_[0-9a-f]{32}"));
         assertNotEquals(first, second);
+    }
+
+    @Test
+    void editorDraftRoundTripsPersistentFieldsWithoutExposingTheLocalPath() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        VehicleEditorDraft original = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        original.target = VehicleEditorDraft.Target.WHEEL;
+        original.setDisplayName("Saved wheel");
+        original.setModelFile(VehicleEditorDraft.Target.WHEEL,
+                Path.of("C:", "Users", "Player", "model-cached.bbmodel"));
+        original.showPart(VehicleEditorDraft.Target.WHEEL);
+        original.wheelSize = 1.25F;
+        original.wheelGrip = 0.8F;
+        original.wheelRadius = 7.0F;
+        original.wheelWidth = 4.5F;
+        original.wheelRotationY = -90.0F;
+
+        var saved = original.save();
+        assertEquals("model-cached.bbmodel",
+                saved.getCompound("Parts").getCompound("WHEEL").getString("ModelFile"));
+        assertFalse(saved.toString().contains("Users"));
+
+        VehicleEditorDraft restored = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        restored.load(saved);
+
+        assertEquals(VehicleEditorDraft.Target.WHEEL, restored.target);
+        assertEquals("Saved wheel", restored.displayName());
+        assertEquals(Path.of("model-cached.bbmodel"), restored.modelFile());
+        assertTrue(restored.isPartVisible(VehicleEditorDraft.Target.WHEEL));
+        assertEquals(1.25F, restored.wheelSize);
+        assertEquals(0.8F, restored.wheelGrip);
+        assertEquals(7.0F, restored.wheelRadius);
+        assertEquals(4.5F, restored.wheelWidth);
+        assertEquals(-90.0F, restored.wheelRotationY);
     }
 
     @Test
