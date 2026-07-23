@@ -90,6 +90,15 @@ class VehiclePackBuilderTest {
     }
 
     @Test
+    void dropdownPositionsAreTruncatedToOneDecimalPlace() {
+        assertEquals("0.7", VehicleImportScreen.truncatedPosition(0.7259620126724243D));
+        assertEquals("-0.7", VehicleImportScreen.truncatedPosition(-0.7259625D));
+        assertEquals("2.1", VehicleImportScreen.truncatedPosition(2.138D));
+        assertEquals("-2.1", VehicleImportScreen.truncatedPosition(-2.138D));
+        assertEquals("0.0", VehicleImportScreen.truncatedPosition(0.0D));
+    }
+
+    @Test
     void itemExportUsesAndCleansAUploadStagingFileInsteadOfExports() throws IOException {
         Path root = temporaryDirectory.resolve("riautomobility");
 

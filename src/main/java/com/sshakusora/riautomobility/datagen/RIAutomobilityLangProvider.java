@@ -249,8 +249,8 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "option.first_person", chinese ? "第一人称" : "First Person");
         add(p + "option.external", chinese ? "外部" : "External");
         add(p + "position.wheel", chinese ? "轮位 %s (%.1f, %.1f)" : "Wheel %s (%.1f, %.1f)");
-        add(p + "position.seat", chinese ? "座椅 %s (%.1f, %.1f, %.1f)" : "Seat %s (%.1f, %.1f, %.1f)");
-        add(p + "position.additional_hitbox", chinese ? "附加碰撞箱 %s (%.1f, %.1f, %.1f)" : "Additional Hitbox %s (%.1f, %.1f, %.1f)");
+        add(p + "position.seat", chinese ? "座椅 %s (%s, %s, %s)" : "Seat %s (%s, %s, %s)");
+        add(p + "position.additional_hitbox", chinese ? "附加碰撞箱 %s (%s, %s, %s)" : "Additional Hitbox %s (%s, %s, %s)");
         add(p + "dialog.open_file", chinese ? "选择 BBModel 或 RIAuto 文件" : "Select a BBModel or RIAuto file");
         add(p + "dialog.import_filter", "BBModel and RIAuto files (*.bbmodel, *.riauto)");
         add(p + "dialog.export_pack", chinese ? "导出 .riauto" : "Export .riauto");

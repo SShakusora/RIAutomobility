@@ -31,6 +31,12 @@ final class VehicleScrollingText {
 
     static void renderCentered(GuiGraphics graphics, Font font, Component text,
                                int x, int y, int width, int height, int color, float scale) {
+        renderCentered(graphics, font, text, x, y, width, height, color, scale, false);
+    }
+
+    static void renderCentered(GuiGraphics graphics, Font font, Component text,
+                               int x, int y, int width, int height, int color, float scale,
+                               boolean shadow) {
         int availableWidth = Math.max(1, (int) (width / scale));
         int textWidth = font.width(text);
         int overflow = Math.max(0, textWidth - availableWidth);
@@ -49,7 +55,7 @@ final class VehicleScrollingText {
         graphics.pose().pushPose();
         graphics.pose().translate(x, y + textY, 0.0F);
         graphics.pose().scale(scale, scale, 1.0F);
-        graphics.drawString(font, text, textX, 0, color, false);
+        graphics.drawString(font, text, textX, 0, color, shadow);
         graphics.pose().popPose();
         graphics.disableScissor();
     }

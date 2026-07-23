@@ -17,8 +17,14 @@ final class VehicleGuiTextures {
             RIAutomobility.MODID, "textures/gui/vehicle_import_table.png");
     private static final ResourceLocation SELECTION_BACKGROUND = new ResourceLocation(
             RIAutomobility.MODID, "textures/gui/vehicle_import_selection.png");
+    private static final ResourceLocation ELEMENTS_TEXTURE = new ResourceLocation(
+            RIAutomobility.MODID, "textures/gui/vehicle_import_elements.png");
     private static final int TABLE_BACKGROUND_WIDTH = 512;
     private static final int TABLE_BACKGROUND_HEIGHT = 300;
+    private static final int ELEMENTS_TEXTURE_SIZE = 128;
+    private static final int PAGE_BUTTON_HEIGHT = 29;
+    private static final int RESET_VIEW_BUTTON_WIDTH = 74;
+    private static final int RESET_VIEW_BUTTON_HEIGHT = 20;
     private static final ResourceLocation FINAL_TEXTURE = new ResourceLocation(
             RIAutomobility.MODID, "textures/gui/vehicle_import.png");
     private static final ResourceLocation TEMPLATE_TEXTURE = new ResourceLocation(
@@ -49,6 +55,20 @@ final class VehicleGuiTextures {
                 TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT,
                 TABLE_BACKGROUND_WIDTH, TABLE_BACKGROUND_HEIGHT);
         return true;
+    }
+
+    static void blitPageButton(GuiGraphics graphics, int x, int y, boolean selected) {
+        int width = selected ? 64 : 58;
+        int v = selected ? 30 : 0;
+        graphics.blit(ELEMENTS_TEXTURE, x, y, width, PAGE_BUTTON_HEIGHT,
+                0, v, width, PAGE_BUTTON_HEIGHT, ELEMENTS_TEXTURE_SIZE, ELEMENTS_TEXTURE_SIZE);
+    }
+
+    static void blitResetViewButton(GuiGraphics graphics, int x, int y, boolean selected) {
+        int v = selected ? 88 : 67;
+        graphics.blit(ELEMENTS_TEXTURE, x, y, RESET_VIEW_BUTTON_WIDTH, RESET_VIEW_BUTTON_HEIGHT,
+                0, v, RESET_VIEW_BUTTON_WIDTH, RESET_VIEW_BUTTON_HEIGHT,
+                ELEMENTS_TEXTURE_SIZE, ELEMENTS_TEXTURE_SIZE);
     }
 
     private static void refreshBackgroundAvailability() {

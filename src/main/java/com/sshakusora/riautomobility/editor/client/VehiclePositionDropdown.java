@@ -109,7 +109,7 @@ final class VehiclePositionDropdown {
                     x + 1, rowY, contentRight - x - 1, ROW_HEIGHT);
             Component label = optionLabel.apply(index);
             graphics.drawString(font, font.plainSubstrByWidth(label.getString(), contentRight - x - 8),
-                    x + 4, rowY + 6, 0xFFE6E9ED, false);
+                    x + 4, rowY + 6, 0xFFE6E9ED, type != Type.WHEEL);
         }
         graphics.disableScissor();
 

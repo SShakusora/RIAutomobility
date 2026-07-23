@@ -25,6 +25,8 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -114,16 +116,15 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             addSelectionControls();
             return;
         }
-        int x = leftPos + 7;
+        int x = leftPos + 4;
         int y = topPos + 24;
         for (Page value : Page.values()) {
-            Button tab = texturedButton(VehicleImportText.component(value.label),
+            Button tab = new VehiclePageButton(x, y, VehicleImportText.component(value.label),
                     b -> {
                         page = value;
                         setTargetForPage();
                         resetWidgets();
-                    },
-                    x, y, TAB_WIDTH - 10, 32);
+                    });
             tab.active = page != value;
             addRenderableWidget(tab);
             y += 36;
@@ -137,8 +138,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         }
         addExportItemControl();
         int px = previewX0() + 6;
-        VehicleTexturedButton resetViewButton = texturedButton(VehicleImportText.component("button.reset_view"),
-                b -> resetView(), px, topPos + 26, 72, 18);
+        VehicleResetViewButton resetViewButton = new VehicleResetViewButton(px, topPos + 26,
+                VehicleImportText.component("button.reset_view"), b -> resetView());
         resetViewButton.active = hasCurrentPartPreview();
         addRenderableWidget(resetViewButton);
         disableUnavailablePartControls(panelX);
@@ -566,14 +567,21 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     private Component seatPositionDropdownLabel(int index) {
         Vec3 seat = draft.seats.get(index);
-        return VehicleImportText.component("position.seat", index + 1, seat.x, seat.y, seat.z);
+        return VehicleImportText.component("position.seat", index + 1,
+                truncatedPosition(seat.x), truncatedPosition(seat.y), truncatedPosition(seat.z));
     }
 
     private Component collisionDropdownLabel(int index) {
         if (index == 0) return VehicleImportText.component("header.entity_hitbox");
         VehicleEditorDraft.HitboxPoint hitbox = draft.hitboxes.get(index - 1);
         Vec3 origin = hitbox.origin();
-        return VehicleImportText.component("position.additional_hitbox", index, origin.x, origin.y, origin.z);
+        return VehicleImportText.component("position.additional_hitbox", index,
+                truncatedPosition(origin.x), truncatedPosition(origin.y), truncatedPosition(origin.z));
+    }
+
+    static String truncatedPosition(double value) {
+        if (!Double.isFinite(value)) return Double.toString(value);
+        return BigDecimal.valueOf(value).setScale(1, RoundingMode.DOWN).toPlainString();
     }
 
     private void vectorFields(int x, int y, Vec3 initial, Consumer<Vec3> setter) {
@@ -1015,8 +1023,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void addSelectionControls() {
-        addRenderableWidget(texturedButton(VehicleImportText.component("button.back"),
-                b -> closeSelection(), leftPos + 8, topPos + 24, 54, 20));
+        addRenderableWidget(new VehicleTextOnlyButton(leftPos + 8, topPos + 24, 54, 20,
+                VehicleImportText.component("button.back"), b -> closeSelection()));
         int selectionsPerPage = selectionsPerPage();
         int count = selectionCount();
         int pageCount = Math.max(1, (count + selectionsPerPage - 1) / selectionsPerPage);
@@ -1251,8 +1259,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                             VehicleImportText.component(label.text), label.x, labelY, label.width, labelColor);
                 }
             });
-            if (!hasCurrentPartPreview())
-                g.drawCenteredString(font, VehicleImportText.component("message.no_preview"), (previewX0() + leftPos + imageWidth - 5) / 2, topPos + imageHeight / 2, 0x8F98A5);
+            if (!hasCurrentPartPreview()) {
+                int messageX = previewX0() + 8;
+                int messageWidth = leftPos + imageWidth - 13 - messageX;
+                VehicleScrollingText.renderCentered(g, font,
+                        VehicleImportText.component("message.no_preview"),
+                        messageX, topPos + imageHeight / 2 - font.lineHeight / 2,
+                        messageWidth, font.lineHeight, 0xFFFFFF, 1.0F, true);
+            }
             if (!status.isBlank())
                 g.drawString(font, font.plainSubstrByWidth(status, imageWidth - font.width(title) - 28), leftPos + font.width(title) + 18, topPos + 8, 0xC9D1D9, false);
         }

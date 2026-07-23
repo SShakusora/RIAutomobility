@@ -32,6 +32,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.glfw.GLFW;
@@ -52,6 +53,7 @@ final class VehiclePreviewRenderer {
     }
 
     private static final float COMPONENT_PREVIEW_SCALE = 2.5F;
+    private static final float ORBIT_PREVIEW_DEPTH_MARGIN = 32768.0F;
     private static final int ORBIT_GIZMO_SIZE = 64;
     private static final float ORBIT_GIZMO_AXIS_RADIUS = 22.0F;
     private static final float ORBIT_GIZMO_MARKER_RADIUS = 4.5F;
@@ -160,8 +162,18 @@ final class VehiclePreviewRenderer {
 
     private void renderOrbitVehicle(GuiGraphics graphics, float partialTick,
                                     int x0, int x1, int y0, int y1) {
+        graphics.flush();
         OutlineBufferSource outlineBuffers = preparePreviewOutline();
         graphics.enableScissor(x0, y0, x1, y1);
+        Window window = Minecraft.getInstance().getWindow();
+        Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        // Forge positions normal GUI geometry close to the far clip plane. The orbit scale also
+        // scales model depth, so large previews need extra depth without changing their X/Y layout.
+        Matrix4f previewProjection = new Matrix4f().setOrtho(
+                0.0F, (float) (window.getWidth() / window.getGuiScale()),
+                (float) (window.getHeight() / window.getGuiScale()), 0.0F,
+                1000.0F, ForgeHooksClient.getGuiFarPlane() + ORBIT_PREVIEW_DEPTH_MARGIN);
+        RenderSystem.setProjectionMatrix(previewProjection, VertexSorting.ORTHOGRAPHIC_Z);
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate((x0 + x1) / 2.0F + panX, (y0 + y1) / 2.0F + 24 + panY, 160);
@@ -195,6 +207,7 @@ final class VehiclePreviewRenderer {
         Lighting.setupFor3DItems();
         RenderSystem.disableDepthTest();
         clearPreviewDepth();
+        RenderSystem.setProjectionMatrix(previousProjection, VertexSorting.ORTHOGRAPHIC_Z);
         renderOrbitGizmo(graphics, x1, y1);
         graphics.flush();
         graphics.disableScissor();
