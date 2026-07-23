@@ -93,6 +93,12 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("item.riautomobility.vehicle_key", "Blank Vehicle Key");
             add("item.riautomobility.vehicle_key.bound", "Vehicle Key");
             add("tooltip.riautomobility.vehicle_key.id", "Vehicle: %s");
+            add("tooltip.riautomobility.vehicle_key.hold_shift", "Hold %s to view usage");
+            add("tooltip.riautomobility.vehicle_key.blank_usage.1", "Keep this key in your off hand when placing a vehicle");
+            add("tooltip.riautomobility.vehicle_key.blank_usage.2", "It will bind to that vehicle and restrict driver access");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.1", "Keep this key in your inventory to access its vehicle");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.2", "Right-click to locate and highlight its vehicle");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.3", "Craft it by itself to turn it back into a blank key");
             add("message.riautomobility.vehicle_key.denied", "You do not have this vehicle's key.");
             add("message.riautomobility.vehicle_key.blank", "This vehicle key is blank.");
             add("message.riautomobility.vehicle_key.invalid", "The bound vehicle no longer exists. The key is now blank.");
@@ -155,6 +161,12 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
             add("item.riautomobility.vehicle_key", "空白机动车钥匙");
             add("item.riautomobility.vehicle_key.bound", "机动车钥匙");
             add("tooltip.riautomobility.vehicle_key.id", "车辆：%s");
+            add("tooltip.riautomobility.vehicle_key.hold_shift", "按住 %s 查看使用说明");
+            add("tooltip.riautomobility.vehicle_key.blank_usage.1", "放置或组装车辆时，将此钥匙放在副手");
+            add("tooltip.riautomobility.vehicle_key.blank_usage.2", "钥匙将绑定该车辆，并限制其驾驶权限");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.1", "将钥匙放在背包中，即可使用其绑定的车辆");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.2", "右键使用可定位并高亮其绑定的车辆");
+            add("tooltip.riautomobility.vehicle_key.bound_usage.3", "单独合成可将其重置为空白钥匙");
             add("message.riautomobility.vehicle_key.denied", "你的背包中没有该车辆的钥匙。");
             add("message.riautomobility.vehicle_key.blank", "这是一把空白机动车钥匙。");
             add("message.riautomobility.vehicle_key.invalid", "这把钥匙对应的车辆已不存在，钥匙已恢复为空白钥匙。");

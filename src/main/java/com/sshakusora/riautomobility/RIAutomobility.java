@@ -16,6 +16,7 @@ import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelRepository;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.recipe.AutomobileComponentIngredient;
+import com.sshakusora.riautomobility.recipe.RIAutomobilityRecipes;
 import com.sshakusora.riautomobility.wheel.RIAutomobileWheel;
 import io.github.foundationgames.automobility.block.model.SlopeBakedModel;
 import io.github.foundationgames.automobility.screen.AutomobileHud;
@@ -68,6 +69,7 @@ public class RIAutomobility
         RIAutomobileWheel.init();
         RIAutomobilityEntities.ENTITIES.register(bus);
         RIAutomobilityItems.ITEMS.register(bus);
+        RIAutomobilityRecipes.SERIALIZERS.register(bus);
         VehicleImportRegistries.BLOCKS.register(bus);
         VehicleImportRegistries.ITEMS.register(bus);
         VehicleImportRegistries.MENUS.register(bus);

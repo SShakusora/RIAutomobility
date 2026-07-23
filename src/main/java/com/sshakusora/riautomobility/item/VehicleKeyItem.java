@@ -5,6 +5,7 @@ import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.VehicleHighlightPacket;
 import com.sshakusora.riautomobility.world.VehicleLocatorSavedData;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -174,9 +175,27 @@ public final class VehicleKeyItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        getVehicleId(stack).ifPresent(id -> tooltip.add(Component.translatable(
+        Optional<UUID> vehicleId = getVehicleId(stack);
+        vehicleId.ifPresent(id -> tooltip.add(Component.translatable(
                 "tooltip.riautomobility.vehicle_key.id",
                 getVehicleName(stack).orElseGet(() -> id.toString().substring(0, 8))
         ).withStyle(ChatFormatting.GRAY)));
+
+        if (!Screen.hasShiftDown()) {
+            tooltip.add(Component.translatable(
+                    "tooltip.riautomobility.vehicle_key.hold_shift",
+                    Component.literal("Shift").withStyle(ChatFormatting.YELLOW)
+            ).withStyle(ChatFormatting.DARK_GRAY));
+            return;
+        }
+
+        String usageKey = vehicleId.isPresent()
+                ? "tooltip.riautomobility.vehicle_key.bound_usage"
+                : "tooltip.riautomobility.vehicle_key.blank_usage";
+        tooltip.add(Component.translatable(usageKey + ".1").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable(usageKey + ".2").withStyle(ChatFormatting.GRAY));
+        if (vehicleId.isPresent()) {
+            tooltip.add(Component.translatable(usageKey + ".3").withStyle(ChatFormatting.GRAY));
+        }
     }
 }

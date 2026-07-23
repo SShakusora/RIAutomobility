@@ -195,6 +195,12 @@
   "tooltip.riautomobility.component_author": "Author: %s",
   "tooltip.riautomobility.missing_car_pack_resources": "Missing car-pack resources for this component",
   "tooltip.riautomobility.vehicle_key.id": "Vehicle: %s",
+  "tooltip.riautomobility.vehicle_key.hold_shift": "Hold %s to view usage",
+  "tooltip.riautomobility.vehicle_key.blank_usage.1": "Keep this key in your off hand when placing a vehicle",
+  "tooltip.riautomobility.vehicle_key.blank_usage.2": "It will bind to that vehicle and restrict driver access",
+  "tooltip.riautomobility.vehicle_key.bound_usage.1": "Keep this key in your inventory to access its vehicle",
+  "tooltip.riautomobility.vehicle_key.bound_usage.2": "Right-click to locate and highlight its vehicle",
+  "tooltip.riautomobility.vehicle_key.bound_usage.3": "Craft it by itself to turn it back into a blank key",
   "wheel.riautomobility.dmc12": "DMC12",
   "wheel.riautomobility.standard_formula": "Standard Formula"
 }

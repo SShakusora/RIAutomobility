@@ -1,6 +1,8 @@
 package com.sshakusora.riautomobility.integration.jei;
 
 import com.sshakusora.riautomobility.RIAutomobility;
+import com.sshakusora.riautomobility.item.RIAutomobilityItems;
+import com.sshakusora.riautomobility.recipe.VehicleKeyResetRecipe;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
@@ -49,6 +51,18 @@ public class RIAutomobilityJeiPlugin implements IModPlugin {
         registration.registerSubtypeInterpreter(AutomobilityItems.AUTOMOBILE_WHEEL.require(), interpreter);
         registration.registerSubtypeInterpreter(AutomobilityItems.FRONT_ATTACHMENT.require(), interpreter);
         registration.registerSubtypeInterpreter(AutomobilityItems.REAR_ATTACHMENT.require(), interpreter);
+        registration.registerSubtypeInterpreter(
+                RIAutomobilityItems.VEHICLE_KEY.get(),
+                (stack, context) -> stack.hasTag() ? "tagged" : IIngredientSubtypeInterpreter.NONE
+        );
+    }
+
+    @Override
+    public void registerVanillaCategoryExtensions(IVanillaCategoryExtensionRegistration registration) {
+        registration.getCraftingCategory().addCategoryExtension(
+                VehicleKeyResetRecipe.class,
+                VehicleKeyResetRecipeJeiExtension::new
+        );
     }
 
     @Override
