@@ -3,9 +3,9 @@ package com.sshakusora.riautomobility.content;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
+import io.github.foundationgames.automobility.sound.AutomobilitySounds;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.GsonHelper;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public record EngineSpec(
 
     public AutomobileEngine toEngine() {
         return new AutomobileEngine(
-                this.id, this.torque, this.speed, () -> SoundEvents.MINECART_INSIDE,
+                this.id, this.torque, this.speed, AutomobilitySounds.IRON_ENGINE::require,
                 new AutomobileEngine.EngineModel(this.model.texture(), this.model.modelId(),
                         this.exhausts.stream().map(ExhaustSpec::toExhaust).toArray(AutomobileEngine.ExhaustPos[]::new))
         );

@@ -122,7 +122,29 @@ public final class BbModelParser {
         Map<String, BbModelData.ElementNode> elements = parseElements(model, context);
         Map<String, JsonObject> groups = parseGroups(model);
         List<BbModelData.Node> roots = parseOutliner(model, elements, groups);
-        return new BbModelData.Document(version, modelFormat, textureWidth, textureHeight, List.copyOf(textures), roots, parseAnimations(model));
+        return new BbModelData.Document(version, modelFormat, textureWidth, textureHeight,
+                List.copyOf(textures), roots, parseVariablePlaceholders(model), parseAnimations(model));
+    }
+
+    private static Map<String, String> parseVariablePlaceholders(JsonObject model) {
+        String definitions = GsonHelper.getAsString(model, "animation_variable_placeholders", "");
+        if (definitions.isBlank()) {
+            definitions = GsonHelper.getAsString(model, "variable_placeholders", "");
+        }
+        if (definitions.isBlank()) {
+            return Map.of();
+        }
+
+        Map<String, String> placeholders = new LinkedHashMap<>();
+        for (String line : definitions.split("\\R")) {
+            int assignment = line.indexOf('=');
+            if (assignment < 0) continue;
+            String name = line.substring(0, assignment).replaceAll("[\\s;]", "");
+            String expression = line.substring(assignment + 1).trim().replaceFirst(";\\s*$", "").trim();
+            if (name.isEmpty() || expression.isEmpty()) continue;
+            placeholders.put(MolangExpression.normalizeVariableName(name), expression);
+        }
+        return Collections.unmodifiableMap(placeholders);
     }
 
     private static List<BbModelData.Texture> parseTextures(JsonObject model, int defaultWidth, int defaultHeight) {

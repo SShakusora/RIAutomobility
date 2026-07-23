@@ -113,6 +113,30 @@ class VehiclePackBuilderTest {
     }
 
     @Test
+    void importingAnotherBbmodelUsesANewComponentIdentityWithoutInvalidatingThePreview() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        VehicleEditorDraft original = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        original.target = VehicleEditorDraft.Target.WHEEL;
+        original.setModelFile(VehicleEditorDraft.Target.WHEEL, Path.of("first.bbmodel"));
+        ResourceLocation firstComponentId = original.componentId();
+        String firstPreviewKey = original.previewKey(VehicleEditorDraft.Target.WHEEL);
+        original.overwrite = true;
+
+        VehicleEditorDraft restored = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        restored.load(original.save());
+        assertEquals(firstComponentId, restored.componentId());
+
+        restored.setModelFile(VehicleEditorDraft.Target.WHEEL, Path.of("second.bbmodel"));
+
+        assertNotEquals(firstComponentId, restored.componentId());
+        assertEquals(firstPreviewKey, restored.previewKey(VehicleEditorDraft.Target.WHEEL));
+        assertFalse(restored.overwrite);
+    }
+
+    @Test
     void exportFileNameUsesDisplayNameAndAddsCollisionSuffix() throws IOException {
         String fileStem = VehicleImportScreen.exportFileStem("测试车辆");
         assertEquals("测试车辆", fileStem);

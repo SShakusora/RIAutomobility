@@ -397,6 +397,8 @@ public final class VehicleEditorDraft {
         modelFiles.put(part, path);
         authors.put(part, "");
         previewReady.put(part, false);
+        componentPaths.put(part, generateComponentPath());
+        overwrite = false;
         if (part == Target.FRAME) automaticFrameModelSize = true;
         if (part == Target.WHEEL) automaticWheelModelSize = true;
     }

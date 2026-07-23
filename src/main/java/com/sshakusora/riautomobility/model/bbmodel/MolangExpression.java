@@ -14,6 +14,15 @@ final class MolangExpression {
         return new Parser(source).parse();
     }
 
+    static String normalizeVariableName(String name) {
+        String normalized = name.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("v.")) return "variable." + normalized.substring(2);
+        if (normalized.startsWith("q.")) return "query." + normalized.substring(2);
+        if (normalized.startsWith("t.")) return "temp." + normalized.substring(2);
+        if (normalized.startsWith("c.")) return "context." + normalized.substring(2);
+        return normalized;
+    }
+
     @FunctionalInterface
     interface Expression {
         double evaluate(ToDoubleFunction<String> variables);
@@ -244,6 +253,11 @@ final class MolangExpression {
             case "math.clamp", "math.lerp" -> { minimum = 3; maximum = 3; }
             case "math.pow", "math.mod", "math.atan2" -> { minimum = 2; maximum = 2; }
             case "math.random" -> { minimum = 0; maximum = 2; }
+            case "q.vehicle_passenger_view_yaw", "query.vehicle_passenger_view_yaw",
+                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch" -> {
+                minimum = 1;
+                maximum = 1;
+            }
             case "math.abs", "math.sin", "math.cos", "math.tan", "math.asin", "math.acos", "math.atan",
                     "math.sqrt", "math.floor", "math.ceil", "math.round", "math.trunc", "math.exp", "math.ln",
                     "math.sign" -> { minimum = 1; maximum = 1; }
@@ -288,6 +302,10 @@ final class MolangExpression {
                 double maximum = arguments.size() < 2 ? 1.0D : argument(arguments, 1, variables);
                 yield minimum + ThreadLocalRandom.current().nextDouble() * (maximum - minimum);
             }
+            case "q.vehicle_passenger_view_yaw", "query.vehicle_passenger_view_yaw",
+                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch" ->
+                    variables.applyAsDouble(normalizeVariableName(name) + "("
+                            + argument(arguments, 0, variables) + ")");
             default -> throw new IllegalArgumentException("Unsupported Molang function '" + name + "'");
         };
     }

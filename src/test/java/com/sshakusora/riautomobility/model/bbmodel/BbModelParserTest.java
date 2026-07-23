@@ -13,6 +13,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +23,48 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BbModelParserTest {
+    @Test
+    void parsesAnimatedEngineExample() throws IOException {
+        BbModelData.Document document;
+        try (var reader = Files.newBufferedReader(
+                Path.of("art", "examples", "animated_engine_demo.bbmodel"), UTF_8)) {
+            document = BbModelParser.parse(JsonParser.parseReader(reader).getAsJsonObject());
+        }
+
+        assertDoesNotThrow(() -> BbModelParser.requireEmbeddedPngTextures(document));
+        assertEquals("engine_run", document.animations().get(0).name());
+        assertEquals("q.vehicle_engine_running",
+                document.variablePlaceholders().get("variable.engine_active"));
+        Set<String> animatedBones = Set.of(
+                        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                        "dddddddd-dddd-4ddd-8ddd-dddddddddddd");
+        assertEquals(animatedBones, document.animations().get(0).animators().keySet());
+        BbAnimationPlayer.clearCache();
+        assertEquals(animatedBones, BbAnimationPlayer.sample(document, "engine_run", null).keySet());
+
+        RenderableAutomobile running = (RenderableAutomobile) Proxy.newProxyInstance(
+                RenderableAutomobile.class.getClassLoader(),
+                new Class<?>[]{RenderableAutomobile.class},
+                (proxy, method, arguments) -> switch (method.getName()) {
+                    case "engineRunning" -> true;
+                    case "getTime" -> 2L;
+                    default -> defaultValue(method.getReturnType());
+                });
+        BbRenderContext.begin(null, running, 0.5F);
+        Map<String, BbAnimationPlayer.Transform> runningPose;
+        try {
+            runningPose = BbAnimationPlayer.sample(document, "engine_run", BbRenderContext.current());
+        } finally {
+            BbRenderContext.end();
+        }
+        assertEquals(90.0F, runningPose.get("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").rotation().z, 0.001F);
+        assertEquals(1.25F, runningPose.get("cccccccc-cccc-4ccc-8ccc-cccccccccccc").position().y, 0.001F);
+        assertEquals(-1.25F, runningPose.get("dddddddd-dddd-4ddd-8ddd-dddddddddddd").position().y, 0.001F);
+        BbAnimationPlayer.clearCache();
+    }
+
     @Test
     void parsesConvertedBuiltinVehicleModels() throws IOException {
         Map<String, BuiltinModelExpectation> models = Map.of(
@@ -254,6 +298,100 @@ class BbModelParserTest {
     }
 
     @Test
+    void evaluatesBlockbenchVariablePlaceholdersRecursively() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "animation_variable_placeholders":"v.base = 2;\\nvariable.result = v.base * 3 + 1;\\nt.scaled = variable.result + 1;",
+                  "elements":[],
+                  "animations":[{"name":"variables","animators":{"bone":{"type":"bone","keyframes":[
+                    {"channel":"position","time":0,"data_points":[{"x":"variable.result","y":"q.anim_time","z":"t.scaled"}]}
+                  ]}}}]
+                }
+                """).getAsJsonObject());
+
+        BbAnimationPlayer.Transform transform = BbAnimationPlayer.sample(document, "variables", null).get("bone");
+        assertEquals(7.0F, transform.position().x, 0.0001F);
+        assertEquals(0.0F, transform.position().y, 0.0001F);
+        assertEquals(8.0F, transform.position().z, 0.0001F);
+        assertEquals("2", document.variablePlaceholders().get("variable.base"));
+    }
+
+    @Test
+    void evaluatesVariablePlaceholdersAgainstVehicleQueries() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "animation_variable_placeholders":"v.running = q.vehicle_engine_running;",
+                  "elements":[],
+                  "animations":[{"name":"variables","animators":{"bone":{"type":"bone","keyframes":[
+                    {"channel":"position","time":0,"data_points":[{"x":"v.running","y":0,"z":0}]}
+                  ]}}}]
+                }
+                """).getAsJsonObject());
+        RenderableAutomobile automobile = (RenderableAutomobile) Proxy.newProxyInstance(
+                RenderableAutomobile.class.getClassLoader(),
+                new Class<?>[]{RenderableAutomobile.class},
+                (proxy, method, arguments) -> method.getName().equals("engineRunning")
+                        ? true : defaultValue(method.getReturnType()));
+
+        BbRenderContext.begin(null, automobile, 0.0F);
+        BbAnimationPlayer.Transform transform;
+        try {
+            transform = BbAnimationPlayer.sample(document, "variables", BbRenderContext.current()).get("bone");
+        } finally {
+            BbRenderContext.end();
+        }
+
+        assertEquals(1.0F, transform.position().x, 0.0001F);
+    }
+
+    @Test
+    void loadsLegacyVariablePlaceholderField() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "variable_placeholders":"v.speed = 3;",
+                  "elements":[]
+                }
+                """).getAsJsonObject());
+
+        assertEquals(Map.of("variable.speed", "3"), document.variablePlaceholders());
+    }
+
+    @Test
+    void modernVariablePlaceholdersOverrideLegacyField() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "variable_placeholders":"v.speed = 1;",
+                  "animation_variable_placeholders":"v.speed = 2;",
+                  "elements":[]
+                }
+                """).getAsJsonObject());
+
+        assertEquals(Map.of("variable.speed", "2"), document.variablePlaceholders());
+    }
+
+    @Test
+    void detectsCyclicBlockbenchVariables() {
+        BbModelData.Document document = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "animation_variable_placeholders":"v.first = v.second;\\nv.second = v.first;",
+                  "elements":[],
+                  "animations":[{"name":"variables","animators":{"bone":{"type":"bone","keyframes":[
+                    {"channel":"position","time":0,"data_points":[{"x":"v.first","y":0,"z":0}]}
+                  ]}}}]
+                }
+                """).getAsJsonObject());
+
+        BbModelFormatException error = assertThrows(BbModelFormatException.class,
+                () -> BbAnimationPlayer.sample(document, "variables", null));
+        assertTrue(error.getMessage().contains("Cyclic Blockbench variable dependency"));
+    }
+
+    @Test
     void onlyTreatsSelectedAnimationsWithKeyframesAsDynamic() {
         BbModelData.Document effective = animationDocument("1");
         BbModelData.Document empty = BbModelParser.parse(JsonParser.parseString("""
@@ -311,6 +449,42 @@ class BbModelParserTest {
 
         assertEquals(10.0D, expression.evaluate(name -> name.equals("query.anim_time") ? 2.0D : 0.0D), 0.0001D);
         assertEquals(0.0D, expression.evaluate(name -> 0.5D), 0.0001D);
+    }
+
+    @Test
+    void evaluatesIndexedPassengerViewQueryFunctions() {
+        MolangExpression.Expression expression = MolangExpression.compile(
+                "q.vehicle_passenger_view_yaw(1 + 1) + query.vehicle_passenger_view_pitch(3)");
+
+        assertEquals(25.0D, expression.evaluate(name -> switch (name) {
+            case "query.vehicle_passenger_view_yaw(2.0)" -> 10.0D;
+            case "query.vehicle_passenger_view_pitch(3.0)" -> 15.0D;
+            default -> 0.0D;
+        }), 0.0001D);
+        assertThrows(IllegalArgumentException.class,
+                () -> MolangExpression.compile("q.vehicle_passenger_view_yaw()"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MolangExpression.compile("q.vehicle_passenger_view_pitch(0, 1)"));
+    }
+
+    @Test
+    void passengerViewQueriesReturnZeroWithoutARealVehicleEntity() {
+        BbModelData.Document document = animationDocument(
+                "q.vehicle_passenger_view_yaw(0) + q.vehicle_passenger_view_pitch(0)");
+        RenderableAutomobile preview = (RenderableAutomobile) Proxy.newProxyInstance(
+                RenderableAutomobile.class.getClassLoader(),
+                new Class<?>[]{RenderableAutomobile.class},
+                (proxy, method, arguments) -> defaultValue(method.getReturnType()));
+
+        BbRenderContext.begin(null, preview, 0.5F);
+        BbAnimationPlayer.Transform transform;
+        try {
+            transform = BbAnimationPlayer.sample(document, "cached", BbRenderContext.current()).get("bone");
+        } finally {
+            BbRenderContext.end();
+        }
+
+        assertEquals(0.0F, transform.position().x, 0.0001F);
     }
 
     private static BbModelData.Document animationDocument(String expression) {

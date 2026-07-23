@@ -1,13 +1,19 @@
 package com.sshakusora.riautomobility.model.bbmodel;
 
 import com.google.gson.JsonElement;
+import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import org.joml.Vector3f;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BbAnimationPlayer {
+    private static final int MAX_VARIABLE_DEPTH = 64;
+    private static final String PASSENGER_VIEW_YAW = "query.vehicle_passenger_view_yaw";
+    private static final String PASSENGER_VIEW_PITCH = "query.vehicle_passenger_view_pitch";
     private static final Map<String, MolangExpression.Expression> EXPRESSIONS = new ConcurrentHashMap<>();
     private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
     private static final Map<RenderableAutomobile, SampleCache> SAMPLE_CACHES = new WeakHashMap<>();
@@ -40,7 +46,7 @@ public final class BbAnimationPlayer {
         float absoluteTime = automobile == null ? 0.0F : (automobile.getTime() + tickDelta) / 20.0F;
         float time = animationTime(animation, absoluteTime);
         QueryState queryState = QUERY_STATE.get();
-        queryState.set(automobile, time, absoluteTime, tickDelta);
+        queryState.set(document.variablePlaceholders(), automobile, time, absoluteTime, tickDelta);
         try {
             List<PreparedAnimator> animators = prepared(animation);
             SampleCache cache;
@@ -194,15 +200,26 @@ public final class BbAnimationPlayer {
         String expression = value.getAsString();
         try {
             return EXPRESSIONS.computeIfAbsent(expression, MolangExpression::compile)
-                    .evaluate(BbAnimationPlayer::queryValue);
+                    .evaluate(BbAnimationPlayer::variableValue);
         } catch (IllegalArgumentException exception) {
             throw new BbModelFormatException("Invalid Blockbench Molang expression '" + expression + "'", exception);
         }
     }
 
-    private static double queryValue(String name) {
+    private static double variableValue(String name) {
         QueryState queryState = QUERY_STATE.get();
-        return switch (name) {
+        String normalized = MolangExpression.normalizeVariableName(name);
+        String expression = queryState.variablePlaceholders.get(normalized);
+        if (expression != null) {
+            return evaluateVariable(queryState, normalized, expression);
+        }
+        if (normalized.startsWith(PASSENGER_VIEW_YAW + "(")) {
+            return passengerView(queryState, normalized, true);
+        }
+        if (normalized.startsWith(PASSENGER_VIEW_PITCH + "(")) {
+            return passengerView(queryState, normalized, false);
+        }
+        return switch (normalized) {
             case "query.anim_time" -> queryState.animationTime;
             case "query.life_time" -> queryState.lifeTime;
             case "query.is_on_ground" -> queryState.automobile != null && queryState.automobile.automobileOnGround() ? 1 : 0;
@@ -213,6 +230,72 @@ public final class BbAnimationPlayer {
             case "query.vehicle_boost_timer" -> queryState.automobile == null ? 0 : queryState.automobile.getBoostTimer();
             default -> 0.0D;
         };
+    }
+
+    private static double passengerView(QueryState queryState, String query, boolean yaw) {
+        int seatIndex = passengerIndex(query);
+        Entity passenger = passengerAt(queryState.automobile, seatIndex);
+        if (passenger == null) {
+            return 0.0D;
+        }
+        if (!yaw) {
+            return passenger.getViewXRot(queryState.tickDelta);
+        }
+        return Mth.wrapDegrees(passenger.getViewYRot(queryState.tickDelta)
+                - queryState.automobile.getAutomobileYaw(queryState.tickDelta));
+    }
+
+    private static int passengerIndex(String query) {
+        int opening = query.indexOf('(');
+        int closing = query.lastIndexOf(')');
+        if (opening < 0 || closing != query.length() - 1 || closing <= opening + 1) {
+            return -1;
+        }
+        try {
+            double value = Double.parseDouble(query.substring(opening + 1, closing));
+            if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE || value != Math.floor(value)) {
+                return -1;
+            }
+            return (int) value;
+        } catch (NumberFormatException exception) {
+            return -1;
+        }
+    }
+
+    private static Entity passengerAt(RenderableAutomobile automobile, int seatIndex) {
+        if (seatIndex < 0 || !(automobile instanceof Entity vehicle)) {
+            return null;
+        }
+        List<Entity> passengers = vehicle.getPassengers();
+        if (vehicle instanceof RIAutomobileEntity riautomobile) {
+            for (Entity passenger : passengers) {
+                if (riautomobile.getVisualSeatIndex(passenger) == seatIndex) {
+                    return passenger;
+                }
+            }
+            return null;
+        }
+        return seatIndex < passengers.size() ? passengers.get(seatIndex) : null;
+    }
+
+    private static double evaluateVariable(QueryState queryState, String name, String expression) {
+        if (queryState.resolvingVariables.size() >= MAX_VARIABLE_DEPTH) {
+            throw new BbModelFormatException("Blockbench variable dependency exceeds "
+                    + MAX_VARIABLE_DEPTH + " levels at '" + name + "'");
+        }
+        if (!queryState.resolvingVariables.add(name)) {
+            throw new BbModelFormatException("Cyclic Blockbench variable dependency: "
+                    + String.join(" -> ", queryState.resolvingVariables) + " -> " + name);
+        }
+        try {
+            return EXPRESSIONS.computeIfAbsent(expression, MolangExpression::compile)
+                    .evaluate(BbAnimationPlayer::variableValue);
+        } catch (IllegalArgumentException exception) {
+            throw new BbModelFormatException("Invalid Blockbench variable '" + name
+                    + "' expression '" + expression + "'", exception);
+        } finally {
+            queryState.resolvingVariables.remove(name);
+        }
     }
 
     private static Vector3f catmullRomInto(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3,
@@ -292,12 +375,16 @@ public final class BbAnimationPlayer {
     }
 
     private static final class QueryState {
+        private Map<String, String> variablePlaceholders = Map.of();
+        private final Set<String> resolvingVariables = new LinkedHashSet<>();
         private RenderableAutomobile automobile;
         private float animationTime;
         private float lifeTime;
         private float tickDelta;
 
-        private void set(RenderableAutomobile automobile, float animationTime, float lifeTime, float tickDelta) {
+        private void set(Map<String, String> variablePlaceholders, RenderableAutomobile automobile,
+                         float animationTime, float lifeTime, float tickDelta) {
+            this.variablePlaceholders = variablePlaceholders;
             this.automobile = automobile;
             this.animationTime = animationTime;
             this.lifeTime = lifeTime;
@@ -305,6 +392,8 @@ public final class BbAnimationPlayer {
         }
 
         private void clear() {
+            this.variablePlaceholders = Map.of();
+            this.resolvingVariables.clear();
             this.automobile = null;
             this.animationTime = 0.0F;
             this.lifeTime = 0.0F;

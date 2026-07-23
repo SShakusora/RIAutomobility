@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,6 +85,7 @@ class BbModelRuntimeSanitizerTest {
         BbModelData.Document document = assertDoesNotThrow(() -> BbModelParser.parse(sanitized));
         assertDoesNotThrow(() -> BbModelParser.requireExternalPngTextures(document));
         assertEquals("1", document.animations().get(0).animators().keySet().iterator().next());
+        assertEquals(Map.of("variable.speed", "0"), document.variablePlaceholders());
     }
 
     @Test

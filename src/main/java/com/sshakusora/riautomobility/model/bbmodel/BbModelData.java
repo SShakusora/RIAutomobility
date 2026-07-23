@@ -17,8 +17,18 @@ public final class BbModelData {
             int textureHeight,
             List<Texture> textures,
             List<Node> roots,
+            Map<String, String> variablePlaceholders,
             List<Animation> animations
-    ) {}
+    ) {
+        public Document {
+            variablePlaceholders = Map.copyOf(variablePlaceholders);
+        }
+
+        public Document(String formatVersion, String modelFormat, int textureWidth, int textureHeight,
+                        List<Texture> textures, List<Node> roots, List<Animation> animations) {
+            this(formatVersion, modelFormat, textureWidth, textureHeight, textures, roots, Map.of(), animations);
+        }
+    }
 
     public record Texture(
             int index,

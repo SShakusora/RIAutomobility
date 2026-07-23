@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.events;
 import com.sshakusora.riautomobility.RIAutomobility;
 import com.sshakusora.riautomobility.creative.RIAutomobilityCreativeTabs;
 import io.github.foundationgames.automobility.Automobility;
+import io.github.foundationgames.automobility.item.AutomobileEngineItem;
 import io.github.foundationgames.automobility.item.AutomobileFrameItem;
 import io.github.foundationgames.automobility.item.AutomobileWheelItem;
 import net.minecraftforge.api.distmarker.Dist;
@@ -27,7 +28,9 @@ public final class AutomobileComponentCreativeTabEvents {
             if ((stack.getItem() instanceof AutomobileFrameItem frameItem
                     && RIAutomobilityCreativeTabs.isRIAutomobilityComponent(frameItem.getComponent(stack)))
                     || (stack.getItem() instanceof AutomobileWheelItem wheelItem
-                    && RIAutomobilityCreativeTabs.isRIAutomobilityComponent(wheelItem.getComponent(stack)))) {
+                    && RIAutomobilityCreativeTabs.isRIAutomobilityComponent(wheelItem.getComponent(stack)))
+                    || (stack.getItem() instanceof AutomobileEngineItem engineItem
+                    && RIAutomobilityCreativeTabs.isRIAutomobilityComponent(engineItem.getComponent(stack)))) {
                 entries.remove();
             }
         }
