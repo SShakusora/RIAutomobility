@@ -54,6 +54,29 @@ final class BbCompiledGeometry {
                 collector.outputQuadCount());
     }
 
+    static StaticGeometry compileShadowGeometry(StaticGeometry geometry) {
+        if (geometry.batches().isEmpty()) return StaticGeometry.EMPTY;
+        List<Batch> batches = new ArrayList<>();
+        int quadCount = 0;
+        for (Batch batch : geometry.batches()) {
+            int retained = batch.quadCount(3);
+            if (retained == 0) continue;
+            float[] data = new float[retained * PACKED_QUAD_STRIDE];
+            int target = 0;
+            for (int quad = 0; quad < batch.detailLevels().length; quad++) {
+                if (batch.detailLevels()[quad] < 3) continue;
+                System.arraycopy(batch.data(), quad * PACKED_QUAD_STRIDE,
+                        data, target, PACKED_QUAD_STRIDE);
+                target += PACKED_QUAD_STRIDE;
+            }
+            batches.add(new Batch(batch.texture(), data, new byte[retained]));
+            quadCount += retained;
+        }
+        return quadCount == 0
+                ? StaticGeometry.EMPTY
+                : new StaticGeometry(List.copyOf(batches), geometry.nodeCount(), quadCount, quadCount);
+    }
+
     private static void flattenNode(BbModelData.Node node, Vector3f parentOrigin, Matrix4f parentPose,
                                     Map<BbModelData.ElementNode, List<Quad>> geometry,
                                     StaticBatchCollector collector, int[] nodeCount) {
@@ -112,6 +135,62 @@ final class BbCompiledGeometry {
             data[cursor++] = uv.y;
         }
         return new PackedQuad(data);
+    }
+
+    static float[] compileTangents(float[] data, int quadCount) {
+        float[] tangents = new float[quadCount * 4];
+        for (int quad = 0; quad < quadCount; quad++) {
+            int base = quad * PACKED_QUAD_STRIDE;
+            int vertex0 = base + 3;
+            int vertex1 = vertex0 + 5;
+            int vertex2 = vertex1 + 5;
+            float edge1X = data[vertex1] - data[vertex0];
+            float edge1Y = data[vertex1 + 1] - data[vertex0 + 1];
+            float edge1Z = data[vertex1 + 2] - data[vertex0 + 2];
+            float edge2X = data[vertex2] - data[vertex0];
+            float edge2Y = data[vertex2 + 1] - data[vertex0 + 1];
+            float edge2Z = data[vertex2 + 2] - data[vertex0 + 2];
+            float deltaU1 = data[vertex1 + 3] - data[vertex0 + 3];
+            float deltaV1 = data[vertex1 + 4] - data[vertex0 + 4];
+            float deltaU2 = data[vertex2 + 3] - data[vertex0 + 3];
+            float deltaV2 = data[vertex2 + 4] - data[vertex0 + 4];
+            float denominator = deltaU1 * deltaV2 - deltaU2 * deltaV1;
+            float scale = denominator == 0.0F ? 1.0F : 1.0F / denominator;
+
+            float tangentX = scale * (deltaV2 * edge1X - deltaV1 * edge2X);
+            float tangentY = scale * (deltaV2 * edge1Y - deltaV1 * edge2Y);
+            float tangentZ = scale * (deltaV2 * edge1Z - deltaV1 * edge2Z);
+            float tangentScale = inverseSqrt(tangentX * tangentX + tangentY * tangentY + tangentZ * tangentZ);
+            tangentX *= tangentScale;
+            tangentY *= tangentScale;
+            tangentZ *= tangentScale;
+
+            float bitangentX = scale * (-deltaU2 * edge1X + deltaU1 * edge2X);
+            float bitangentY = scale * (-deltaU2 * edge1Y + deltaU1 * edge2Y);
+            float bitangentZ = scale * (-deltaU2 * edge1Z + deltaU1 * edge2Z);
+            float bitangentScale = inverseSqrt(bitangentX * bitangentX + bitangentY * bitangentY + bitangentZ * bitangentZ);
+            bitangentX *= bitangentScale;
+            bitangentY *= bitangentScale;
+            bitangentZ *= bitangentScale;
+
+            float normalX = data[base];
+            float normalY = data[base + 1];
+            float normalZ = data[base + 2];
+            float crossX = tangentY * normalZ - tangentZ * normalY;
+            float crossY = tangentZ * normalX - tangentX * normalZ;
+            float crossZ = tangentX * normalY - tangentY * normalX;
+            int target = quad * 4;
+            tangents[target] = tangentX;
+            tangents[target + 1] = tangentY;
+            tangents[target + 2] = tangentZ;
+            tangents[target + 3] = bitangentX * crossX + bitangentY * crossY + bitangentZ * crossZ < 0.0F
+                    ? -1.0F : 1.0F;
+        }
+        return tangents;
+    }
+
+    private static float inverseSqrt(float value) {
+        return value == 0.0F ? 1.0F : (float) (1.0 / Math.sqrt(value));
     }
 
     private static int detailLevel(BbModelData.Geometry geometry) {
@@ -409,7 +488,11 @@ final class BbCompiledGeometry {
         static final StaticGeometry EMPTY = new StaticGeometry(List.of(), 0, 0, 0);
     }
 
-    record Batch(BbModelRepository.ResolvedTexture texture, float[] data, byte[] detailLevels) {
+    record Batch(BbModelRepository.ResolvedTexture texture, float[] data, byte[] detailLevels, float[] tangents) {
+        Batch(BbModelRepository.ResolvedTexture texture, float[] data, byte[] detailLevels) {
+            this(texture, data, detailLevels, compileTangents(data, detailLevels.length));
+        }
+
         int quadCount() {
             return detailLevels.length;
         }

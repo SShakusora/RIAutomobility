@@ -61,6 +61,7 @@ public final class BbInstancedRenderer {
     private static int instanceBufferId;
     private static boolean disabled;
     private static boolean warnedUnsupported;
+    private static boolean announcedShaderPackFallback;
 
     private BbInstancedRenderer() {
     }
@@ -77,6 +78,7 @@ public final class BbInstancedRenderer {
         shader = null;
         disabled = false;
         warnedUnsupported = false;
+        announcedShaderPackFallback = false;
         event.registerShader(new ShaderInstance(
                         event.getResourceProvider(), RIAutomobility.rl("bbmodel_instanced"), SHADER_FORMAT),
                 loaded -> shader = loaded);
@@ -86,6 +88,15 @@ public final class BbInstancedRenderer {
                               PoseStack.Pose pose, BbRenderContext context, int lod,
                               int light, int overlay,
                               float red, float green, float blue, float alpha) {
+        if (!ShaderPackCompatibility.allowsCustomInstancing(
+                ShaderPackCompatibility.isShaderPackInUse())) {
+            if (!announcedShaderPackFallback) {
+                announcedShaderPackFallback = true;
+                LOGGER.info("Shader pack active; static BBModels will use the shader-compatible buffered renderer");
+            }
+            return false;
+        }
+        announcedShaderPackFallback = false;
         if (shader == null || disabled || alpha < 0.999F || geometry.batches().isEmpty()
                 || context == null
                 || (!(context.automobile() instanceof Entity)

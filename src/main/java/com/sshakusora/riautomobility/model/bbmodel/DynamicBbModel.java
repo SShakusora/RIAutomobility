@@ -37,6 +37,7 @@ public final class DynamicBbModel extends Model {
     private Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> compiledGeometry = Map.of();
     private Map<BbModelData.Node, BbCompiledGeometry.NodeTransform> compiledTransforms = Map.of();
     private BbCompiledGeometry.StaticGeometry staticGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
+    private BbCompiledGeometry.StaticGeometry shadowGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
     private boolean staticModel;
     private boolean missingReported;
     private boolean loggedBroken;
@@ -169,6 +170,13 @@ public final class DynamicBbModel extends Model {
 
     private void renderStatic(PoseStack.Pose pose, BbRenderContext context, VertexConsumer fallback,
                               int light, int overlay, float red, float green, float blue, float alpha) {
+        if (ShaderPackCompatibility.isRenderingShadowPass()) {
+            for (BbCompiledGeometry.Batch batch : this.shadowGeometry.batches()) {
+                VertexConsumer consumer = consumer(context, fallback, batch.texture());
+                emitPackedBatch(pose, consumer, batch, 0, light, overlay, red, green, blue, alpha);
+            }
+            return;
+        }
         int lod = lodLevel(pose.pose(), context);
         if (BbInstancedRenderer.tryEnqueue(this, this.staticGeometry, pose, context, lod,
                 light, overlay, red, green, blue, alpha)) {
@@ -183,9 +191,12 @@ public final class DynamicBbModel extends Model {
     private static int lodLevel(Matrix4f pose, BbRenderContext context) {
         if (context == null || !(context.automobile() instanceof Entity)) return 0;
         float distanceSquared = pose.m30() * pose.m30() + pose.m31() * pose.m31() + pose.m32() * pose.m32();
-        if (distanceSquared > 128.0F * 128.0F) return 3;
-        if (distanceSquared > 80.0F * 80.0F) return 2;
-        if (distanceSquared > 48.0F * 48.0F) return 1;
+        float levelOne = 48.0F;
+        float levelTwo = 80.0F;
+        float levelThree = 128.0F;
+        if (distanceSquared > levelThree * levelThree) return 3;
+        if (distanceSquared > levelTwo * levelTwo) return 2;
+        if (distanceSquared > levelOne * levelOne) return 1;
         return 0;
     }
 
@@ -196,24 +207,36 @@ public final class DynamicBbModel extends Model {
         this.staticModel = !BbAnimationPlayer.hasEffectiveAnimation(document, this.spec.bbAnimation());
         if (this.staticModel) {
             this.staticGeometry = BbCompiledGeometry.compileStatic(this.spec, document, geometry);
+            this.shadowGeometry = BbCompiledGeometry.compileShadowGeometry(this.staticGeometry);
             this.compiledGeometry = Map.of();
             this.compiledTransforms = Map.of();
             LOGGER.debug("Compiled static BBModel {}: {} nodes, {} quads, {} batches ({} duplicates removed)",
                     this.modelResource, this.staticGeometry.nodeCount(), this.staticGeometry.outputQuadCount(),
                     this.staticGeometry.batches().size(),
                     this.staticGeometry.inputQuadCount() - this.staticGeometry.outputQuadCount());
+            LOGGER.debug("Static BBModel {} LOD quads: {}/{}/{}/{}", this.modelResource,
+                    quadCount(0), quadCount(1), quadCount(2), quadCount(3));
         } else {
             this.staticGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
+            this.shadowGeometry = BbCompiledGeometry.StaticGeometry.EMPTY;
             this.compiledGeometry = geometry;
             this.compiledTransforms = BbCompiledGeometry.compileTransforms(document);
         }
         this.compiledDocument = document;
     }
 
+    private int quadCount(int lod) {
+        return this.staticGeometry.batches().stream().mapToInt(batch -> batch.quadCount(lod)).sum();
+    }
+
     private static void emitPackedBatch(PoseStack.Pose pose, VertexConsumer consumer,
                                         BbCompiledGeometry.Batch batch, int lod,
                                         int light, int overlay,
                                         float red, float green, float blue, float alpha) {
+        if (OculusEntityVertexWriter.tryWrite(pose, consumer, batch, lod,
+                light, overlay, red, green, blue, alpha)) {
+            return;
+        }
         Matrix4f matrix = pose.pose();
         Matrix3f normalMatrix = pose.normal();
         float[] data = batch.data();

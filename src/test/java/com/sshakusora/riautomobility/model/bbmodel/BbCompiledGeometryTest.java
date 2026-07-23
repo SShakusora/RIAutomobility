@@ -93,6 +93,26 @@ class BbCompiledGeometryTest {
     }
 
     @Test
+    void compilesCoarsestRealGeometryForShadows() {
+        BbModelData.ElementNode first = cube("first", new Vector3f());
+        BbModelData.ElementNode second = cube("second", new Vector3f(32, 16, -16));
+        BbModelData.Document document = new BbModelData.Document(
+                "4.10", "free", 16, 16, List.of(), List.of(first, second), List.of());
+        FrameSpec.ModelSpec spec = spec();
+        Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> geometry =
+                BbCompiledGeometry.compile(spec.bbModel(), spec, document);
+        BbCompiledGeometry.StaticGeometry flattened =
+                BbCompiledGeometry.compileStatic(spec, document, geometry);
+        BbCompiledGeometry.StaticGeometry shadow = BbCompiledGeometry.compileShadowGeometry(flattened);
+
+        int expectedQuads = flattened.batches().stream().mapToInt(batch -> batch.quadCount(3)).sum();
+        assertEquals(expectedQuads, shadow.inputQuadCount());
+        assertEquals(expectedQuads, shadow.outputQuadCount());
+        assertEquals(flattened.batches().size(), shadow.batches().size());
+        assertArrayEquals(flattened.batches().get(0).data(), shadow.batches().get(0).data());
+    }
+
+    @Test
     void compilesWorkspaceF1AsSingleStaticMaterialBatch() throws Exception {
         Path modelFile = Path.of("run/F1-rebuild.bbmodel");
         assumeTrue(Files.isRegularFile(modelFile));
@@ -116,6 +136,8 @@ class BbCompiledGeometryTest {
         assertTrue(batch.quadCount(1) >= batch.quadCount(2));
         assertTrue(batch.quadCount(2) >= batch.quadCount(3));
         assertTrue(batch.quadCount(3) > 0);
+        assertEquals(batch.quadCount(3),
+                BbCompiledGeometry.compileShadowGeometry(flattened).outputQuadCount());
     }
 
     private static BbModelData.ElementNode cube(String uuid, Vector3f origin) {
