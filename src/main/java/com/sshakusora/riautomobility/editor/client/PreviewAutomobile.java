@@ -1,6 +1,8 @@
 package com.sshakusora.riautomobility.editor.client;
 
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionAction;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionStateProvider;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
@@ -12,13 +14,15 @@ import io.github.foundationgames.automobility.automobile.render.RenderableAutomo
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-final class PreviewAutomobile implements RenderableAutomobile, BbInstancedRenderer.ImmediateTarget {
+final class PreviewAutomobile implements RenderableAutomobile, BbInstancedRenderer.ImmediateTarget,
+        VehicleInteractionStateProvider {
     private static final long NANOS_PER_TICK = 50_000_000L;
     private static final int ENGINE_PREVIEW_CYCLE_TICKS = 160;
     private static final int ENGINE_ACCELERATION_START = 40;
     private static final int ENGINE_BOOST_START = 90;
     private static final int ENGINE_DECELERATION_START = 110;
     private final VehicleEditorDraft draft;
+    private final PreviewInteractionState interactionState = new PreviewInteractionState();
     private final long animationStartNanos = System.nanoTime();
     private long engineAnimationStartNanos = animationStartNanos;
     private boolean engineRunning;
@@ -35,6 +39,14 @@ final class PreviewAutomobile implements RenderableAutomobile, BbInstancedRender
 
     void setAttachmentGuidesVisible(boolean visible) {
         this.attachmentGuidesVisible = visible;
+    }
+
+    void applyInteractionPreview(VehicleInteractionAction.Molang action) {
+        interactionState.apply(action, getTime());
+    }
+
+    void clearInteractionPreview() {
+        interactionState.clear();
     }
 
     @Override public AutomobileFrame getFrame() {
@@ -95,6 +107,12 @@ final class PreviewAutomobile implements RenderableAutomobile, BbInstancedRender
         return Math.max(0, ENGINE_PREVIEW_CYCLE_TICKS - phase);
     }
     @Override public long getTime() { return (System.nanoTime() - this.animationStartNanos) / NANOS_PER_TICK; }
+    @Override public float getInteractionValue(int channel, float partialTick) {
+        return interactionState.value(channel, getTime() + partialTick);
+    }
+    @Override public float getInteractionTime(int channel, float partialTick) {
+        return interactionState.time(channel, getTime() + partialTick);
+    }
     @Override public boolean automobileOnGround() { return true; }
     @Override public boolean debris() { return false; }
     @Override public Vector3f debrisColor() { return new Vector3f(1, 1, 1); }

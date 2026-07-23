@@ -1,6 +1,8 @@
 # Blockbench 动画与 Molang
 
-RIAutomobility 可以直接播放 `.bbmodel` 中的骨骼动画，并允许在关键帧的 X、Y、Z 数值中填写 Molang 表达式。借助项目提供的车辆查询量，同一个动画可以实时响应转向、车轮旋转、引擎、涡轮、Boost 和乘客视角。
+RIAutomobility 可以直接播放 `.bbmodel` 中的骨骼动画，并允许在关键帧的 X、Y、Z 数值中填写 Molang 表达式。借助项目提供的车辆查询量，同一个动画可以实时响应转向、车轮旋转、引擎、涡轮、Boost、乘客视角和车辆交互状态。
+
+[返回 Wiki 首页](Home.md) · [OBB 车辆交互盒](Vehicle-Interaction-Boxes.md)
 
 > [!IMPORTANT]
 > RIAutomobility 实现的是面向 BB 动画的 **Molang 子集**，不是 Minecraft Bedrock 的完整 Molang 运行时。请只使用本文列出的语法、函数和查询量；未列出的 Bedrock 查询、动画控制器、脚本语句等均不受支持。
@@ -18,6 +20,23 @@ RIAutomobility 可以直接播放 `.bbmodel` 中的骨骼动画，并允许在�
    ```
 
 4. 保存 `.bbmodel`，再通过 RIAutomobility 的车辆导入台导入并导出车辆包。
+
+可以直接在 Blockbench 中打开示例工程
+[animated_frame_demo.bbmodel](../art/examples/animated_frame_demo.bbmodel)。
+它是一个专门用于验证交互 Molang 的简化车架，并带有内嵌 PNG 纹理和
+`interaction_demo` 动画：
+
+| 通道 | 示例骨骼 | 演示内容 |
+| ---: | --- | --- |
+| `0` | 左、右车门 | 使用相反方向的 Y 轴旋转演示车门开合 |
+| `1` | 引擎盖 | 使用 X 轴旋转演示开启角度 |
+| `2` | 前灯组 | 使用三轴缩放演示连续状态值 |
+| `3` | 尾翼 | 同时使用位置和旋转通道 |
+| `4` | 仪表按钮 | 使用位置通道，并同时读取 `vehicle_interaction_time` |
+
+在车辆导入界面的交互分页中选择对应 Molang 动作并设置相同 `channel`，即可通过
+自动预览或“重新播放 Molang”按钮检查动画。该模型也被解析器测试直接读取，用于保证
+内嵌纹理、变量占位符、交互查询和骨骼动画采样始终可用。
 
 下面是几个常用表达式。
 
@@ -80,6 +99,28 @@ q.vehicle_passenger_view_yaw(0)
 ```molang
 q.vehicle_passenger_view_pitch(1 + 1)
 ```
+
+### 车辆交互通道
+
+| 函数 | 返回值 | 说明 |
+| --- | ---: | --- |
+| `query.vehicle_interaction(channel)` | `0` 到 `1` | 指定交互通道当前的插值值。 |
+| `query.vehicle_interaction_time(channel)` | 秒 | 指定通道自最近一次状态变化后经过的时间。 |
+
+`channel` 参数可以是表达式，但求值结果必须是 `0` 到 `31` 的整数，并与车辆组件
+`interaction_boxes.actions` 中 Molang 动作的 `channel` 一致。参数越界、为负数或
+带有小数时返回 `0`。`set`、`toggle` 和 `pulse` 动作都由服务端更新，状态会随车辆
+同步到客户端。
+
+例如用 0 号通道控制车门旋转：
+
+```molang
+q.vehicle_interaction(0) * 70
+```
+
+`query.vehicle_interaction_time(channel)` 在该通道从未被触发时为 `0`。执行新动作时
+计时归零；`pulse` 开始自动返回时会再次归零。完整的动作格式、权限与触发方式见
+[OBB 车辆交互盒](Vehicle-Interaction-Boxes.md)。
 
 ## 数值与布尔值
 
@@ -268,8 +309,10 @@ v.boost_angle = q.vehicle_boost_timer > 0 ? 90 : math.clamp(q.vehicle_turbo_char
 
 1. 检查查询量或变量拼写；未知变量会静默返回 `0`。
 2. 如果使用乘客视角查询，确认座位索引存在且该座位有人乘坐。
-3. 如果只在导入预览中测试，注意预览没有真实乘客，且转向值固定为 `0`。
-4. 自定义变量必须每行一个赋值，不能在同一行用多个分号连续定义。
+3. 如果使用交互查询，确认表达式中的通道与当前 Molang 动作一致，并且参数最终为
+   `0` 到 `31` 的整数。
+4. 如果只在导入预览中测试，注意预览没有真实乘客，且转向值固定为 `0`。
+5. 自定义变量必须每行一个赋值，不能在同一行用多个分号连续定义。
 
 ### 模型报告循环变量依赖
 

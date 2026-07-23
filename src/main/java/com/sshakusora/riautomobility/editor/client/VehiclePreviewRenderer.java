@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import com.sshakusora.riautomobility.entity.HitboxEntity;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionBox;
 import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbRenderContext;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
@@ -36,6 +37,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
 final class VehiclePreviewRenderer {
@@ -44,6 +46,7 @@ final class VehiclePreviewRenderer {
         FRAME_WHEELS,
         FRAME_SEATS,
         FRAME_HITBOXES,
+        FRAME_INTERACTIONS,
         FRAME_ATTACHMENTS,
         WHEEL,
         ENGINE,
@@ -57,10 +60,16 @@ final class VehiclePreviewRenderer {
     private static final float ORBIT_GIZMO_MARKER_RADIUS = 4.5F;
     private static final float ORBIT_GIZMO_DEPTH_SCALE = 0.16F;
     private static final float ORBIT_GIZMO_LABEL_SCALE = 0.65F;
+    private static final float PREVIEW_OUTLINE_HALF_WIDTH = 0.75F;
     private static final int ORBIT_GIZMO_X_COLOR = 0xFD3043;
     private static final int ORBIT_GIZMO_Y_COLOR = 0x26EC45;
     private static final int ORBIT_GIZMO_Z_COLOR = 0x2D5EE8;
     private static final int ORBIT_GIZMO_LABEL_COLOR = 0xFF111418;
+    private static final int[][] BOX_EDGES = {
+            {0, 1}, {2, 3}, {4, 5}, {6, 7},
+            {0, 2}, {1, 3}, {4, 6}, {5, 7},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
     private static final WheelBase.WheelPos SINGLE_WHEEL_PREVIEW_POSITION = new WheelBase.WheelPos(
             0.0F, 0.0F, 1.0F, 0.0F, WheelBase.WheelEnd.FRONT, WheelBase.WheelSide.LEFT);
 
@@ -84,6 +93,7 @@ final class VehiclePreviewRenderer {
     private int wheelPointIndex;
     private int seatIndex;
     private int hitboxIndex = -1;
+    private int interactionBoxIndex = -1;
     private float firstPersonYaw;
     private float firstPersonPitch;
     private float firstPersonFov = 70.0F;
@@ -102,11 +112,12 @@ final class VehiclePreviewRenderer {
     }
 
     void render(GuiGraphics graphics, float partialTick, int x0, int x1, int y0, int y1,
-                View view, int wheelPointIndex, int seatIndex, int hitboxIndex) {
+                View view, int wheelPointIndex, int seatIndex, int hitboxIndex, int interactionBoxIndex) {
         this.view = view;
         this.wheelPointIndex = wheelPointIndex;
         this.seatIndex = seatIndex;
         this.hitboxIndex = hitboxIndex;
+        this.interactionBoxIndex = interactionBoxIndex;
         if (view == View.SEAT_FIRST_PERSON) {
             renderFirstPersonVehicle(graphics, partialTick, x0, x1, y0, y1);
         } else {
@@ -188,19 +199,20 @@ final class VehiclePreviewRenderer {
         // Keep preview scaling out of the normal matrix. The negative Z scale is a camera-space
         // projection adjustment; applying it through PoseStack.scale flips the model lighting.
         pose.mulPoseMatrix(orbitScale.scaling(zoom, zoom, -zoom));
-        pose.mulPose(Axis.XP.rotationDegrees(180.0F));
-        pose.mulPose(orbitXRotation.rotationX((float) Math.toRadians(rotationX)));
-        pose.mulPose(orbitYRotation.rotationY((float) Math.toRadians(rotationY)));
+        applyOrbitRotation(pose, orbitXRotation, orbitYRotation, rotationX, rotationY);
         RenderSystem.enableDepthTest();
         Lighting.setupForEntityInInventory();
         MultiBufferSource.BufferSource buffers = graphics.bufferSource();
         switch (view) {
-            case FRAME, FRAME_WHEELS, FRAME_SEATS, FRAME_HITBOXES, FRAME_ATTACHMENTS -> {
+            case FRAME, FRAME_WHEELS, FRAME_SEATS, FRAME_HITBOXES, FRAME_INTERACTIONS, FRAME_ATTACHMENTS -> {
                 if (!draft.isPartVisible(VehicleEditorDraft.Target.FRAME)) break;
+                pose.pushPose();
                 AutomobileRenderer.render(pose, buffers, LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, partialTick, preview);
+                pose.popPose();
                 if (view == View.FRAME_WHEELS) renderSelectedWheelOutline(pose, outlineBuffers, partialTick);
                 if (view == View.FRAME_HITBOXES) renderHitboxOutlines(pose, buffers);
+                if (view == View.FRAME_INTERACTIONS) renderInteractionOutlines(pose, buffers);
                 if (view == View.FRAME_SEATS) renderSeatPlayers(pose, buffers, outlineBuffers);
                 if (view == View.FRAME_ATTACHMENTS) renderAttachmentOutlines(pose, outlineBuffers, partialTick);
             }
@@ -220,6 +232,13 @@ final class VehiclePreviewRenderer {
         renderOrbitGizmo(graphics, x1, y1);
         graphics.flush();
         graphics.disableScissor();
+    }
+
+    static void applyOrbitRotation(PoseStack pose, Quaternionf xRotation, Quaternionf yRotation,
+                                   float pitchDegrees, float yawDegrees) {
+        pose.mulPose(Axis.XP.rotationDegrees(180.0F));
+        pose.mulPose(xRotation.rotationX((float) Math.toRadians(pitchDegrees)));
+        pose.mulPose(yRotation.rotationY((float) Math.toRadians(yawDegrees)));
     }
 
     private static void clearPreviewDepth() {
@@ -631,32 +650,98 @@ final class VehiclePreviewRenderer {
     }
 
     private void renderHitboxOutlines(PoseStack pose, MultiBufferSource.BufferSource buffers) {
-        pose.pushPose();
-        pose.mulPose(Axis.ZP.rotationDegrees(180.0F));
-        pose.mulPose(Axis.YP.rotationDegrees(180.0F));
-        VertexConsumer lines = buffers.getBuffer(RenderType.lines());
+        VertexConsumer quads = buffers.getBuffer(RenderType.debugQuads());
         double entityHalfWidth = draft.widthBlocks * 0.5D;
-        AABB entityBox = previewHitbox(Vec3.ZERO, entityHalfWidth, draft.heightBlocks);
+        AABB entityBox = vehicleHitbox(Vec3.ZERO, entityHalfWidth, draft.heightBlocks);
         boolean entitySelected = hitboxIndex < 0;
-        LevelRenderer.renderLineBox(pose, lines, entityBox,
+        renderPreviewLineBox(pose, quads, entityBox,
                 entitySelected ? 1.0F : 0.15F, entitySelected ? 0.72F : 0.85F,
-                entitySelected ? 0.12F : 0.85F, 1.0F);
+                entitySelected ? 0.12F : 0.85F);
         for (int index = 0; index < draft.hitboxes.size(); index++) {
             VehicleEditorDraft.HitboxPoint hitbox = draft.hitboxes.get(index);
             double inset = HitboxEntity.horizontalCollisionInset(hitbox.width());
             double halfWidth = Math.max(0.0D, hitbox.width() - inset * 2.0D) * 0.5D;
-            AABB box = previewHitbox(hitbox.origin(), halfWidth, hitbox.height());
+            AABB box = vehicleHitbox(hitbox.origin(), halfWidth, hitbox.height());
             boolean selected = index == hitboxIndex;
-            LevelRenderer.renderLineBox(pose, lines, box,
+            renderPreviewLineBox(pose, quads, box,
                     selected ? 1.0F : 0.15F, selected ? 0.72F : 0.8F,
-                    selected ? 0.12F : 1.0F, 1.0F);
+                    selected ? 0.12F : 1.0F);
         }
-        pose.popPose();
     }
 
-    private static AABB previewHitbox(Vec3 origin, double halfWidth, double height) {
-        return new AABB(origin.x - halfWidth, -origin.y - height, -origin.z - halfWidth,
-                origin.x + halfWidth, -origin.y, -origin.z + halfWidth);
+    private void renderInteractionOutlines(PoseStack pose, MultiBufferSource.BufferSource buffers) {
+        VertexConsumer quads = buffers.getBuffer(RenderType.debugQuads());
+        double frameRaise = preview.getWheels().model().radius() / 16.0D;
+        for (int index = 0; index < draft.interactionBoxes.size(); index++) {
+            VehicleEditorDraft.InteractionBoxPoint box = draft.interactionBoxes.get(index);
+            Vec3[] corners = VehicleInteractionBox.vehicleLocalCorners(
+                    box.center(), box.size(), box.rotation());
+            for (int corner = 0; corner < corners.length; corner++) {
+                corners[corner] = corners[corner].add(0.0D, frameRaise, 0.0D);
+            }
+            boolean selected = index == interactionBoxIndex;
+            renderPreviewLineBox(pose, quads, corners,
+                    selected ? 0.25F : 0.1F,
+                    selected ? 1.0F : 0.7F,
+                    selected ? 0.45F : 0.3F);
+        }
+    }
+
+    static AABB vehicleHitbox(Vec3 origin, double halfWidth, double height) {
+        return new AABB(origin.x - halfWidth, origin.y, origin.z - halfWidth,
+                origin.x + halfWidth, origin.y + height, origin.z + halfWidth);
+    }
+
+    private static void renderPreviewLineBox(PoseStack pose, VertexConsumer quads, AABB box,
+                                             float red, float green, float blue) {
+        renderPreviewLineBox(pose, quads, new Vec3[]{
+                new Vec3(box.minX, box.minY, box.minZ),
+                new Vec3(box.maxX, box.minY, box.minZ),
+                new Vec3(box.minX, box.maxY, box.minZ),
+                new Vec3(box.maxX, box.maxY, box.minZ),
+                new Vec3(box.minX, box.minY, box.maxZ),
+                new Vec3(box.maxX, box.minY, box.maxZ),
+                new Vec3(box.minX, box.maxY, box.maxZ),
+                new Vec3(box.maxX, box.maxY, box.maxZ)
+        }, red, green, blue);
+    }
+
+    private static void renderPreviewLineBox(PoseStack pose, VertexConsumer quads,
+                                             Vec3[] corners, float red, float green,
+                                             float blue) {
+        Matrix4f matrix = pose.last().pose();
+        for (int[] edge : BOX_EDGES) {
+            Vec3 start = corners[edge[0]];
+            Vec3 end = corners[edge[1]];
+            Vector3f screenStart = matrix.transformPosition(
+                    new Vector3f((float) start.x, (float) start.y, (float) start.z));
+            Vector3f screenEnd = matrix.transformPosition(
+                    new Vector3f((float) end.x, (float) end.y, (float) end.z));
+            Vector3f[] vertices = previewLineQuad(screenStart, screenEnd);
+            for (Vector3f vertex : vertices) {
+                quadVertex(quads, vertex.x, vertex.y, vertex.z, red, green, blue);
+            }
+        }
+    }
+
+    static Vector3f[] previewLineQuad(Vector3f start, Vector3f end) {
+        float deltaX = end.x - start.x;
+        float deltaY = end.y - start.y;
+        float length = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (length < 1.0E-4F) return new Vector3f[0];
+        float offsetX = -deltaY / length * PREVIEW_OUTLINE_HALF_WIDTH;
+        float offsetY = deltaX / length * PREVIEW_OUTLINE_HALF_WIDTH;
+        return new Vector3f[]{
+                new Vector3f(start.x + offsetX, start.y + offsetY, start.z),
+                new Vector3f(start.x - offsetX, start.y - offsetY, start.z),
+                new Vector3f(end.x - offsetX, end.y - offsetY, end.z),
+                new Vector3f(end.x + offsetX, end.y + offsetY, end.z)
+        };
+    }
+
+    private static void quadVertex(VertexConsumer quads, float x, float y, float z,
+                                   float red, float green, float blue) {
+        quads.vertex(x, y, z).color(red, green, blue, 1.0F).endVertex();
     }
 
     private void renderSeatPlayers(PoseStack pose, MultiBufferSource.BufferSource buffers,

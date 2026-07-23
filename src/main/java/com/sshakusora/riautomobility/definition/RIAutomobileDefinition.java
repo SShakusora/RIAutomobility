@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.definition;
 
 import io.github.foundationgames.automobility.automobile.attachment.FrontAttachmentType;
 import io.github.foundationgames.automobility.automobile.attachment.RearAttachmentType;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionBox;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.phys.Vec3;
@@ -14,6 +15,8 @@ public record RIAutomobileDefinition(
         EntityDimensions dimensions,
         List<Vec3> cameraPositions,
         List<Hitbox> hitboxes,
+        List<VehicleInteractionBox> interactionBoxes,
+        boolean disableHitboxInteractions,
         boolean hideEngine,
         boolean frontAttachmentEnabled,
         boolean rearAttachmentEnabled,
@@ -69,6 +72,8 @@ public record RIAutomobileDefinition(
         private EntityDimensions dimensions = EntityDimensions.scalable(1.0F, 0.66F);
         private List<Vec3> cameraPositions = List.of(Vec3.ZERO);
         private List<Hitbox> hitboxes = List.of();
+        private List<VehicleInteractionBox> interactionBoxes = List.of();
+        private boolean disableHitboxInteractions = false;
         private boolean hideEngine = false;
         private boolean frontAttachmentEnabled = true;
         private boolean rearAttachmentEnabled = true;
@@ -107,6 +112,20 @@ public record RIAutomobileDefinition(
 
         public Builder hitboxes(Hitbox... hitboxes) {
             return this.hitboxes(Arrays.asList(hitboxes));
+        }
+
+        public Builder interactionBoxes(List<VehicleInteractionBox> interactionBoxes) {
+            this.interactionBoxes = List.copyOf(interactionBoxes);
+            return this;
+        }
+
+        public Builder interactionBoxes(VehicleInteractionBox... interactionBoxes) {
+            return this.interactionBoxes(Arrays.asList(interactionBoxes));
+        }
+
+        public Builder disableHitboxInteractions(boolean disableHitboxInteractions) {
+            this.disableHitboxInteractions = disableHitboxInteractions;
+            return this;
         }
 
         public Builder hideEngine(boolean hideEngine) {
@@ -182,6 +201,8 @@ public record RIAutomobileDefinition(
                     this.dimensions,
                     this.cameraPositions,
                     this.hitboxes,
+                    this.interactionBoxes,
+                    this.disableHitboxInteractions,
                     this.hideEngine,
                     this.frontAttachmentEnabled,
                     this.rearAttachmentEnabled,

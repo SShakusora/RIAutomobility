@@ -3,6 +3,9 @@ package com.sshakusora.riautomobility.entity;
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
 import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
 import com.sshakusora.riautomobility.item.VehicleKeyAccess;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionAction;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionBox;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionStateProvider;
 import com.sshakusora.riautomobility.mixin.accessor.AutomobileEntityAccessor;
 import com.sshakusora.riautomobility.network.packet.client.VehicleHighlightClientHandler;
 import com.sshakusora.riautomobility.util.RIAutomobileTransformUtil;
@@ -54,7 +57,8 @@ import java.util.function.Consumer;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-public class RIAutomobileEntity extends AutomobileEntity implements WorldlyContainer {
+public class RIAutomobileEntity extends AutomobileEntity
+        implements WorldlyContainer, VehicleInteractionStateProvider {
     private static final int INVENTORY_SIZE = 54;
     private static final int MAX_TRACKED_SEATS = 8;
     private static final int[] NO_AUTOMATION_SLOTS = new int[0];
@@ -67,6 +71,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
     private static final EntityDataAccessor<Integer> BASE_PASSENGER = SynchedEntityData.defineId(
             RIAutomobileEntity.class,
             EntityDataSerializers.INT
+    );
+    private static final EntityDataAccessor<CompoundTag> INTERACTION_STATE = SynchedEntityData.defineId(
+            RIAutomobileEntity.class,
+            EntityDataSerializers.COMPOUND_TAG
     );
     private static final List<EntityDataAccessor<Integer>> TRACKED_SEATS = List.of(
             SynchedEntityData.defineId(RIAutomobileEntity.class, EntityDataSerializers.INT),
@@ -166,6 +174,9 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
         this.unresolvedFrameId = unresolvedId(savedFrameId, this.getFrame());
         this.unresolvedWheelId = unresolvedId(savedWheelId, this.getWheels());
         this.unresolvedEngineId = unresolvedId(savedEngineId, this.getEngine());
+        if (tag.contains("InteractionState", CompoundTag.TAG_COMPOUND)) {
+            this.entityData.set(INTERACTION_STATE, tag.getCompound("InteractionState").copy());
+        }
         if (usesRIASeats() || this.unresolvedFrameId != null) {
             ContainerHelper.loadAllItems(tag, items);
             for (int i = 0; i < MAX_TRACKED_SEATS; i++) {
@@ -179,6 +190,9 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Keyed", this.isKeyed());
+        if (!this.entityData.get(INTERACTION_STATE).isEmpty()) {
+            tag.put("InteractionState", this.entityData.get(INTERACTION_STATE).copy());
+        }
         preserveUnresolvedId(tag, "frame", this.unresolvedFrameId);
         preserveUnresolvedId(tag, "wheels", this.unresolvedWheelId);
         preserveUnresolvedId(tag, "engine", this.unresolvedEngineId);
@@ -207,6 +221,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
         this.unresolvedWheelId = null;
         this.unresolvedEngineId = null;
         super.setComponents(frame, wheel, engine);
+        clearInteractionState();
         if (usesRIASeats()) {
             EntityDimensions dimensions = getDefinition().dimensions();
             if (dimensions.width != this.dimensions.width || dimensions.height != this.dimensions.height) {
@@ -224,6 +239,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
         this.unresolvedWheelId = clearIfResolved(this.unresolvedWheelId, wheel);
         this.unresolvedEngineId = clearIfResolved(this.unresolvedEngineId, engine);
         super.setComponents(frame, wheel, engine);
+        clearInteractionState();
 
         if (usesRIASeats()) {
             removeHitboxes();
@@ -269,6 +285,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
     public void tick() {
         boolean riaSeats = usesRIASeats();
         if (!level().isClientSide()) {
+            tickInteractionPulses();
             if (this.tickCount % 20 == 0) {
                 updateVehicleLocation();
             }
@@ -453,6 +470,10 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
+        if (areHitboxInteractionsDisabled()) {
+            return InteractionResult.PASS;
+        }
+
         ItemStack stack = player.getItemInHand(hand);
         boolean dismantlingTool = stack.is(AutomobilityItems.CROWBAR.require()) || stack.is(forgeWrench);
         boolean authorized = VehicleKeyAccess.canAccess(player, this);
@@ -883,6 +904,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
         super.defineSynchedData();
         this.entityData.define(KEYED, false);
         this.entityData.define(BASE_PASSENGER, -1);
+        this.entityData.define(INTERACTION_STATE, new CompoundTag());
         for (EntityDataAccessor<Integer> trackedSeat : TRACKED_SEATS) {
             this.entityData.define(trackedSeat, -1);
         }
@@ -904,6 +926,144 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
 
     public boolean canPlayerAccess(Player player) {
         return VehicleKeyAccess.canAccess(player, this);
+    }
+
+    public List<VehicleInteractionBox> getInteractionBoxes() {
+        return getDefinition().interactionBoxes();
+    }
+
+    public boolean areHitboxInteractionsDisabled() {
+        return usesRIASeats() && getDefinition().disableHitboxInteractions();
+    }
+
+    @Override
+    public float getInteractionValue(int channel, float partialTick) {
+        if (channel < 0 || channel > VehicleInteractionAction.MAX_CHANNEL) {
+            return 0.0F;
+        }
+        CompoundTag state = this.entityData.get(INTERACTION_STATE);
+        String key = interactionChannelKey(channel);
+        if (!state.contains(key, CompoundTag.TAG_COMPOUND)) {
+            return 0.0F;
+        }
+        CompoundTag value = state.getCompound(key);
+        float target = value.getFloat("Target");
+        int duration = value.getInt("Duration");
+        if (duration <= 0) {
+            return target;
+        }
+        double elapsed = this.level().getGameTime() + partialTick - value.getLong("Start");
+        float progress = Mth.clamp((float) (elapsed / duration), 0.0F, 1.0F);
+        return Mth.lerp(progress, value.getFloat("From"), target);
+    }
+
+    @Override
+    public float getInteractionTime(int channel, float partialTick) {
+        CompoundTag state = this.entityData.get(INTERACTION_STATE);
+        String key = interactionChannelKey(channel);
+        if (channel < 0 || channel > VehicleInteractionAction.MAX_CHANNEL
+                || !state.contains(key, CompoundTag.TAG_COMPOUND)) {
+            return 0.0F;
+        }
+        long start = state.getCompound(key).getLong("Start");
+        return Math.max(0.0F, (this.level().getGameTime() + partialTick - start) / 20.0F);
+    }
+
+    public void applyInteractionMolang(VehicleInteractionAction.Molang action) {
+        if (this.level().isClientSide()) {
+            return;
+        }
+        int channel = action.channel();
+        CompoundTag state = this.entityData.get(INTERACTION_STATE).copy();
+        CompoundTag previous = state.getCompound(interactionChannelKey(channel));
+        float current = getInteractionValue(channel, 0.0F);
+        float previousTarget = previous.getFloat("Target");
+        float target = switch (action.operation()) {
+            case SET, PULSE -> action.value();
+            case TOGGLE -> previousTarget >= 0.5F ? 0.0F : action.value();
+        };
+        CompoundTag updated = new CompoundTag();
+        updated.putFloat("From", current);
+        updated.putFloat("Target", target);
+        updated.putLong("Start", this.level().getGameTime());
+        updated.putInt("Duration", action.transitionTicks());
+        if (action.operation() == VehicleInteractionAction.MolangOperation.PULSE) {
+            updated.putLong("PulseEnd", this.level().getGameTime() + action.durationTicks());
+            updated.putInt("ReturnDuration", action.transitionTicks());
+        }
+        state.put(interactionChannelKey(channel), updated);
+        this.entityData.set(INTERACTION_STATE, state);
+    }
+
+    public boolean boardAtInteractionSeat(Player player, int seat) {
+        if (!usesRIASeats() || player.getVehicle() == this) {
+            return false;
+        }
+        if (seat < 0) {
+            return boardAsPassenger(player);
+        }
+        if (seat >= getSeatCount() || seat == 0 && !canPlayerAccess(player)) {
+            return false;
+        }
+        Entity occupant = getSeatPassenger(seat);
+        if (occupant instanceof Player) {
+            return false;
+        }
+        if (occupant != null) {
+            occupant.stopRiding();
+        }
+        if (!player.startRiding(this, true)) {
+            return false;
+        }
+        int assignedSeat = getSeatIndex(player);
+        if (assignedSeat >= 0) {
+            setSeatPassenger(assignedSeat, null);
+        }
+        setSeatPassenger(seat, player);
+        snapPassengerToSeat(player);
+        return true;
+    }
+
+    public void openInteractionInventory(Player player) {
+        openInventory(player);
+    }
+
+    private void tickInteractionPulses() {
+        CompoundTag currentState = this.entityData.get(INTERACTION_STATE);
+        CompoundTag updatedState = null;
+        long now = this.level().getGameTime();
+        for (int channel = 0; channel <= VehicleInteractionAction.MAX_CHANNEL; channel++) {
+            String key = interactionChannelKey(channel);
+            if (!currentState.contains(key, CompoundTag.TAG_COMPOUND)) {
+                continue;
+            }
+            CompoundTag value = currentState.getCompound(key);
+            if (!value.contains("PulseEnd") || now < value.getLong("PulseEnd")) {
+                continue;
+            }
+            if (updatedState == null) {
+                updatedState = currentState.copy();
+            }
+            CompoundTag reset = new CompoundTag();
+            reset.putFloat("From", getInteractionValue(channel, 0.0F));
+            reset.putFloat("Target", 0.0F);
+            reset.putLong("Start", now);
+            reset.putInt("Duration", value.getInt("ReturnDuration"));
+            updatedState.put(key, reset);
+        }
+        if (updatedState != null) {
+            this.entityData.set(INTERACTION_STATE, updatedState);
+        }
+    }
+
+    private void clearInteractionState() {
+        if (this.entityData != null) {
+            this.entityData.set(INTERACTION_STATE, new CompoundTag());
+        }
+    }
+
+    private static String interactionChannelKey(int channel) {
+        return "c" + channel;
     }
 
     private void updateVehicleLocation() {

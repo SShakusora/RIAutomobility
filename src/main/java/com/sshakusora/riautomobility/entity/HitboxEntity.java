@@ -77,6 +77,10 @@ public class HitboxEntity extends Entity{
         return null;
     }
 
+    public boolean belongsTo(AutomobileEntity automobile) {
+        return automobile != null && this.entityData.get(AUTOMOBILE) == automobile.getId();
+    }
+
     public Vec3 boxOrigin() {
         if (this.origin != null) {
             return this.origin;
@@ -87,7 +91,9 @@ public class HitboxEntity extends Entity{
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) { }
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+        // The client derives the hitbox position from the automobile's interpolated transform.
+    }
 
     public void syncPosition(AutomobileEntity auto) {
         Vec3 pos = this.boxOrigin();
@@ -126,14 +132,22 @@ public class HitboxEntity extends Entity{
             }
         }
 
-        // The parent automobile synchronizes every attached hitbox after it moves.
-        // Doing it here as well doubles the transforms and bounding-box updates.
+        // Server-side hitboxes are synchronized by the parent after it moves. The
+        // client receives separate hitbox entities that are not in the parent's
+        // local list, so they must follow the interpolated automobile here.
+        if (this.level().isClientSide()) {
+            syncPosition(automobile);
+        }
     }
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         var automobile = getAutomobile();
         if (automobile == null) return super.interact(player, hand);
+        if (automobile instanceof RIAutomobileEntity riautomobile
+                && riautomobile.areHitboxInteractionsDisabled()) {
+            return InteractionResult.PASS;
+        }
 
         ItemStack heldStack = player.getItemInHand(hand);
         if (automobile instanceof RIAutomobileEntity riautomobile

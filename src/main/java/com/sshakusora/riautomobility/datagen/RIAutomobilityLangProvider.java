@@ -203,13 +203,13 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         String p = "editor.riautomobility.vehicle_import.";
         String[][] entries = chinese ? new String[][]{
                 {"page.frame", "外壳"}, {"page.wheel", "轮子"}, {"page.engine", "引擎"},
-                {"tab.basic", "基础"}, {"tab.wheels", "轮位"}, {"tab.seats", "座椅"}, {"tab.hitboxes", "碰撞"}, {"tab.attachments", "附件"}, {"tab.advanced", "高级"},
-                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.import_model", "导入文件"}, {"button.export_pack", "导出文件"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
+                {"tab.basic", "基础"}, {"tab.wheels", "轮位"}, {"tab.seats", "座椅"}, {"tab.hitboxes", "碰撞"}, {"tab.interactions", "交互"}, {"tab.attachments", "附件"}, {"tab.advanced", "高级"},
+                {"button.reset_view", "重置视图"}, {"button.select_preview", "选择预览"}, {"button.preview_molang", "重新播放 Molang"}, {"button.import_model", "导入文件"}, {"button.export_pack", "导出文件"}, {"button.export_item", "导出物品"}, {"button.select_list", "选择名单"},
                 {"label.name", "名字："}, {"label.weight", "重量："}, {"label.engine_back", "引擎后移："}, {"label.engine_height", "引擎高度："}, {"label.size", "尺寸："}, {"label.grip", "抓地力："}, {"label.radius", "半径："}, {"label.width", "宽度："}, {"label.height", "高度："}, {"label.torque", "扭矩："}, {"label.speed", "速度："}, {"label.rotation_y", "Y轴旋转："}, {"label.x", "X："}, {"label.y", "Y："}, {"label.z", "Z："},
                 {"header.wheel", "轮位 %s/%s"}, {"header.seat", "座椅 %s/%s"}, {"header.entity_hitbox", "实体碰撞箱"}, {"header.additional_hitbox", "附加碰撞箱 %s/%s"}, {"status.invalid_number", "数字格式无效"}
         } : new String[][]{
-                {"page.frame", "Frame"}, {"page.wheel", "Wheel"}, {"page.engine", "Engine"}, {"tab.basic", "Basic"}, {"tab.wheels", "Wheels"}, {"tab.seats", "Seats"}, {"tab.hitboxes", "Hitboxes"}, {"tab.attachments", "Attachments"}, {"tab.advanced", "Advanced"},
-                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.import_model", "Import File"}, {"button.export_pack", "Export File"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
+                {"page.frame", "Frame"}, {"page.wheel", "Wheel"}, {"page.engine", "Engine"}, {"tab.basic", "Basic"}, {"tab.wheels", "Wheels"}, {"tab.seats", "Seats"}, {"tab.hitboxes", "Hitboxes"}, {"tab.interactions", "Interactions"}, {"tab.attachments", "Attachments"}, {"tab.advanced", "Advanced"},
+                {"button.reset_view", "Reset View"}, {"button.select_preview", "Select Preview"}, {"button.preview_molang", "Replay Molang"}, {"button.import_model", "Import File"}, {"button.export_pack", "Export File"}, {"button.export_item", "Export Item"}, {"button.select_list", "Select List"},
                 {"label.name", "Name:"}, {"label.weight", "Weight:"}, {"label.engine_back", "Engine Back:"}, {"label.engine_height", "Engine Height:"}, {"label.size", "Size:"}, {"label.grip", "Grip:"}, {"label.radius", "Radius:"}, {"label.width", "Width:"}, {"label.height", "Height:"}, {"label.torque", "Torque:"}, {"label.speed", "Speed:"}, {"label.rotation_y", "Y Rotation:"}, {"label.x", "X:"}, {"label.y", "Y:"}, {"label.z", "Z:"},
                 {"header.wheel", "Wheel %s/%s"}, {"header.seat", "Seat %s/%s"}, {"header.entity_hitbox", "Entity Hitbox"}, {"header.additional_hitbox", "Additional Hitbox %s/%s"}, {"status.invalid_number", "Invalid number format"}
         };
@@ -231,6 +231,42 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "label.hide_engine", chinese ? "隐藏引擎：" : "Hide Engine:");
         add(p + "label.engine_animation", chinese ? "引擎动画：" : "Engine Animation:");
         add(p + "label.container_hitbox", chinese ? "容器碰撞箱：" : "Container Hitbox:");
+        add(p + "label.hitbox_interactions", chinese ? "碰撞箱交互：" : "Hitbox Interaction:");
+        add(p + "label.interaction_id", chinese ? "交互 ID：" : "Interaction ID:");
+        add(p + "label.interaction_center_x", chinese ? "中心 X：" : "Center X:");
+        add(p + "label.interaction_center_y", chinese ? "中心 Y：" : "Center Y:");
+        add(p + "label.interaction_center_z", chinese ? "中心 Z：" : "Center Z:");
+        add(p + "label.interaction_size_x", chinese ? "尺寸 X：" : "Size X:");
+        add(p + "label.interaction_size_y", chinese ? "尺寸 Y：" : "Size Y:");
+        add(p + "label.interaction_size_z", chinese ? "尺寸 Z：" : "Size Z:");
+        add(p + "label.interaction_rotation_x", chinese ? "旋转 X：" : "Rotation X:");
+        add(p + "label.interaction_rotation_y", chinese ? "旋转 Y：" : "Rotation Y:");
+        add(p + "label.interaction_rotation_z", chinese ? "旋转 Z：" : "Rotation Z:");
+        add(p + "label.requires_access", chinese ? "需要钥匙：" : "Require Access:");
+        add(p + "label.interaction_seat", chinese ? "座位编号：" : "Seat Index:");
+        add(p + "label.molang_channel", chinese ? "Molang 通道：" : "Molang Channel:");
+        add(p + "label.molang_value", chinese ? "目标值：" : "Target Value:");
+        add(p + "label.duration_ticks", chinese ? "持续刻数：" : "Duration Ticks:");
+        add(p + "label.transition_ticks", chinese ? "过渡刻数：" : "Transition Ticks:");
+        add(p + "label.requires_access.off", chinese ? "否" : "No");
+        add(p + "label.requires_access.on", chinese ? "是" : "Yes");
+        add(p + "label.hitbox_interactions.enabled", chinese ? "启用" : "Enabled");
+        add(p + "label.hitbox_interactions.disabled", chinese ? "禁用" : "Disabled");
+        add(p + "header.no_interaction_box", chinese ? "未添加交互盒" : "No Interaction Box");
+        add(p + "header.interaction_box", chinese ? "交互盒 %s/%s" : "Interaction Box %s/%s");
+        add(p + "header.interaction_action", chinese ? "动作 %s/%s" : "Action %s/%s");
+        add(p + "action.open_container", chinese ? "动作：打开容器" : "Action: Open Container");
+        add(p + "action.mount", chinese ? "动作：上车" : "Action: Mount");
+        add(p + "action.molang", chinese ? "动作：Molang" : "Action: Molang");
+        add(p + "operation.set", chinese ? "操作：设值" : "Operation: Set");
+        add(p + "operation.toggle", chinese ? "操作：切换" : "Operation: Toggle");
+        add(p + "operation.pulse", chinese ? "操作：脉冲" : "Operation: Pulse");
+        add(p + "trigger.left_click", chinese ? "交互：左键" : "Interaction: Left Click");
+        add(p + "trigger.right_click", chinese ? "交互：右键" : "Interaction: Right Click");
+        add(p + "trigger.shift_left_click", chinese ? "交互：Shift + 左键" : "Interaction: Shift + Left Click");
+        add(p + "trigger.shift_right_click", chinese ? "交互：Shift + 右键" : "Interaction: Shift + Right Click");
+        add(p + "validation.interaction_box", chinese ? "交互盒参数、动作或 ID 无效" : "Invalid interaction box geometry, action, or id");
+        add(p + "validation.interaction_box_id", chinese ? "交互盒 ID 不可重复" : "Interaction box ids must be unique");
         add(p + "label.hide_engine.off", chinese ? "否" : "No");
         add(p + "label.hide_engine.on", chinese ? "是" : "Yes");
         add(p + "label.axle.rear", chinese ? "后" : "Rear");
@@ -315,6 +351,25 @@ abstract class RIAutomobilityLangProvider extends LanguageProvider {
         add(p + "tooltip.side", chinese ? "标记当前轮位位于车辆左侧或右侧。" : "Marks the current wheel position as the vehicle's left or right side.");
         add(p + "tooltip.engine_animation", chinese ? "仅启动或停止编辑器预览中的引擎动画。" : "Only starts or stops the engine animation in the editor preview.");
         add(p + "tooltip.container_hitbox", chinese ? "与此碰撞箱交互时打开车辆储物界面。" : "Interacting with this hitbox opens the vehicle storage screen.");
+        add(p + "tooltip.hitbox_interactions", chinese
+                ? "禁用后，主实体和附加碰撞箱不再处理右键；玩家只能通过不同部位的交互盒执行载具功能。"
+                : "When disabled, the main entity and additional hitboxes ignore right-clicks; vehicle functions can only be triggered through interaction boxes.");
+        add(p + "tooltip.interaction_center_x", chinese ? "交互盒中心相对车架原点的局部 X 偏移，单位为方块。" : "Interaction-box center local X offset from the frame origin, in blocks.");
+        add(p + "tooltip.interaction_center_y", chinese ? "交互盒中心相对车架原点的局部 Y 偏移，单位为方块。" : "Interaction-box center local Y offset from the frame origin, in blocks.");
+        add(p + "tooltip.interaction_center_z", chinese ? "交互盒中心相对车架原点的局部 Z 偏移，单位为方块。" : "Interaction-box center local Z offset from the frame origin, in blocks.");
+        add(p + "tooltip.interaction_size_x", chinese ? "交互盒沿自身 X 轴的完整长度，单位为方块。" : "Full interaction-box length along its local X axis, in blocks.");
+        add(p + "tooltip.interaction_size_y", chinese ? "交互盒沿自身 Y 轴的完整长度，单位为方块。" : "Full interaction-box length along its local Y axis, in blocks.");
+        add(p + "tooltip.interaction_size_z", chinese ? "交互盒沿自身 Z 轴的完整长度，单位为方块。" : "Full interaction-box length along its local Z axis, in blocks.");
+        add(p + "tooltip.interaction_rotation_x", chinese ? "交互盒绕自身 X 轴的旋转角，单位为度。" : "Interaction-box rotation about its local X axis, in degrees.");
+        add(p + "tooltip.interaction_rotation_y", chinese ? "交互盒绕自身 Y 轴的旋转角，单位为度。" : "Interaction-box rotation about its local Y axis, in degrees.");
+        add(p + "tooltip.interaction_rotation_z", chinese ? "交互盒绕自身 Z 轴的旋转角，单位为度。" : "Interaction-box rotation about its local Z axis, in degrees.");
+        add(p + "tooltip.interaction_id", chinese ? "车架内唯一的小写交互盒 ID。" : "Unique lowercase interaction box id within this frame.");
+        add(p + "tooltip.requires_access", chinese ? "动作执行前是否验证车辆钥匙权限。" : "Whether the vehicle key permission is checked before this action.");
+        add(p + "tooltip.interaction_seat", chinese ? "-1 表示首个可用乘客位，0 表示驾驶位。" : "-1 selects the first passenger seat; 0 selects the driver seat.");
+        add(p + "tooltip.molang_channel", chinese ? "供 Blockbench 查询读取的 0 到 31 通道。" : "Channel 0 to 31 exposed to Blockbench queries.");
+        add(p + "tooltip.molang_value", chinese ? "交互通道的目标值，限制在 0 到 1。" : "Target interaction value, clamped from 0 to 1.");
+        add(p + "tooltip.duration_ticks", chinese ? "脉冲动作维持目标状态的游戏刻数。" : "Ticks for which a pulse action holds its target.");
+        add(p + "tooltip.transition_ticks", chinese ? "通道到达目标值所用的插值刻数。" : "Ticks used to interpolate the channel to its target.");
         add(p + "tooltip.front_attachment", chinese ? "控制是否允许安装前附件。" : "Controls whether front attachments may be installed.");
         add(p + "tooltip.rear_attachment", chinese ? "控制是否允许安装后附件。" : "Controls whether rear attachments may be installed.");
         add(p + "tooltip.front_list", chinese ? "前附件筛选名单；可选择白名单或黑名单。" : "Front attachment filter list; choose whitelist or blacklist mode.");

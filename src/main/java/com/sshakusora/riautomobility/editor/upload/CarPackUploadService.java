@@ -234,6 +234,10 @@ public final class CarPackUploadService {
                                   CheckedAction apply, CheckedAction rollback) throws Exception {
         boolean targetExists = Files.exists(target);
         if (targetExists && !overwrite) {
+            if (hasSameContent(source, target)) {
+                Files.deleteIfExists(source);
+                return;
+            }
             throw new IOException("A car pack with this name already exists");
         }
 
@@ -276,6 +280,17 @@ public final class CarPackUploadService {
                 Files.deleteIfExists(source);
             }
             Files.deleteIfExists(backup);
+        }
+    }
+
+    private static boolean hasSameContent(Path first, Path second) {
+        try {
+            if (Files.mismatch(first, second) == -1L) {
+                return true;
+            }
+            return CarPackManager.contentDigest(first).equals(CarPackManager.contentDigest(second));
+        } catch (IOException ignored) {
+            return false;
         }
     }
 

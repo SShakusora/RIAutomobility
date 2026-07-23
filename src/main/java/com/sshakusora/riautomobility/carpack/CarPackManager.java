@@ -203,6 +203,10 @@ public final class CarPackManager {
         return toHex(digest.digest());
     }
 
+    public static String contentDigest(Path path) throws IOException {
+        return digest(path);
+    }
+
     private static String carPackId(String fileName) {
         String lowerName = fileName.toLowerCase(Locale.ROOT);
         String id;

@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 final class VehiclePositionDropdown {
-    enum Type { WHEEL, SEAT, COLLISION }
+    enum Type { WHEEL, SEAT, COLLISION, INTERACTION }
 
     private static final int MAX_VISIBLE_ROWS = 5;
     private static final int ROW_HEIGHT = 20;

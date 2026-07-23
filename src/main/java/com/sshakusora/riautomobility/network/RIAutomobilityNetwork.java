@@ -15,7 +15,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 
 public class RIAutomobilityNetwork {
-    private static final String PROTOCOL_VERSION = "7";
+    private static final String PROTOCOL_VERSION = "9";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             RIAutomobility.rl("main"),
@@ -40,6 +40,14 @@ public class RIAutomobilityNetwork {
                 BoardingAsPassengerPacket::encode,
                 BoardingAsPassengerPacket::decode,
                 BoardingAsPassengerPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
+        CHANNEL.registerMessage(
+                id++,
+                VehicleInteractionPacket.class,
+                VehicleInteractionPacket::encode,
+                VehicleInteractionPacket::decode,
+                VehicleInteractionPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER)
         );
         CHANNEL.registerMessage(

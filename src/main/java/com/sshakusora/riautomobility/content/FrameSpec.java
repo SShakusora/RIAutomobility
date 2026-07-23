@@ -4,6 +4,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionAction;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionBox;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.network.FriendlyByteBuf;
@@ -34,6 +36,8 @@ public record FrameSpec(
         List<Vec3> seats,
         List<Vec3> cameraPositions,
         List<HitboxSpec> hitboxes,
+        List<InteractionBoxSpec> interactionBoxes,
+        boolean disableHitboxInteractions,
         boolean frontAttachmentEnabled,
         boolean rearAttachmentEnabled,
         List<ResourceLocation> frontAttachmentWhitelist,
@@ -66,6 +70,8 @@ public record FrameSpec(
                 .seats(this.seats.stream().map(pos -> new RIAutomobileDefinition.SeatPos(pos.x, pos.y, pos.z)).toList())
                 .cameraPositions(this.cameraPositions)
                 .hitboxes(this.hitboxes.stream().map(HitboxSpec::toHitbox).toList())
+                .interactionBoxes(this.interactionBoxes.stream().map(InteractionBoxSpec::toInteractionBox).toList())
+                .disableHitboxInteractions(this.disableHitboxInteractions)
                 .hideEngine(this.hideEngine)
                 .frontAttachmentEnabled(this.frontAttachmentEnabled)
                 .rearAttachmentEnabled(this.rearAttachmentEnabled)
@@ -96,6 +102,8 @@ public record FrameSpec(
                 readVec3List(json, "seats"),
                 readVec3List(json, "camera_positions"),
                 readHitboxes(json),
+                readInteractionBoxes(json),
+                GsonHelper.getAsBoolean(json, "disable_hitbox_interactions", false),
                 GsonHelper.getAsBoolean(json, "front_attachment_enabled", true),
                 GsonHelper.getAsBoolean(json, "rear_attachment_enabled", true),
                 readIdList(json, "front_attachment_whitelist"),
@@ -136,6 +144,13 @@ public record FrameSpec(
             hitboxArray.add(hitbox.toJson());
         }
         json.add("hitboxes", hitboxArray);
+
+        JsonArray interactionBoxArray = new JsonArray();
+        for (InteractionBoxSpec interactionBox : this.interactionBoxes) {
+            interactionBoxArray.add(interactionBox.toJson());
+        }
+        json.add("interaction_boxes", interactionBoxArray);
+        json.addProperty("disable_hitbox_interactions", this.disableHitboxInteractions);
         json.addProperty("front_attachment_enabled", this.frontAttachmentEnabled);
         json.addProperty("rear_attachment_enabled", this.rearAttachmentEnabled);
         json.add("front_attachment_whitelist", writeIdList(this.frontAttachmentWhitelist));
@@ -191,6 +206,26 @@ public record FrameSpec(
         }
         for (JsonElement element : GsonHelper.getAsJsonArray(json, "hitboxes")) {
             values.add(HitboxSpec.fromJson(element.getAsJsonObject()));
+        }
+        return values;
+    }
+
+    private static List<InteractionBoxSpec> readInteractionBoxes(JsonObject json) {
+        List<InteractionBoxSpec> values = new ArrayList<>();
+        if (!json.has("interaction_boxes")) {
+            return values;
+        }
+        JsonArray array = GsonHelper.getAsJsonArray(json, "interaction_boxes");
+        if (array.size() > VehicleInteractionBox.MAX_BOXES) {
+            throw new IllegalArgumentException("A frame may define at most "
+                    + VehicleInteractionBox.MAX_BOXES + " interaction boxes");
+        }
+        for (JsonElement element : array) {
+            values.add(InteractionBoxSpec.fromJson(element.getAsJsonObject()));
+        }
+        long distinctIds = values.stream().map(InteractionBoxSpec::id).distinct().count();
+        if (distinctIds != values.size()) {
+            throw new IllegalArgumentException("Vehicle interaction box ids must be unique");
         }
         return values;
     }
@@ -399,6 +434,73 @@ public record FrameSpec(
             json.addProperty("width", this.width);
             json.addProperty("height", this.height);
             json.addProperty("container", this.hasContainer);
+            return json;
+        }
+    }
+
+    public record InteractionBoxSpec(
+            String id,
+            Vec3 center,
+            Vec3 size,
+            Vec3 rotation,
+            List<VehicleInteractionAction> actions
+    ) {
+        public InteractionBoxSpec {
+            actions = List.copyOf(actions);
+            // Centralize all validation in the runtime value object.
+            new VehicleInteractionBox(id, center, size, rotation, actions);
+        }
+
+        public VehicleInteractionBox toInteractionBox() {
+            return new VehicleInteractionBox(id, center, size, rotation, actions);
+        }
+
+        public static InteractionBoxSpec fromJson(JsonObject json) {
+            JsonArray actionArray = GsonHelper.getAsJsonArray(json, "actions");
+            List<VehicleInteractionAction> actions = new ArrayList<>(actionArray.size());
+            for (JsonElement action : actionArray) {
+                actions.add(VehicleInteractionAction.fromJson(action.getAsJsonObject()));
+            }
+            return new InteractionBoxSpec(
+                    GsonHelper.getAsString(json, "id"),
+                    readVec3(json, "center", Vec3.ZERO),
+                    readVec3(json, "size", new Vec3(1.0D, 1.0D, 1.0D)),
+                    readVec3(json, "rotation", Vec3.ZERO),
+                    actions
+            );
+        }
+
+        public JsonObject toJson() {
+            JsonObject json = new JsonObject();
+            json.addProperty("id", id);
+            json.add("center", writeVec3(center));
+            json.add("size", writeVec3(size));
+            if (!rotation.equals(Vec3.ZERO)) {
+                json.add("rotation", writeVec3(rotation));
+            }
+            JsonArray actionArray = new JsonArray();
+            actions.forEach(action -> actionArray.add(action.toJson()));
+            json.add("actions", actionArray);
+            return json;
+        }
+
+        private static Vec3 readVec3(JsonObject parent, String key, Vec3 fallback) {
+            if (!parent.has(key)) {
+                return fallback;
+            }
+            JsonObject value = GsonHelper.getAsJsonObject(parent, key);
+            return new Vec3(
+                    GsonHelper.getAsDouble(value, "x", fallback.x),
+                    GsonHelper.getAsDouble(value, "y", fallback.y),
+                    GsonHelper.getAsDouble(value, "z", fallback.z)
+            );
+        }
+
+        private static JsonObject writeVec3(Vec3 value) {
+            JsonObject json = new JsonObject();
+            json.addProperty("x", value.x);
+            json.addProperty("y", value.y);
+            json.addProperty("z", value.z);
             return json;
         }
     }

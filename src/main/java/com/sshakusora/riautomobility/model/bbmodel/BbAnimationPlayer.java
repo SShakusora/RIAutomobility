@@ -2,6 +2,7 @@ package com.sshakusora.riautomobility.model.bbmodel;
 
 import com.google.gson.JsonElement;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionStateProvider;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -14,6 +15,8 @@ public final class BbAnimationPlayer {
     private static final int MAX_VARIABLE_DEPTH = 64;
     private static final String PASSENGER_VIEW_YAW = "query.vehicle_passenger_view_yaw";
     private static final String PASSENGER_VIEW_PITCH = "query.vehicle_passenger_view_pitch";
+    private static final String INTERACTION_VALUE = "query.vehicle_interaction";
+    private static final String INTERACTION_TIME = "query.vehicle_interaction_time";
     private static final Map<String, MolangExpression.Expression> EXPRESSIONS = new ConcurrentHashMap<>();
     private static final Map<BbModelData.Animation, List<PreparedAnimator>> PREPARED = new IdentityHashMap<>();
     private static final Map<RenderableAutomobile, SampleCache> SAMPLE_CACHES = new WeakHashMap<>();
@@ -219,6 +222,12 @@ public final class BbAnimationPlayer {
         if (normalized.startsWith(PASSENGER_VIEW_PITCH + "(")) {
             return passengerView(queryState, normalized, false);
         }
+        if (normalized.startsWith(INTERACTION_VALUE + "(")) {
+            return interactionValue(queryState, normalized, false);
+        }
+        if (normalized.startsWith(INTERACTION_TIME + "(")) {
+            return interactionValue(queryState, normalized, true);
+        }
         return switch (normalized) {
             case "query.anim_time" -> queryState.animationTime;
             case "query.life_time" -> queryState.lifeTime;
@@ -260,6 +269,17 @@ public final class BbAnimationPlayer {
         } catch (NumberFormatException exception) {
             return -1;
         }
+    }
+
+    private static double interactionValue(QueryState queryState, String query, boolean time) {
+        int channel = passengerIndex(query);
+        if (channel < 0
+                || !(queryState.automobile instanceof VehicleInteractionStateProvider interactionState)) {
+            return 0.0D;
+        }
+        return time
+                ? interactionState.getInteractionTime(channel, queryState.tickDelta)
+                : interactionState.getInteractionValue(channel, queryState.tickDelta);
     }
 
     private static Entity passengerAt(RenderableAutomobile automobile, int seatIndex) {

@@ -254,7 +254,9 @@ final class MolangExpression {
             case "math.pow", "math.mod", "math.atan2" -> { minimum = 2; maximum = 2; }
             case "math.random" -> { minimum = 0; maximum = 2; }
             case "q.vehicle_passenger_view_yaw", "query.vehicle_passenger_view_yaw",
-                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch" -> {
+                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch",
+                    "q.vehicle_interaction", "query.vehicle_interaction",
+                    "q.vehicle_interaction_time", "query.vehicle_interaction_time" -> {
                 minimum = 1;
                 maximum = 1;
             }
@@ -303,7 +305,9 @@ final class MolangExpression {
                 yield minimum + ThreadLocalRandom.current().nextDouble() * (maximum - minimum);
             }
             case "q.vehicle_passenger_view_yaw", "query.vehicle_passenger_view_yaw",
-                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch" ->
+                    "q.vehicle_passenger_view_pitch", "query.vehicle_passenger_view_pitch",
+                    "q.vehicle_interaction", "query.vehicle_interaction",
+                    "q.vehicle_interaction_time", "query.vehicle_interaction_time" ->
                     variables.applyAsDouble(normalizeVariableName(name) + "("
                             + argument(arguments, 0, variables) + ")");
             default -> throw new IllegalArgumentException("Unsupported Molang function '" + name + "'");

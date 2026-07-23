@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.editor.client;
 import com.sshakusora.riautomobility.carpack.CarPackManager;
 import com.sshakusora.riautomobility.editor.VehicleImportGuiAtlas;
 import com.sshakusora.riautomobility.editor.VehicleImportMenu;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionAction;
 import com.sshakusora.riautomobility.network.RIAutomobilityNetwork;
 import com.sshakusora.riautomobility.network.packet.ExportVehicleComponentItemPacket;
 import com.sshakusora.riautomobility.network.packet.UpdateVehicleImportDraftPacket;
@@ -37,6 +38,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 public final class VehicleImportScreen extends AbstractContainerScreen<VehicleImportMenu> {
     private static final int TAB_WIDTH = 62;
@@ -78,10 +80,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private int wheelPointIndex;
     private int seatIndex;
     private int hitboxIndex = -1;
+    private int interactionBoxIndex = -1;
+    private int interactionActionIndex;
+    private MolangPreviewSelection molangPreviewSelection;
     private VehiclePositionDropdown positionDropdown;
     private int wheelPositionDropdownScroll;
     private int seatPositionDropdownScroll;
     private int collisionDropdownScroll;
+    private int interactionDropdownScroll;
     private int hitboxControlScroll;
     private HitboxScrollArea hitboxScrollArea;
     private VehicleVerticalScrollBar hitboxScrollBar;
@@ -173,11 +179,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         wheelPointIndex = Math.max(0, state.getInt("WheelPointIndex"));
         seatIndex = Math.max(0, state.getInt("SeatIndex"));
         hitboxIndex = state.contains("HitboxIndex") ? state.getInt("HitboxIndex") : -1;
+        interactionBoxIndex = state.contains("InteractionBoxIndex") ? state.getInt("InteractionBoxIndex") : -1;
+        interactionActionIndex = Math.max(0, state.getInt("InteractionActionIndex"));
         seatFirstPerson = state.getBoolean("SeatFirstPerson");
         selectionPage = Math.max(0, state.getInt("SelectionPage"));
         wheelPositionDropdownScroll = Math.max(0, state.getInt("WheelPositionDropdownScroll"));
         seatPositionDropdownScroll = Math.max(0, state.getInt("SeatPositionDropdownScroll"));
         collisionDropdownScroll = Math.max(0, state.getInt("CollisionDropdownScroll"));
+        interactionDropdownScroll = Math.max(0, state.getInt("InteractionDropdownScroll"));
         hitboxControlScroll = Math.max(0, state.getInt("HitboxControlScroll"));
         frontAttachmentListScroll = state.getDouble("FrontAttachmentListScroll");
         rearAttachmentListScroll = state.getDouble("RearAttachmentListScroll");
@@ -212,11 +221,14 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         state.putInt("WheelPointIndex", wheelPointIndex);
         state.putInt("SeatIndex", seatIndex);
         state.putInt("HitboxIndex", hitboxIndex);
+        state.putInt("InteractionBoxIndex", interactionBoxIndex);
+        state.putInt("InteractionActionIndex", interactionActionIndex);
         state.putBoolean("SeatFirstPerson", seatFirstPerson);
         state.putInt("SelectionPage", selectionPage);
         state.putInt("WheelPositionDropdownScroll", wheelPositionDropdownScroll);
         state.putInt("SeatPositionDropdownScroll", seatPositionDropdownScroll);
         state.putInt("CollisionDropdownScroll", collisionDropdownScroll);
+        state.putInt("InteractionDropdownScroll", interactionDropdownScroll);
         state.putInt("HitboxControlScroll", hitboxControlScroll);
         state.putDouble("FrontAttachmentListScroll", frontAttachmentListScroll);
         state.putDouble("RearAttachmentListScroll", rearAttachmentListScroll);
@@ -327,6 +339,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             case WHEELS -> addFrameWheelControls(x, y);
             case SEATS -> addSeatControls(x, y);
             case HITBOXES -> addHitboxControls(x, y);
+            case INTERACTIONS -> addInteractionControls(x, y);
             case ATTACHMENTS -> addAttachmentControls(x, y);
         }
     }
@@ -534,6 +547,291 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 SelectionType.REAR_ATTACHMENTS, draft.rearAttachmentEnabled);
     }
 
+    private void addInteractionControls(int x, int y) {
+        binaryToggle(x, y, "label.hitbox_interactions", "enabled", "disabled",
+                () -> draft.disableHitboxInteractions,
+                () -> draft.disableHitboxInteractions = !draft.disableHitboxInteractions);
+        y += 28;
+
+        interactionBoxIndex = Math.max(-1, Math.min(interactionBoxIndex, draft.interactionBoxes.size() - 1));
+        addInteractionHeader(x, y);
+        y += 28;
+        if (interactionBoxIndex < 0) {
+            return;
+        }
+
+        interactionActionIndex = Math.max(0, Math.min(interactionActionIndex,
+                currentInteractionBox().actions().size() - 1));
+        int contentTop = y;
+        int childStart = children().size();
+        int labelStart = labels.size();
+        int tooltipStart = parameterTooltips.size();
+        int controlWidth = PARAM_WIDTH - HITBOX_SCROLLBAR_GAP - HITBOX_SCROLLBAR_WIDTH;
+        int fieldWidth = controlWidth - 70;
+
+        labeledText(x, y, "label.interaction_id", currentInteractionBox().id(), value ->
+                replaceInteractionBox(new VehicleEditorDraft.InteractionBoxPoint(
+                        value, currentInteractionBox().center(), currentInteractionBox().size(),
+                        currentInteractionBox().rotation(), currentInteractionBox().actions())));
+        y += CONTROL_ROW_STEP;
+        vectorFields(x, y, fieldWidth, "interaction_center", currentInteractionBox().center(), value ->
+                replaceInteractionBox(new VehicleEditorDraft.InteractionBoxPoint(
+                        currentInteractionBox().id(), value, currentInteractionBox().size(),
+                        currentInteractionBox().rotation(), currentInteractionBox().actions())));
+        y += CONTROL_ROW_STEP * 3;
+        vectorFields(x, y, fieldWidth, "interaction_size", currentInteractionBox().size(), value ->
+                replaceInteractionBox(new VehicleEditorDraft.InteractionBoxPoint(
+                        currentInteractionBox().id(), currentInteractionBox().center(), value,
+                        currentInteractionBox().rotation(), currentInteractionBox().actions())));
+        y += CONTROL_ROW_STEP * 3;
+        vectorFields(x, y, fieldWidth, "interaction_rotation", currentInteractionBox().rotation(), value ->
+                replaceInteractionBox(new VehicleEditorDraft.InteractionBoxPoint(
+                        currentInteractionBox().id(), currentInteractionBox().center(),
+                        currentInteractionBox().size(), value, currentInteractionBox().actions())));
+        y += CONTROL_ROW_STEP * 3;
+
+        addInteractionActionHeader(x, y, controlWidth);
+        y += CONTROL_ROW_STEP;
+        VehicleInteractionAction action = currentInteractionAction();
+        addRenderableWidget(texturedButton(
+                VehicleImportText.component("action." + interactionActionType(action)),
+                button -> {
+                    replaceInteractionAction(nextInteractionAction(action));
+                    resetWidgets();
+                }, x, y, controlWidth, 20));
+        y += CONTROL_ROW_STEP;
+        if (!(action instanceof VehicleInteractionAction.OpenContainer)) {
+            binaryToggle(x, y, controlWidth, "label.requires_access", "off", "on",
+                    action::requiresAccess, () -> {
+                        replaceInteractionAction(withAccess(currentInteractionAction(),
+                                !currentInteractionAction().requiresAccess()));
+                        resetWidgets();
+                    });
+            y += CONTROL_ROW_STEP;
+        }
+        if (action instanceof VehicleInteractionAction.Mount mount) {
+            labeledNumber(x, y, "label.interaction_seat", fieldWidth, 1.0F,
+                    () -> (float) mount.seat(), value -> replaceInteractionAction(
+                            new VehicleInteractionAction.Mount(
+                                    Math.max(-1, Math.min(255, Math.round(value))), mount.requiresAccess())));
+            y += CONTROL_ROW_STEP;
+        } else if (action instanceof VehicleInteractionAction.Molang molang) {
+            addRenderableWidget(texturedButton(
+                    VehicleImportText.component(
+                            "trigger." + molang.trigger().name().toLowerCase(Locale.ROOT)),
+                    button -> {
+                        updateCurrentMolangAction(current ->
+                                MolangActionEditor.withTrigger(current, nextTrigger(current.trigger())));
+                        resetWidgets();
+                    }, x, y, controlWidth, 20));
+            y += CONTROL_ROW_STEP;
+            addRenderableWidget(texturedButton(
+                    VehicleImportText.component("operation." + molang.operation().name().toLowerCase(Locale.ROOT)),
+                    button -> {
+                        updateCurrentMolangAction(current ->
+                                MolangActionEditor.withOperation(current, nextOperation(current.operation())));
+                        resetWidgets();
+                    }, x, y, controlWidth, 20));
+            y += CONTROL_ROW_STEP;
+            labeledNumber(x, y, "label.molang_channel", fieldWidth, 1.0F,
+                    () -> (float) molang.channel(), value -> updateCurrentMolangAction(
+                            current -> MolangActionEditor.withChannel(current, value)));
+            y += CONTROL_ROW_STEP;
+            labeledNumber(x, y, "label.molang_value", fieldWidth, 0.05F,
+                    molang::value, value -> updateCurrentMolangAction(
+                            current -> MolangActionEditor.withValue(current, value)));
+            y += CONTROL_ROW_STEP;
+            labeledNumber(x, y, "label.duration_ticks", fieldWidth, 1.0F,
+                    () -> (float) molang.durationTicks(), value -> updateCurrentMolangAction(
+                            current -> MolangActionEditor.withDurationTicks(current, value)));
+            y += CONTROL_ROW_STEP;
+            labeledNumber(x, y, "label.transition_ticks", fieldWidth, 1.0F,
+                    () -> (float) molang.transitionTicks(), value -> updateCurrentMolangAction(
+                            current -> MolangActionEditor.withTransitionTicks(current, value)));
+            y += CONTROL_ROW_STEP;
+            addRenderableWidget(texturedButton(
+                    VehicleImportText.component("button.preview_molang"),
+                    button -> replayCurrentMolangPreview(),
+                    x, y, controlWidth, 20));
+            y += CONTROL_ROW_STEP;
+        }
+
+        int contentHeight = y + 20 - contentTop;
+        int viewportBottom = topPos + VehicleImportMenu.INVENTORY_Y - 19;
+        List<AbstractWidget> scrollWidgets = children().subList(childStart, children().size()).stream()
+                .filter(AbstractWidget.class::isInstance)
+                .map(AbstractWidget.class::cast)
+                .toList();
+        hitboxScrollArea = new HitboxScrollArea(x, controlWidth, contentTop, viewportBottom,
+                scrollWidgets, labels.subList(labelStart, labels.size()),
+                parameterTooltips.subList(tooltipStart, parameterTooltips.size()));
+        hitboxScrollBar = new VehicleVerticalScrollBar(
+                x + controlWidth + HITBOX_SCROLLBAR_GAP, contentTop,
+                HITBOX_SCROLLBAR_WIDTH, viewportBottom - contentTop,
+                contentHeight, CONTROL_ROW_STEP, hitboxControlScroll,
+                scroll -> hitboxControlScroll = scroll,
+                displayedScroll -> {
+                    if (hitboxScrollArea != null) {
+                        hitboxScrollArea.apply(displayedScroll);
+                        if (getFocused() instanceof AbstractWidget widget && !widget.visible) {
+                            setFocused(null);
+                        }
+                    }
+                });
+        addRenderableWidget(hitboxScrollBar);
+        hitboxScrollArea.apply(hitboxScrollBar.displayedScroll());
+    }
+
+    private void addInteractionHeader(int x, int y) {
+        int headerWidth = PARAM_WIDTH - 48;
+        Component name = interactionBoxIndex < 0
+                ? VehicleImportText.component("header.no_interaction_box")
+                : VehicleImportText.component("header.interaction_box",
+                interactionBoxIndex + 1, draft.interactionBoxes.size());
+        Button selector = texturedButton(name, button -> {
+            if (!draft.interactionBoxes.isEmpty()) {
+                togglePositionDropdown(VehiclePositionDropdown.Type.INTERACTION,
+                        x, y, headerWidth, draft.interactionBoxes.size(), interactionBoxIndex,
+                        this::interactionDropdownLabel, selected -> {
+                            closePositionDropdown(() -> {
+                                interactionBoxIndex = selected;
+                                interactionActionIndex = 0;
+                                resetWidgets();
+                            });
+                        });
+            }
+        }, x, y, headerWidth, 20);
+        selector.active = !draft.interactionBoxes.isEmpty();
+        addRenderableWidget(selector);
+        addRenderableWidget(texturedButton(Component.literal("+"), button -> {
+            positionDropdown = null;
+            int next = draft.interactionBoxes.size() + 1;
+            draft.interactionBoxes.add(new VehicleEditorDraft.InteractionBoxPoint(
+                    "interaction_" + next, Vec3.ZERO, new Vec3(1.0D, 1.0D, 1.0D), Vec3.ZERO,
+                    List.of(new VehicleInteractionAction.Molang(
+                            0, VehicleInteractionAction.MolangOperation.PULSE,
+                            1.0F, 10, 0, false))));
+            interactionBoxIndex = draft.interactionBoxes.size() - 1;
+            interactionActionIndex = 0;
+            resetWidgets();
+        }, x + PARAM_WIDTH - 44, y, 20, 20));
+        Button remove = texturedButton(Component.literal("-"), button -> {
+            positionDropdown = null;
+            draft.interactionBoxes.remove(interactionBoxIndex);
+            interactionBoxIndex = draft.interactionBoxes.isEmpty()
+                    ? -1 : Math.min(interactionBoxIndex, draft.interactionBoxes.size() - 1);
+            interactionActionIndex = 0;
+            resetWidgets();
+        }, x + PARAM_WIDTH - 20, y, 20, 20);
+        remove.active = interactionBoxIndex >= 0;
+        addRenderableWidget(remove);
+    }
+
+    private void addInteractionActionHeader(int x, int y, int width) {
+        int headerWidth = width - 48;
+        int count = currentInteractionBox().actions().size();
+        addRenderableWidget(texturedButton(VehicleImportText.component(
+                "header.interaction_action", interactionActionIndex + 1, count), button -> {
+            interactionActionIndex = (interactionActionIndex + 1) % count;
+            resetWidgets();
+        }, x, y, headerWidth, 20));
+        addRenderableWidget(texturedButton(Component.literal("+"), button -> {
+            List<VehicleInteractionAction> actions = new ArrayList<>(currentInteractionBox().actions());
+            actions.add(new VehicleInteractionAction.Molang(
+                    0, VehicleInteractionAction.MolangOperation.PULSE, 1.0F, 10, 0, false));
+            replaceInteractionActions(actions);
+            interactionActionIndex = actions.size() - 1;
+            resetWidgets();
+        }, x + width - 44, y, 20, 20));
+        Button remove = texturedButton(Component.literal("-"), button -> {
+            List<VehicleInteractionAction> actions = new ArrayList<>(currentInteractionBox().actions());
+            actions.remove(interactionActionIndex);
+            replaceInteractionActions(actions);
+            interactionActionIndex = Math.min(interactionActionIndex, actions.size() - 1);
+            resetWidgets();
+        }, x + width - 20, y, 20, 20);
+        remove.active = count > 1;
+        addRenderableWidget(remove);
+    }
+
+    private Component interactionDropdownLabel(int index) {
+        return Component.literal(draft.interactionBoxes.get(index).id());
+    }
+
+    private VehicleEditorDraft.InteractionBoxPoint currentInteractionBox() {
+        return draft.interactionBoxes.get(interactionBoxIndex);
+    }
+
+    private void replaceInteractionBox(VehicleEditorDraft.InteractionBoxPoint box) {
+        draft.interactionBoxes.set(interactionBoxIndex, box);
+    }
+
+    private VehicleInteractionAction currentInteractionAction() {
+        return currentInteractionBox().actions().get(interactionActionIndex);
+    }
+
+    private void replaceInteractionAction(VehicleInteractionAction action) {
+        List<VehicleInteractionAction> actions = new ArrayList<>(currentInteractionBox().actions());
+        actions.set(interactionActionIndex, action);
+        replaceInteractionActions(actions);
+    }
+
+    private void updateCurrentMolangAction(
+            UnaryOperator<VehicleInteractionAction.Molang> update) {
+        if (currentInteractionAction() instanceof VehicleInteractionAction.Molang current) {
+            replaceInteractionAction(update.apply(current));
+        }
+    }
+
+    private void replaceInteractionActions(List<VehicleInteractionAction> actions) {
+        VehicleEditorDraft.InteractionBoxPoint box = currentInteractionBox();
+        replaceInteractionBox(new VehicleEditorDraft.InteractionBoxPoint(
+                box.id(), box.center(), box.size(), box.rotation(), actions));
+    }
+
+    private static String interactionActionType(VehicleInteractionAction action) {
+        if (action instanceof VehicleInteractionAction.OpenContainer) return "open_container";
+        if (action instanceof VehicleInteractionAction.Mount) return "mount";
+        return "molang";
+    }
+
+    private static VehicleInteractionAction nextInteractionAction(VehicleInteractionAction action) {
+        if (action instanceof VehicleInteractionAction.OpenContainer open) {
+            return new VehicleInteractionAction.Mount(-1, open.requiresAccess());
+        }
+        if (action instanceof VehicleInteractionAction.Mount mount) {
+            return new VehicleInteractionAction.Molang(
+                    0, VehicleInteractionAction.MolangOperation.PULSE, 1.0F, 10, 0,
+                    mount.requiresAccess());
+        }
+        return new VehicleInteractionAction.OpenContainer(true);
+    }
+
+    private static VehicleInteractionAction withAccess(VehicleInteractionAction action, boolean requiresAccess) {
+        if (action instanceof VehicleInteractionAction.OpenContainer) {
+            return new VehicleInteractionAction.OpenContainer(requiresAccess);
+        }
+        if (action instanceof VehicleInteractionAction.Mount mount) {
+            return new VehicleInteractionAction.Mount(mount.seat(), requiresAccess);
+        }
+        VehicleInteractionAction.Molang molang = (VehicleInteractionAction.Molang) action;
+        return new VehicleInteractionAction.Molang(
+                molang.channel(), molang.operation(), molang.value(), molang.durationTicks(),
+                molang.transitionTicks(), molang.trigger(), requiresAccess);
+    }
+
+    private static VehicleInteractionAction.MolangOperation nextOperation(
+            VehicleInteractionAction.MolangOperation operation) {
+        VehicleInteractionAction.MolangOperation[] values = VehicleInteractionAction.MolangOperation.values();
+        return values[(operation.ordinal() + 1) % values.length];
+    }
+
+    private static VehicleInteractionAction.Trigger nextTrigger(
+            VehicleInteractionAction.Trigger trigger) {
+        VehicleInteractionAction.Trigger[] values = VehicleInteractionAction.Trigger.values();
+        return values[(trigger.ordinal() + 1) % values.length];
+    }
+
     private void addHitboxControls(int x, int y) {
         hitboxIndex = Math.max(-1, Math.min(hitboxIndex, draft.hitboxes.size() - 1));
         addCollisionHeader(x, y);
@@ -658,6 +956,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             case WHEEL -> wheelPositionDropdownScroll;
             case SEAT -> seatPositionDropdownScroll;
             case COLLISION -> collisionDropdownScroll;
+            case INTERACTION -> interactionDropdownScroll;
         };
         positionDropdown = new VehiclePositionDropdown(type, x, y, width, size, selectedIndex,
                 optionLabel, select, initialScroll, scroll -> {
@@ -665,6 +964,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 case WHEEL -> wheelPositionDropdownScroll = scroll;
                 case SEAT -> seatPositionDropdownScroll = scroll;
                 case COLLISION -> collisionDropdownScroll = scroll;
+                case INTERACTION -> interactionDropdownScroll = scroll;
             }
         });
     }
@@ -710,11 +1010,18 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void vectorFields(int x, int y, int fieldWidth, Vec3 initial, Consumer<Vec3> setter) {
+        vectorFields(x, y, fieldWidth, null, initial, setter);
+    }
+
+    private void vectorFields(int x, int y, int fieldWidth, String labelPrefix,
+                              Vec3 initial, Consumer<Vec3> setter) {
         final double[] values = {initial.x, initial.y, initial.z};
-        String[] names = {"label.x", "label.y", "label.z"};
+        String[] axes = {"x", "y", "z"};
         for (int i = 0; i < 3; i++) {
             int index = i;
-            labeledNumber(x, y + i * CONTROL_ROW_STEP, names[i], fieldWidth, 0.0625F,
+            String label = labelPrefix == null ? "label." + axes[i]
+                    : "label." + labelPrefix + "_" + axes[i];
+            labeledNumber(x, y + i * CONTROL_ROW_STEP, label, fieldWidth, 0.0625F,
                     () -> (float) values[index], v -> {
                         values[index] = v;
                         setter.accept(new Vec3(values[0], values[1], values[2]));
@@ -1359,9 +1666,46 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private void renderVehicle(GuiGraphics graphics, float partialTick) {
+        updateMolangPreviewSelection();
         previewRenderer.render(graphics, partialTick,
                 previewX0(), leftPos + imageWidth - 5, topPos + 22, topPos + imageHeight - 5,
-                previewView(), wheelPointIndex, seatIndex, hitboxIndex);
+                previewView(), wheelPointIndex, seatIndex, hitboxIndex, interactionBoxIndex);
+    }
+
+    private void updateMolangPreviewSelection() {
+        MolangPreviewSelection selected = selectedMolangPreview();
+        if (Objects.equals(selected, molangPreviewSelection)) {
+            return;
+        }
+        preview.clearInteractionPreview();
+        molangPreviewSelection = selected;
+        if (selected != null) {
+            preview.applyInteractionPreview(selected.action());
+        }
+    }
+
+    private MolangPreviewSelection selectedMolangPreview() {
+        if (page != Page.FRAME || frameTab != FrameTab.INTERACTIONS
+                || interactionBoxIndex < 0 || interactionBoxIndex >= draft.interactionBoxes.size()) {
+            return null;
+        }
+        List<VehicleInteractionAction> actions =
+                draft.interactionBoxes.get(interactionBoxIndex).actions();
+        if (interactionActionIndex < 0 || interactionActionIndex >= actions.size()
+                || !(actions.get(interactionActionIndex) instanceof VehicleInteractionAction.Molang molang)) {
+            return null;
+        }
+        return new MolangPreviewSelection(interactionBoxIndex, interactionActionIndex, molang);
+    }
+
+    private void replayCurrentMolangPreview() {
+        MolangPreviewSelection selected = selectedMolangPreview();
+        if (selected == null) {
+            return;
+        }
+        preview.clearInteractionPreview();
+        preview.applyInteractionPreview(selected.action());
+        molangPreviewSelection = selected;
     }
 
     private VehiclePreviewRenderer.View previewView() {
@@ -1373,6 +1717,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                 case WHEELS -> VehiclePreviewRenderer.View.FRAME_WHEELS;
                 case SEATS -> VehiclePreviewRenderer.View.FRAME_SEATS;
                 case HITBOXES -> VehiclePreviewRenderer.View.FRAME_HITBOXES;
+                case INTERACTIONS -> VehiclePreviewRenderer.View.FRAME_INTERACTIONS;
                 case BASIC -> VehiclePreviewRenderer.View.FRAME;
                 case ATTACHMENTS -> VehiclePreviewRenderer.View.FRAME_ATTACHMENTS;
             };
@@ -1414,7 +1759,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                         messageWidth, font.lineHeight, 0xFFFFFF, 1.0F, true);
             }
             if (!status.isBlank())
-                g.drawString(font, font.plainSubstrByWidth(status, imageWidth - font.width(title) - 28), leftPos + font.width(title) + 18, topPos + 8, 0xC9D1D9, false);
+                g.drawString(font, font.plainSubstrByWidth(status, imageWidth - font.width(title) - 28), leftPos + font.width(title) + 18, topPos + 8, 0xFF5555, false);
         }
         if (selectionType == null) {
             g.drawString(font, VehicleImportText.component("label.inventory"), leftPos + VehicleImportMenu.INVENTORY_X,
@@ -1607,7 +1952,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private enum FrameTab {
-        BASIC("tab.basic"), WHEELS("tab.wheels"), SEATS("tab.seats"), HITBOXES("tab.hitboxes"), ATTACHMENTS("tab.attachments");
+        BASIC("tab.basic"), WHEELS("tab.wheels"), SEATS("tab.seats"), HITBOXES("tab.hitboxes"),
+        INTERACTIONS("tab.interactions"), ATTACHMENTS("tab.attachments");
         final String label;
 
         FrameTab(String label) {
@@ -1654,6 +2000,10 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     }
 
     private record FieldLabel(String text, int x, int y, int width) {
+    }
+
+    private record MolangPreviewSelection(int boxIndex, int actionIndex,
+                                          VehicleInteractionAction.Molang action) {
     }
 
     private record NumberControl(EditBox field, float step, Supplier<Float> getter) {

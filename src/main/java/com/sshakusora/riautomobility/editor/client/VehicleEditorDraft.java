@@ -1,10 +1,12 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.google.gson.JsonParser;
 import com.sshakusora.riautomobility.content.EngineSpec;
 import com.sshakusora.riautomobility.content.FrameSpec;
 import com.sshakusora.riautomobility.content.WheelSpec;
 import com.sshakusora.riautomobility.definition.RIAutomobileDefinition;
 import com.sshakusora.riautomobility.definition.RIAutomobileRegistry;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionAction;
 import com.sshakusora.riautomobility.model.bbmodel.BbModelBounds;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
@@ -12,6 +14,7 @@ import io.github.foundationgames.automobility.automobile.AutomobileWheel;
 import io.github.foundationgames.automobility.automobile.WheelBase;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -95,6 +98,8 @@ public final class VehicleEditorDraft {
     public final List<Vec3> seats = new ArrayList<>();
     public final List<Vec3> cameraPositions = new ArrayList<>();
     public final List<HitboxPoint> hitboxes = new ArrayList<>();
+    public final List<InteractionBoxPoint> interactionBoxes = new ArrayList<>();
+    public boolean disableHitboxInteractions;
 
     public float wheelSize = 0.6F;
     public float wheelGrip = 0.5F;
@@ -169,6 +174,8 @@ public final class VehicleEditorDraft {
         tag.put("Seats", saveVec3List(seats));
         tag.put("CameraPositions", saveVec3List(cameraPositions));
         tag.put("Hitboxes", saveHitboxes());
+        tag.put("InteractionBoxes", saveInteractionBoxes());
+        tag.putBoolean("DisableHitboxInteractions", disableHitboxInteractions);
 
         tag.putFloat("WheelSize", wheelSize);
         tag.putFloat("WheelGrip", wheelGrip);
@@ -246,6 +253,8 @@ public final class VehicleEditorDraft {
         loadVec3List(tag.getList("CameraPositions", Tag.TAG_COMPOUND), cameraPositions);
         if (cameraPositions.isEmpty()) cameraPositions.add(Vec3.ZERO);
         loadHitboxes(tag.getList("Hitboxes", Tag.TAG_COMPOUND));
+        loadInteractionBoxes(tag.getList("InteractionBoxes", Tag.TAG_COMPOUND));
+        disableHitboxInteractions = tag.getBoolean("DisableHitboxInteractions");
 
         wheelSize = tag.getFloat("WheelSize");
         wheelGrip = tag.getFloat("WheelGrip");
@@ -328,6 +337,51 @@ public final class VehicleEditorDraft {
             CompoundTag value = list.getCompound(index);
             hitboxes.add(new HitboxPoint(loadVec3(value), value.getFloat("Width"),
                     value.getFloat("Height"), value.getBoolean("HasContainer")));
+        }
+    }
+
+    private ListTag saveInteractionBoxes() {
+        ListTag list = new ListTag();
+        interactionBoxes.forEach(box -> {
+            CompoundTag value = new CompoundTag();
+            value.putString("Id", box.id());
+            value.put("Center", saveVec3(box.center()));
+            value.put("Size", saveVec3(box.size()));
+            value.put("Rotation", saveVec3(box.rotation()));
+            ListTag actions = new ListTag();
+            box.actions().forEach(action -> actions.add(StringTag.valueOf(action.toJson().toString())));
+            value.put("Actions", actions);
+            list.add(value);
+        });
+        return list;
+    }
+
+    private void loadInteractionBoxes(ListTag list) {
+        interactionBoxes.clear();
+        for (int index = 0; index < Math.min(list.size(), 64); index++) {
+            CompoundTag value = list.getCompound(index);
+            List<VehicleInteractionAction> actions = new ArrayList<>();
+            ListTag actionTags = value.getList("Actions", Tag.TAG_STRING);
+            for (int actionIndex = 0; actionIndex < Math.min(actionTags.size(), 16); actionIndex++) {
+                try {
+                    actions.add(VehicleInteractionAction.fromJson(
+                            JsonParser.parseString(actionTags.getString(actionIndex)).getAsJsonObject()));
+                } catch (RuntimeException ignored) {
+                    // Invalid persisted editor entries are omitted and surfaced by validation.
+                }
+            }
+            if (actions.isEmpty()) {
+                actions.add(new VehicleInteractionAction.Molang(
+                        0, VehicleInteractionAction.MolangOperation.PULSE,
+                        1.0F, 10, 0, false));
+            }
+            interactionBoxes.add(new InteractionBoxPoint(
+                    value.getString("Id"),
+                    loadVec3(value.getCompound("Center")),
+                    loadVec3(value.getCompound("Size")),
+                    loadVec3(value.getCompound("Rotation")),
+                    actions
+            ));
         }
     }
 
@@ -495,6 +549,9 @@ public final class VehicleEditorDraft {
         if (cameraPositions.isEmpty()) cameraPositions.add(Vec3.ZERO);
         hitboxes.clear();
         definition.hitboxes().forEach(h -> hitboxes.add(new HitboxPoint(h.origin(), h.width(), h.height(), h.hasContainer())));
+        interactionBoxes.clear();
+        definition.interactionBoxes().forEach(box -> interactionBoxes.add(InteractionBoxPoint.from(box)));
+        disableHitboxInteractions = definition.disableHitboxInteractions();
     }
 
     public void loadWheel(AutomobileWheel wheel) {
@@ -551,6 +608,9 @@ public final class VehicleEditorDraft {
         hitboxes.clear();
         spec.hitboxes().forEach(hitbox -> hitboxes.add(new HitboxPoint(
                 hitbox.origin(), hitbox.width(), hitbox.height(), hitbox.hasContainer())));
+        interactionBoxes.clear();
+        spec.interactionBoxes().forEach(box -> interactionBoxes.add(InteractionBoxPoint.from(box)));
+        disableHitboxInteractions = spec.disableHitboxInteractions();
         showInCreativeTab = spec.showInCreativeTab();
         automaticCameraOffset = null;
         modelError = "";
@@ -631,6 +691,13 @@ public final class VehicleEditorDraft {
                     || !Float.isFinite(hitbox.width()) || hitbox.width() <= 0.0F
                     || !Float.isFinite(hitbox.height()) || hitbox.height() <= 0.0F)) {
                 return VehicleImportText.string("validation.hitbox_dimensions");
+            }
+            if (interactionBoxes.stream().anyMatch(box -> !box.isValid())) {
+                return VehicleImportText.string("validation.interaction_box");
+            }
+            if (interactionBoxes.stream().map(InteractionBoxPoint::id).distinct().count()
+                    != interactionBoxes.size()) {
+                return VehicleImportText.string("validation.interaction_box_id");
             }
             String resourceError = resourceListValidationError("front", frontAttachmentListText);
             if (resourceError != null) return resourceError;
@@ -776,7 +843,10 @@ public final class VehicleEditorDraft {
                 new FrameSpec.WheelBaseSpec(null, null, wheelPoints.stream().map(WheelPoint::toSpec).toList()),
                 lengthPx, NORMALIZED_SEAT_HEIGHT_PX, enginePosBack, enginePosUp, hideEngine, rearAttachmentPos, frontAttachmentPos,
                 widthBlocks, heightBlocks, List.copyOf(seats), List.copyOf(cameraPositions),
-                hitboxes.stream().map(HitboxPoint::toSpec).toList(), frontAttachmentEnabled, rearAttachmentEnabled,
+                hitboxes.stream().map(HitboxPoint::toSpec).toList(),
+                interactionBoxes.stream().map(InteractionBoxPoint::toSpec).toList(),
+                disableHitboxInteractions,
+                frontAttachmentEnabled, rearAttachmentEnabled,
                 frontAttachmentWhitelistMode ? parseResourceLocations(frontAttachmentListText) : List.of(),
                 frontAttachmentWhitelistMode ? List.of() : parseResourceLocations(frontAttachmentListText),
                 rearAttachmentWhitelistMode ? parseResourceLocations(rearAttachmentListText) : List.of(),
@@ -947,6 +1017,39 @@ public final class VehicleEditorDraft {
     public record HitboxPoint(Vec3 origin, float width, float height, boolean hasContainer) {
         FrameSpec.HitboxSpec toSpec() {
             return new FrameSpec.HitboxSpec(origin, width, height, hasContainer);
+        }
+    }
+
+    public record InteractionBoxPoint(
+            String id,
+            Vec3 center,
+            Vec3 size,
+            Vec3 rotation,
+            List<VehicleInteractionAction> actions
+    ) {
+        public InteractionBoxPoint {
+            actions = List.copyOf(actions);
+        }
+
+        static InteractionBoxPoint from(com.sshakusora.riautomobility.interaction.VehicleInteractionBox box) {
+            return new InteractionBoxPoint(box.id(), box.center(), box.size(), box.rotation(), box.actions());
+        }
+
+        static InteractionBoxPoint from(FrameSpec.InteractionBoxSpec box) {
+            return new InteractionBoxPoint(box.id(), box.center(), box.size(), box.rotation(), box.actions());
+        }
+
+        FrameSpec.InteractionBoxSpec toSpec() {
+            return new FrameSpec.InteractionBoxSpec(id, center, size, rotation, actions);
+        }
+
+        boolean isValid() {
+            try {
+                toSpec();
+                return true;
+            } catch (RuntimeException exception) {
+                return false;
+            }
         }
     }
 

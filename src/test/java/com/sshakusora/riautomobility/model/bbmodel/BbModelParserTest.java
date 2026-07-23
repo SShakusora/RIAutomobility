@@ -3,6 +3,7 @@ package com.sshakusora.riautomobility.model.bbmodel;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.sshakusora.riautomobility.content.FrameSpec;
+import com.sshakusora.riautomobility.interaction.VehicleInteractionStateProvider;
 import io.github.foundationgames.automobility.automobile.render.RenderableAutomobile;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -24,44 +25,74 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BbModelParserTest {
     @Test
-    void parsesAnimatedEngineExample() throws IOException {
+    void parsesAnimatedFrameMolangExample() throws IOException {
         BbModelData.Document document;
         try (var reader = Files.newBufferedReader(
-                Path.of("art", "examples", "animated_engine_demo.bbmodel"), UTF_8)) {
+                Path.of("art", "examples", "animated_frame_demo.bbmodel"), UTF_8)) {
             document = BbModelParser.parse(JsonParser.parseReader(reader).getAsJsonObject());
         }
 
         assertDoesNotThrow(() -> BbModelParser.requireEmbeddedPngTextures(document));
-        assertEquals("engine_run", document.animations().get(0).name());
-        assertEquals("q.vehicle_engine_running",
-                document.variablePlaceholders().get("variable.engine_active"));
+        assertEquals("interaction_demo", document.animations().get(0).name());
+        assertEquals("q.vehicle_interaction(0)",
+                document.variablePlaceholders().get("variable.door"));
+        assertEquals("q.vehicle_interaction_time(4)",
+                document.variablePlaceholders().get("variable.button_time"));
         Set<String> animatedBones = Set.of(
-                        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-                        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-                        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-                        "dddddddd-dddd-4ddd-8ddd-dddddddddddd");
-        assertEquals(animatedBones, document.animations().get(0).animators().keySet());
+                "10000000-0000-4000-8000-000000000002",
+                "10000000-0000-4000-8000-000000000003",
+                "10000000-0000-4000-8000-000000000004",
+                "10000000-0000-4000-8000-000000000005",
+                "10000000-0000-4000-8000-000000000006",
+                "10000000-0000-4000-8000-000000000007");
+        // Blockbench can retain empty animator entries for parent bones. Only bones with
+        // keyframes are required to appear in the sampled pose.
+        assertTrue(document.animations().get(0).animators().keySet().containsAll(animatedBones));
         BbAnimationPlayer.clearCache();
-        assertEquals(animatedBones, BbAnimationPlayer.sample(document, "engine_run", null).keySet());
+        assertTrue(BbAnimationPlayer.sample(document, "interaction_demo", null)
+                .keySet().containsAll(animatedBones));
 
-        RenderableAutomobile running = (RenderableAutomobile) Proxy.newProxyInstance(
+        RenderableAutomobile interactive = (RenderableAutomobile) Proxy.newProxyInstance(
                 RenderableAutomobile.class.getClassLoader(),
-                new Class<?>[]{RenderableAutomobile.class},
+                new Class<?>[]{RenderableAutomobile.class, VehicleInteractionStateProvider.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
-                    case "engineRunning" -> true;
+                    case "getInteractionValue" -> switch ((int) arguments[0]) {
+                        case 0 -> 0.5F;
+                        case 1 -> 0.75F;
+                        case 2, 4 -> 1.0F;
+                        case 3 -> 0.25F;
+                        default -> 0.0F;
+                    };
+                    case "getInteractionTime" -> (int) arguments[0] == 4 ? 0.1F : 0.0F;
                     case "getTime" -> 2L;
                     default -> defaultValue(method.getReturnType());
                 });
-        BbRenderContext.begin(null, running, 0.5F);
-        Map<String, BbAnimationPlayer.Transform> runningPose;
+        BbRenderContext.begin(null, interactive, 0.5F);
+        Map<String, BbAnimationPlayer.Transform> pose;
         try {
-            runningPose = BbAnimationPlayer.sample(document, "engine_run", BbRenderContext.current());
+            pose = BbAnimationPlayer.sample(
+                    document, "interaction_demo", BbRenderContext.current());
         } finally {
             BbRenderContext.end();
         }
-        assertEquals(90.0F, runningPose.get("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").rotation().z, 0.001F);
-        assertEquals(1.25F, runningPose.get("cccccccc-cccc-4ccc-8ccc-cccccccccccc").position().y, 0.001F);
-        assertEquals(-1.25F, runningPose.get("dddddddd-dddd-4ddd-8ddd-dddddddddddd").position().y, 0.001F);
+        float leftDoorYaw =
+                pose.get("10000000-0000-4000-8000-000000000002").rotation().y;
+        float rightDoorYaw =
+                pose.get("10000000-0000-4000-8000-000000000003").rotation().y;
+        assertEquals(32.5F, Math.abs(leftDoorYaw), 0.001F);
+        assertEquals(-leftDoorYaw, rightDoorYaw, 0.001F);
+        assertEquals(41.25F,
+                pose.get("10000000-0000-4000-8000-000000000004").rotation().x, 0.001F);
+        assertEquals(1.35F,
+                pose.get("10000000-0000-4000-8000-000000000005").scale().x, 0.001F);
+        assertEquals(1.5F,
+                pose.get("10000000-0000-4000-8000-000000000006").position().y, 0.001F);
+        assertEquals(-3.75F,
+                pose.get("10000000-0000-4000-8000-000000000006").rotation().x, 0.001F);
+        assertEquals(0.2F,
+                pose.get("10000000-0000-4000-8000-000000000007").position().x, 0.001F);
+        assertEquals(-1.5F,
+                pose.get("10000000-0000-4000-8000-000000000007").position().z, 0.001F);
         BbAnimationPlayer.clearCache();
     }
 

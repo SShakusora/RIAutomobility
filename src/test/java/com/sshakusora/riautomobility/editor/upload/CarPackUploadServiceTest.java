@@ -93,6 +93,30 @@ class CarPackUploadServiceTest {
     }
 
     @Test
+    void acceptsSamePackContentWithoutReloadingWhenOverwriteIsDisabled() {
+        assertDoesNotThrow(() -> {
+            Path source = sameContentArchive("upload.riauto", "uploaded copy");
+            Path target = sameContentArchive("installed.riauto", "installed copy");
+            byte[] installedBytes = Files.readAllBytes(target);
+            AtomicBoolean applied = new AtomicBoolean();
+            AtomicBoolean rolledBack = new AtomicBoolean();
+
+            assertNotEquals(-1L, Files.mismatch(source, target));
+            CarPackUploadService.installAtomically(
+                    source, target, false,
+                    () -> applied.set(true),
+                    () -> rolledBack.set(true));
+
+            assertArrayEquals(installedBytes, Files.readAllBytes(target));
+            assertFalse(Files.exists(source));
+            assertFalse(applied.get());
+            assertFalse(rolledBack.get());
+            assertFalse(Files.exists(temporaryDirectory.resolve(".riautomobility.revision")));
+            assertNoBackupFiles();
+        });
+    }
+
+    @Test
     void acceptsV1EditorArchiveWithExternalTexture() throws IOException {
         Path archive = editorArchive(true);
 
@@ -112,6 +136,19 @@ class CarPackUploadServiceTest {
 
     private Path write(String name, String contents) throws IOException {
         return Files.writeString(temporaryDirectory.resolve(name), contents);
+    }
+
+    private Path sameContentArchive(String name, String comment) throws IOException {
+        Path archive = temporaryDirectory.resolve(name);
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(archive), StandardCharsets.UTF_8)) {
+            zip.setComment(comment);
+            ZipEntry entry = new ZipEntry("component.json");
+            entry.setTime(0L);
+            zip.putNextEntry(entry);
+            zip.write("same component".getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        return archive;
     }
 
     private Path editorArchive(boolean includeTexture) throws IOException {

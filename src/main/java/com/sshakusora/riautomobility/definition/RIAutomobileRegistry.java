@@ -34,6 +34,14 @@ public final class RIAutomobileRegistry {
         return frame != null && get(frame).hideEngine();
     }
 
+    public static double maxInteractionRadius() {
+        return DEFINITIONS.values().stream()
+                .flatMap(definition -> definition.interactionBoxes().stream())
+                .mapToDouble(box -> box.enclosingRadius())
+                .max()
+                .orElse(0.0D);
+    }
+
     public static void remove(ResourceLocation id) {
         DEFINITIONS.remove(id);
         RIAutomobilityRegistryUtil.remove(AutomobileFrame.REGISTRY, id);
