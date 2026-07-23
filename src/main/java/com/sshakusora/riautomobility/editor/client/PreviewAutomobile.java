@@ -1,5 +1,6 @@
 package com.sshakusora.riautomobility.editor.client;
 
+import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
 import io.github.foundationgames.automobility.automobile.AutomobileWheel;
@@ -11,7 +12,7 @@ import io.github.foundationgames.automobility.automobile.render.RenderableAutomo
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-final class PreviewAutomobile implements RenderableAutomobile {
+final class PreviewAutomobile implements RenderableAutomobile, BbInstancedRenderer.ImmediateTarget {
     private static final long NANOS_PER_TICK = 50_000_000L;
     private static final int ENGINE_PREVIEW_CYCLE_TICKS = 160;
     private static final int ENGINE_ACCELERATION_START = 40;

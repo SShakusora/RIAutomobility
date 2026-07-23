@@ -38,10 +38,16 @@ public class HitboxEntity extends Entity{
     private final NonNullList<ItemStack> items = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
     private EntityDimensions size;
     private boolean positionSynced;
+    @Nullable
+    private AutomobileEntity automobile;
+    @Nullable
+    private Vec3 origin;
 
     public HitboxEntity(Level level, AutomobileEntity automobile, RIAutomobileDefinition.Hitbox hitbox) {
         super(RIAutomobilityEntities.HITBOX.get(), level);
 
+        this.automobile = automobile;
+        this.origin = hitbox.origin();
         this.entityData.set(AUTOMOBILE, automobile.getId());
         this.entityData.set(ORIGIN, new Vector3f((float) hitbox.origin().x(), (float) hitbox.origin().y(), (float) hitbox.origin().z()));
         this.entityData.set(WIDTH, hitbox.width());
@@ -57,14 +63,27 @@ public class HitboxEntity extends Entity{
     }
 
     public AutomobileEntity getAutomobile() {
+        if (this.automobile != null
+                && !this.automobile.isRemoved()
+                && this.automobile.getId() == this.entityData.get(AUTOMOBILE)) {
+            return this.automobile;
+        }
         Entity entity = this.level().getEntity(this.entityData.get(AUTOMOBILE));
-        if (entity instanceof AutomobileEntity auto) return auto;
+        if (entity instanceof AutomobileEntity auto) {
+            this.automobile = auto;
+            return auto;
+        }
+        this.automobile = null;
         return null;
     }
 
     public Vec3 boxOrigin() {
+        if (this.origin != null) {
+            return this.origin;
+        }
         var o = this.entityData.get(ORIGIN);
-        return new Vec3(o.x(), o.y(), o.z());
+        this.origin = new Vec3(o.x(), o.y(), o.z());
+        return this.origin;
     }
 
     @Override
@@ -107,7 +126,8 @@ public class HitboxEntity extends Entity{
             }
         }
 
-        syncPosition(automobile);
+        // The parent automobile synchronizes every attached hitbox after it moves.
+        // Doing it here as well doubles the transforms and bounding-box updates.
     }
 
     @Override
@@ -253,6 +273,12 @@ public class HitboxEntity extends Entity{
         if (WIDTH.equals(dataAccessor) || HEIGHT.equals(dataAccessor)) {
             this.size = EntityDimensions.scalable(this.entityData.get(WIDTH), this.entityData.get(HEIGHT));
             this.refreshDimensions();
+        }
+        if (AUTOMOBILE.equals(dataAccessor)) {
+            this.automobile = null;
+        }
+        if (ORIGIN.equals(dataAccessor)) {
+            this.origin = null;
         }
     }
 

@@ -15,9 +15,9 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -55,6 +55,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private static final int SELECTION_COLUMNS = 12;
     private static final int SELECTION_CELL_SIZE = 24;
     private static final int SELECTION_GAP = 4;
+    private static final int DRAFT_SYNC_IDLE_TICKS = 20;
     private final VehicleEditorDraft draft;
     private final PreviewAutomobile preview;
     private final VehiclePreviewRenderer previewRenderer;
@@ -92,6 +93,8 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
     private String status = "";
     private CompoundTag lastSentEditorState = new CompoundTag();
     private int draftSyncTicks;
+    private boolean editorStateDirty;
+    private boolean finalEditorStateSynced;
     private boolean restorePreviewPending;
 
     public VehicleImportScreen(VehicleImportMenu menu, Inventory inventory, Component title) {
@@ -222,18 +225,29 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     private void syncEditorState(boolean force) {
         if (minecraft == null || minecraft.getConnection() == null) return;
+        if (force && finalEditorStateSynced) return;
+        if (!force && !editorStateDirty) return;
         CompoundTag state = saveEditorState();
-        if (!force && state.equals(lastSentEditorState)) return;
-        RIAutomobilityNetwork.CHANNEL.sendToServer(
-                new UpdateVehicleImportDraftPacket(menu.blockPos(), state));
-        lastSentEditorState = state;
+        if (!state.equals(lastSentEditorState)) {
+            RIAutomobilityNetwork.CHANNEL.sendToServer(
+                    new UpdateVehicleImportDraftPacket(menu.blockPos(), state));
+            lastSentEditorState = state;
+        }
+        editorStateDirty = false;
+        draftSyncTicks = 0;
+        if (force) finalEditorStateSynced = true;
+    }
+
+    private void markEditorStateDirty() {
+        editorStateDirty = true;
+        finalEditorStateSynced = false;
+        draftSyncTicks = 0;
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (++draftSyncTicks >= 10) {
-            draftSyncTicks = 0;
+        if (editorStateDirty && ++draftSyncTicks >= DRAFT_SYNC_IDLE_TICKS) {
             syncEditorState(false);
         }
     }
@@ -968,6 +982,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
                         }
                     }
                     draft.target = restoredTarget;
+                    markEditorStateDirty();
                     status = VehicleImportText.string("status.preview_loaded");
                     if (Minecraft.getInstance().screen == this) resetWidgets();
                 } else {
@@ -1463,6 +1478,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        if (!inPreview(x, y)) markEditorStateDirty();
         if (positionDropdown != null) {
             if (positionDropdown.isClosing()) return true;
             if (positionDropdown.isOverHeader(x, y)) {
@@ -1484,6 +1500,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        markEditorStateDirty();
         if (positionDropdown != null && positionDropdown.isClosing()) return true;
         if (positionDropdown != null && positionDropdown.mouseDragged(x, y, button)) return true;
         if (previewRenderer.mouseDragged(x, y, button, isSeatFirstPersonView())) return true;
@@ -1492,6 +1509,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
+        markEditorStateDirty();
         if (positionDropdown != null && positionDropdown.mouseReleased(button)) return true;
         previewRenderer.mouseReleased(button);
         return super.mouseReleased(x, y, button);
@@ -1499,6 +1517,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public boolean mouseScrolled(double x, double y, double amount) {
+        if (amount != 0.0D) markEditorStateDirty();
         if (positionDropdown != null && positionDropdown.isClosing()) return true;
         if (positionDropdown != null && positionDropdown.mouseScrolled(x, y, amount)) return true;
         if (amount != 0.0D) {
@@ -1525,6 +1544,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        markEditorStateDirty();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && positionDropdown != null) {
             closePositionDropdown();
             return true;
@@ -1542,6 +1562,12 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        markEditorStateDirty();
+        return super.charTyped(codePoint, modifiers);
     }
 
     @Override

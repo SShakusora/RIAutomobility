@@ -84,6 +84,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
     private final List<HitboxEntity> hitboxes = new ArrayList<>();
     private final UUID[] persistedSeatPassengers = new UUID[MAX_TRACKED_SEATS];
     private final int[] seatAssignmentScratch = new int[MAX_TRACKED_SEATS];
+    private final Map<AutomobileEntity, IncomingCollision> collisionScratch = new IdentityHashMap<>();
 
     @Nullable
     private ResourceLocation unresolvedFrameId;
@@ -266,13 +267,16 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
 
     @Override
     public void tick() {
+        boolean riaSeats = usesRIASeats();
         if (!level().isClientSide()) {
             if (this.tickCount % 20 == 0) {
                 updateVehicleLocation();
             }
-            enforceDriverAccess();
+            if (!riaSeats) {
+                enforceDriverAccess();
+            }
         }
-        if (!usesRIASeats()) {
+        if (!riaSeats) {
             super.tick();
             previousHoldingDrift = isHoldingDrift();
             return;
@@ -284,7 +288,9 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
 
         receiveVehicleCollisions();
         updateDimensionsForFrame();
-        updateCullingBox();
+        if (level().isClientSide()) {
+            updateCullingBox();
+        }
         driftedReadyBoost();
         preAccelerating = isAccelerating();
         prevYawForRotate = this.getYRot();
@@ -1032,7 +1038,8 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
                 hitbox -> hitbox.isCollisionReady() && hitbox.getAutomobile() != this);
         if (nearby.isEmpty()) return;
 
-        Map<AutomobileEntity, IncomingCollision> collisions = new IdentityHashMap<>();
+        Map<AutomobileEntity, IncomingCollision> collisions = this.collisionScratch;
+        collisions.clear();
         for (HitboxEntity box : this.hitboxes) {
             if (!box.isCollisionReady()) continue;
             AABB bbox = box.getBoundingBox().inflate(0.15);
@@ -1080,6 +1087,7 @@ public class RIAutomobileEntity extends AutomobileEntity implements WorldlyConta
                 hadVehicleCollision = 12;
             }
         }
+        collisions.clear();
     }
 
     private Vec3 getMeasuredMovement() {

@@ -2,6 +2,9 @@ package com.sshakusora.riautomobility.network.packet;
 
 import com.sshakusora.riautomobility.carpack.CarPackManifestEntry;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderException;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
@@ -143,6 +146,31 @@ class CarPackPacketCodecTest {
             assertEquals(expected, ExportVehicleComponentItemPacket.decode(buffer));
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    void vehicleEditorDraftRoundTripsAndRejectsOversizedPayloads() {
+        CompoundTag state = new CompoundTag();
+        state.putString("name", "Draft");
+        UpdateVehicleImportDraftPacket expected =
+                new UpdateVehicleImportDraftPacket(new BlockPos(1, 2, 3), state);
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            UpdateVehicleImportDraftPacket.encode(expected, buffer);
+            assertEquals(expected, UpdateVehicleImportDraftPacket.decode(buffer));
+        } finally {
+            buffer.release();
+        }
+
+        FriendlyByteBuf oversized = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            oversized.writeBlockPos(BlockPos.ZERO);
+            oversized.writeZero(UpdateVehicleImportDraftPacket.MAX_EDITOR_STATE_BYTES + 1);
+            assertThrows(DecoderException.class,
+                    () -> UpdateVehicleImportDraftPacket.decode(oversized));
+        } finally {
+            oversized.release();
         }
     }
 }

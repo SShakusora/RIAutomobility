@@ -44,6 +44,7 @@ class BbCompiledGeometryTest {
             assertEquals(4, quad.uvs().length);
             assertTrue(Float.isFinite(quad.normal().x));
             assertEquals(1.0F, quad.normal().length(), 0.0001F);
+            assertEquals(3, quad.detailLevel());
         }
     }
 
@@ -68,6 +69,7 @@ class BbCompiledGeometryTest {
         assertEquals(1, flattened.batches().size());
         BbCompiledGeometry.Batch batch = flattened.batches().get(0);
         assertEquals(6, batch.quadCount());
+        assertEquals(6, batch.quadCount(3));
         assertEquals(6 * BbCompiledGeometry.PACKED_QUAD_STRIDE, batch.data().length);
         for (float value : batch.data()) assertTrue(Float.isFinite(value));
     }

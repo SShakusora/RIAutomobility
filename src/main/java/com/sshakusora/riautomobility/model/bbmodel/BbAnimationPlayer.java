@@ -69,6 +69,19 @@ public final class BbAnimationPlayer {
         QUERY_STATE.remove();
     }
 
+    static boolean hasEffectiveAnimation(BbModelData.Document document, String requestedAnimation) {
+        BbModelData.Animation animation = selectAnimation(document, requestedAnimation);
+        if (animation == null) return false;
+        for (PreparedAnimator animator : prepared(animation)) {
+            if (!animator.position().isEmpty()
+                    || !animator.rotation().isEmpty()
+                    || !animator.scale().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<PreparedAnimator> prepared(BbModelData.Animation animation) {
         synchronized (PREPARED) {
             return PREPARED.computeIfAbsent(animation, BbAnimationPlayer::prepare);
@@ -97,6 +110,9 @@ public final class BbAnimationPlayer {
     }
 
     private static BbModelData.Animation selectAnimation(BbModelData.Document document, String requested) {
+        if (document.animations().isEmpty()) {
+            return null;
+        }
         if (requested != null && !requested.isBlank()) {
             for (BbModelData.Animation animation : document.animations()) {
                 if (requested.equals(animation.name()) || requested.equals(animation.uuid())) {

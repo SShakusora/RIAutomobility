@@ -17,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 public final class VehicleImportTableBlockEntity extends BlockEntity implements Container, MenuProvider {
     private static final String EDITOR_STATE_TAG = "EditorState";
-    private static final int MAX_EDITOR_STATE_TEXT_LENGTH = 32_768;
     private static final Component TITLE = Component.translatable("container.riautomobility.vehicle_import");
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
@@ -32,7 +31,7 @@ public final class VehicleImportTableBlockEntity extends BlockEntity implements 
     }
 
     public void setEditorState(CompoundTag state) {
-        if (state == null || state.toString().length() > MAX_EDITOR_STATE_TEXT_LENGTH) return;
+        if (state == null || state.equals(this.editorState)) return;
         this.editorState = state.copy();
         this.setChanged();
     }
@@ -49,9 +48,7 @@ public final class VehicleImportTableBlockEntity extends BlockEntity implements 
         super.load(tag);
         this.items.clear();
         ContainerHelper.loadAllItems(tag, this.items);
-        CompoundTag loadedState = tag.getCompound(EDITOR_STATE_TAG);
-        this.editorState = loadedState.toString().length() <= MAX_EDITOR_STATE_TEXT_LENGTH
-                ? loadedState.copy() : new CompoundTag();
+        this.editorState = tag.getCompound(EDITOR_STATE_TAG).copy();
     }
 
     @Override

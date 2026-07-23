@@ -73,16 +73,31 @@ public abstract class AutomobileEntityCollisionMixin {
 
         if (self.level().hasChunksAt(start, end)) {
             var pos = new BlockPos.MutableBlockPos();
+            collisionBlocks:
             for (int x = start.getX(); x <= end.getX(); ++x) {
                 for (int y = start.getY(); y <= end.getY(); ++y) {
                     for (int z = start.getZ(); z <= end.getZ(); ++z) {
                         pos.set(x, y, z);
                         var state = self.level().getBlockState(pos);
                         var blockShape = state.getCollisionShape(self.level(), pos, shapeCtx).move(pos.getX(), pos.getY(), pos.getZ());
-                        this.automobileOnGround |= Shapes.joinIsNotEmpty(blockShape, groundCuboid, BooleanOp.AND);
-                        this.isFloorDirectlyBelow |= Shapes.joinIsNotEmpty(blockShape, floorCuboid, BooleanOp.AND);
-                        wallHit |= Shapes.joinIsNotEmpty(blockShape, wallCuboid, BooleanOp.AND);
-                        stepWallHit |= Shapes.joinIsNotEmpty(blockShape, stepWallCuboid, BooleanOp.AND);
+                        if (!this.automobileOnGround) {
+                            this.automobileOnGround = Shapes.joinIsNotEmpty(
+                                    blockShape, groundCuboid, BooleanOp.AND);
+                        }
+                        if (!this.isFloorDirectlyBelow) {
+                            this.isFloorDirectlyBelow = Shapes.joinIsNotEmpty(
+                                    blockShape, floorCuboid, BooleanOp.AND);
+                        }
+                        if (!wallHit) {
+                            wallHit = Shapes.joinIsNotEmpty(blockShape, wallCuboid, BooleanOp.AND);
+                        }
+                        if (!stepWallHit) {
+                            stepWallHit = Shapes.joinIsNotEmpty(
+                                    blockShape, stepWallCuboid, BooleanOp.AND);
+                        }
+                        if (this.automobileOnGround && this.isFloorDirectlyBelow && wallHit && stepWallHit) {
+                            break collisionBlocks;
+                        }
                     }
                 }
             }
@@ -91,11 +106,13 @@ public abstract class AutomobileEntityCollisionMixin {
         this.touchingWall = wallHit && stepWallHit;
 
         riautomobility$collisionScratch.clear();
-        this.accumulateCollisionAreas(riautomobility$collisionScratch);
-        for (CollisionArea collider : riautomobility$collisionScratch) {
-            if (collider.boxIntersects(groundBox)) {
-                this.automobileOnGround = true;
-                break;
+        if (!this.automobileOnGround) {
+            this.accumulateCollisionAreas(riautomobility$collisionScratch);
+            for (CollisionArea collider : riautomobility$collisionScratch) {
+                if (collider.boxIntersects(groundBox)) {
+                    this.automobileOnGround = true;
+                    break;
+                }
             }
         }
     }

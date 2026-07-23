@@ -254,6 +254,24 @@ class BbModelParserTest {
     }
 
     @Test
+    void onlyTreatsSelectedAnimationsWithKeyframesAsDynamic() {
+        BbModelData.Document effective = animationDocument("1");
+        BbModelData.Document empty = BbModelParser.parse(JsonParser.parseString("""
+                {
+                  "meta":{"format_version":"5.0","model_format":"modded_entity"},
+                  "elements":[],
+                  "animations":[{"name":"empty","animators":{"bone":{"type":"bone","keyframes":[]}}}]
+                }
+                """).getAsJsonObject());
+
+        assertTrue(BbAnimationPlayer.hasEffectiveAnimation(effective, "cached"));
+        assertFalse(BbAnimationPlayer.hasEffectiveAnimation(effective, "missing"));
+        assertFalse(BbAnimationPlayer.hasEffectiveAnimation(empty, "empty"));
+        assertFalse(BbAnimationPlayer.hasEffectiveAnimation(new BbModelData.Document(
+                "5.0", "modded_entity", 16, 16, List.of(), List.of(), List.of()), ""));
+    }
+
+    @Test
     void clearCacheReleasesCompiledMolangExpressions() throws ReflectiveOperationException {
         BbAnimationPlayer.clearCache();
         BbModelData.Document document = animationDocument("math.sin(90)");

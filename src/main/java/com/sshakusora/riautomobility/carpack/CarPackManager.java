@@ -3,10 +3,10 @@ package com.sshakusora.riautomobility.carpack;
 import com.mojang.logging.LogUtils;
 import com.sshakusora.riautomobility.Config;
 import com.sshakusora.riautomobility.entity.RIAutomobileEntity;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.FilePackResources;
 import net.minecraft.server.packs.repository.Pack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.entity.Entity;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
@@ -31,7 +31,6 @@ public final class CarPackManager {
     private static final String TRANSFER_CACHE_DIRECTORY_NAME = "server-transfers";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int BUFFER_SIZE = 8192;
-    private static final AABB WORLD_BOUNDS = new AABB(-3.0E7D, -2048.0D, -3.0E7D, 3.0E7D, 2048.0D, 3.0E7D);
     private static volatile List<CarPack> clientResourcePacks;
     private static volatile CarPack clientPreviewPack;
 
@@ -174,10 +173,18 @@ public final class CarPackManager {
         }
     }
 
-    public static void refreshLevel(Level level) {
-        for (RIAutomobileEntity automobile : level.getEntitiesOfClass(RIAutomobileEntity.class, WORLD_BOUNDS)) {
-            automobile.reloadRIAutomobilityComponents();
+    public static void refreshLevel(ServerLevel level) {
+        refreshEntities(level.getAllEntities());
+    }
+
+    public static void refreshEntities(Iterable<? extends Entity> entities) {
+        List<RIAutomobileEntity> automobiles = new ArrayList<>();
+        for (var entity : entities) {
+            if (entity instanceof RIAutomobileEntity automobile) {
+                automobiles.add(automobile);
+            }
         }
+        automobiles.forEach(RIAutomobileEntity::reloadRIAutomobilityComponents);
     }
 
     static String digest(Path path) throws IOException {

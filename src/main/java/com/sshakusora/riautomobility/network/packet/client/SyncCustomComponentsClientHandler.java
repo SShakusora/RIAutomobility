@@ -37,7 +37,7 @@ public final class SyncCustomComponentsClientHandler {
         RIAutomobileModels.rebuildDynamicModelsNow();
 
         if (minecraft.level != null) {
-            CarPackManager.refreshLevel(minecraft.level);
+            CarPackManager.refreshEntities(minecraft.level.entitiesForRendering());
         }
     }
 

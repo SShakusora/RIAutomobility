@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import com.sshakusora.riautomobility.entity.HitboxEntity;
+import com.sshakusora.riautomobility.model.bbmodel.BbInstancedRenderer;
 import com.sshakusora.riautomobility.model.bbmodel.BbRenderContext;
 import io.github.foundationgames.automobility.automobile.AutomobileEngine;
 import io.github.foundationgames.automobility.automobile.AutomobileFrame;
@@ -36,9 +37,6 @@ import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.glfw.GLFW;
-
-import java.util.Arrays;
-import java.util.Comparator;
 
 final class VehiclePreviewRenderer {
     enum View {
@@ -69,8 +67,18 @@ final class VehiclePreviewRenderer {
     private final VehicleEditorDraft draft;
     private final PreviewAutomobile preview;
     private final Matrix4f orbitScale = new Matrix4f();
+    private final Matrix4f savedProjection = new Matrix4f();
+    private final Matrix4f previewProjection = new Matrix4f();
+    private final Matrix4f outlineProjection = new Matrix4f();
     private final Quaternionf orbitXRotation = new Quaternionf();
     private final Quaternionf orbitYRotation = new Quaternionf();
+    private final AxisProjection[] gizmoAxes = {
+            new AxisProjection(ORBIT_GIZMO_X_COLOR, "X"),
+            new AxisProjection(ORBIT_GIZMO_Y_COLOR, "Y"),
+            new AxisProjection(ORBIT_GIZMO_Z_COLOR, "Z")
+    };
+    private final int[] gizmoLayerOrder = new int[9];
+    private final float[] gizmoLayerDepth = new float[9];
     private PlayerModel<AbstractClientPlayer> seatPlayerModel;
     private View view = View.FRAME;
     private int wheelPointIndex;
@@ -166,10 +174,10 @@ final class VehiclePreviewRenderer {
         OutlineBufferSource outlineBuffers = preparePreviewOutline();
         graphics.enableScissor(x0, y0, x1, y1);
         Window window = Minecraft.getInstance().getWindow();
-        Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        Matrix4f previousProjection = this.savedProjection.set(RenderSystem.getProjectionMatrix());
         // Forge positions normal GUI geometry close to the far clip plane. The orbit scale also
         // scales model depth, so large previews need extra depth without changing their X/Y layout.
-        Matrix4f previewProjection = new Matrix4f().setOrtho(
+        Matrix4f previewProjection = this.previewProjection.setOrtho(
                 0.0F, (float) (window.getWidth() / window.getGuiScale()),
                 (float) (window.getHeight() / window.getGuiScale()), 0.0F,
                 1000.0F, ForgeHooksClient.getGuiFarPlane() + ORBIT_PREVIEW_DEPTH_MARGIN);
@@ -201,6 +209,7 @@ final class VehiclePreviewRenderer {
             case SEAT_FIRST_PERSON -> {
             }
         }
+        BbInstancedRenderer.flushNow(RenderSystem.getProjectionMatrix());
         buffers.endBatch();
         finishPreviewOutline(outlineBuffers, partialTick);
         pose.popPose();
@@ -223,36 +232,38 @@ final class VehiclePreviewRenderer {
     private void renderOrbitGizmo(GuiGraphics graphics, int previewRight, int previewBottom) {
         float centerX = previewRight - ORBIT_GIZMO_SIZE * 0.5F;
         float centerY = previewBottom - ORBIT_GIZMO_SIZE * 0.5F;
-        AxisProjection[] axes = orbitGizmoAxes();
-
-        GizmoLayer[] layers = new GizmoLayer[axes.length * 3];
-        for (int index = 0; index < axes.length; index++) {
-            AxisProjection axis = axes[index];
-            layers[index * 3] = new GizmoLayer(axis, 1.0F, true, null);
-            layers[index * 3 + 1] = new GizmoLayer(axis, 1.0F, false, axis.label);
-            layers[index * 3 + 2] = new GizmoLayer(axis, -1.0F, false, null);
+        updateOrbitGizmoAxes();
+        for (int layer = 0; layer < gizmoLayerOrder.length; layer++) {
+            AxisProjection axis = gizmoAxes[layer / 3];
+            int kind = layer % 3;
+            gizmoLayerOrder[layer] = layer;
+            gizmoLayerDepth[layer] = axis.depth * (kind == 0 ? 0.5F : kind == 1 ? 1.0F : -1.0F);
         }
-        Arrays.sort(layers, Comparator.comparingDouble(GizmoLayer::depth));
-        for (GizmoLayer layer : layers) {
-            if (layer.line) {
+        sortGizmoLayers();
+
+        for (int orderedLayer : gizmoLayerOrder) {
+            AxisProjection axis = gizmoAxes[orderedLayer / 3];
+            int kind = orderedLayer % 3;
+            if (kind == 0) {
                 drawLine(graphics, centerX, centerY,
-                        centerX + ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenX,
-                        centerY + ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenY,
-                        axisColor(layer.axis.color, 0.70F, 0xB8));
+                        centerX + ORBIT_GIZMO_AXIS_RADIUS * axis.screenX,
+                        centerY + ORBIT_GIZMO_AXIS_RADIUS * axis.screenY,
+                        axisColor(axis.color, 0.70F, 0xB8));
             } else {
-                float depth = layer.depth();
-                int x = Math.round(centerX + layer.sign * ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenX);
-                int y = Math.round(centerY + layer.sign * ORBIT_GIZMO_AXIS_RADIUS * layer.axis.screenY);
+                float sign = kind == 1 ? 1.0F : -1.0F;
+                float depth = gizmoLayerDepth[orderedLayer];
+                int x = Math.round(centerX + sign * ORBIT_GIZMO_AXIS_RADIUS * axis.screenX);
+                int y = Math.round(centerY + sign * ORBIT_GIZMO_AXIS_RADIUS * axis.screenY);
                 int radius = Math.max(1, Math.round(ORBIT_GIZMO_MARKER_RADIUS
                         * (1.0F + ORBIT_GIZMO_DEPTH_SCALE * depth)));
                 float brightness = depth < 0.0F ? 0.70F : 1.0F;
-                drawCircle(graphics, x, y, radius, axisColor(layer.axis.color, brightness, 0xFF));
-                if (layer.label != null) {
-                    drawOrbitGizmoLabel(graphics, layer.label, x, y);
+                drawCircle(graphics, x, y, radius, axisColor(axis.color, brightness, 0xFF));
+                if (kind == 1) {
+                    drawOrbitGizmoLabel(graphics, axis.label, x, y);
                 }
             }
-            // Each layer is submitted separately because fonts and solid shapes use
-            // different RenderTypes that would otherwise lose this painter order.
+            // Solid GUI shapes and font glyphs use different RenderTypes. Submit each sorted
+            // depth layer together so a farther label cannot be drawn over a nearer marker.
             graphics.flush();
         }
     }
@@ -268,7 +279,7 @@ final class VehiclePreviewRenderer {
         pose.popPose();
     }
 
-    private AxisProjection[] orbitGizmoAxes() {
+    private void updateOrbitGizmoAxes() {
         float pitch = (float) Math.toRadians(rotationX);
         float yaw = (float) Math.toRadians(rotationY);
         float sinPitch = (float) Math.sin(pitch);
@@ -277,14 +288,23 @@ final class VehiclePreviewRenderer {
         float cosYaw = (float) Math.cos(yaw);
 
         // These are the normalized X/Y/Z columns of the same rotation used by the vehicle pose.
-        return new AxisProjection[]{
-                new AxisProjection(cosYaw, -sinPitch * sinYaw, -cosPitch * sinYaw,
-                        ORBIT_GIZMO_X_COLOR, "X"),
-                new AxisProjection(0.0F, -cosPitch, sinPitch,
-                        ORBIT_GIZMO_Y_COLOR, "Y"),
-                new AxisProjection(sinYaw, sinPitch * cosYaw, cosPitch * cosYaw,
-                        ORBIT_GIZMO_Z_COLOR, "Z")
-        };
+        gizmoAxes[0].set(cosYaw, -sinPitch * sinYaw, -cosPitch * sinYaw);
+        gizmoAxes[1].set(0.0F, -cosPitch, sinPitch);
+        gizmoAxes[2].set(sinYaw, sinPitch * cosYaw, cosPitch * cosYaw);
+    }
+
+    private void sortGizmoLayers() {
+        for (int index = 1; index < gizmoLayerOrder.length; index++) {
+            int layer = gizmoLayerOrder[index];
+            float depth = gizmoLayerDepth[layer];
+            int insertion = index;
+            while (insertion > 0
+                    && gizmoLayerDepth[gizmoLayerOrder[insertion - 1]] > depth) {
+                gizmoLayerOrder[insertion] = gizmoLayerOrder[insertion - 1];
+                insertion--;
+            }
+            gizmoLayerOrder[insertion] = layer;
+        }
     }
 
     private static void drawLine(GuiGraphics graphics, float x0, float y0, float x1, float y1, int color) {
@@ -315,13 +335,22 @@ final class VehiclePreviewRenderer {
         return alpha << 24 | red << 16 | green << 8 | blue;
     }
 
-    private record AxisProjection(float screenX, float screenY, float depth,
-                                  int color, String label) {
-    }
+    private static final class AxisProjection {
+        private final int color;
+        private final String label;
+        private float screenX;
+        private float screenY;
+        private float depth;
 
-    private record GizmoLayer(AxisProjection axis, float sign, boolean line, String label) {
-        private float depth() {
-            return axis.depth * (line ? 0.5F : sign);
+        private AxisProjection(int color, String label) {
+            this.color = color;
+            this.label = label;
+        }
+
+        private void set(float screenX, float screenY, float depth) {
+            this.screenX = screenX;
+            this.screenY = screenY;
+            this.depth = depth;
         }
     }
 
@@ -358,14 +387,14 @@ final class VehiclePreviewRenderer {
         int viewportY = window.getHeight() - (int) Math.round(y1 * guiScale);
         int viewportWidth = Math.max(1, (int) Math.round((x1 - x0) * guiScale));
         int viewportHeight = Math.max(1, (int) Math.round((y1 - y0) * guiScale));
-        Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        Matrix4f previousProjection = this.savedProjection.set(RenderSystem.getProjectionMatrix());
         PoseStack modelView = RenderSystem.getModelViewStack();
         modelView.pushPose();
         try {
             modelView.setIdentity();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
-            Matrix4f perspective = new Matrix4f().setPerspective(
+            Matrix4f perspective = this.previewProjection.setPerspective(
                     (float) Math.toRadians(fov), (float) viewportWidth / viewportHeight, 0.05F, 100.0F);
             RenderSystem.setProjectionMatrix(perspective, VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.enableDepthTest();
@@ -380,6 +409,7 @@ final class VehiclePreviewRenderer {
             AutomobileRenderer.render(pose, buffers, LightTexture.FULL_BRIGHT,
                     OverlayTexture.NO_OVERLAY, partialTick, preview);
             if (hiddenSeatIndex >= 0) renderSeatPlayers(pose, buffers, hiddenSeatIndex);
+            BbInstancedRenderer.flushNow(RenderSystem.getProjectionMatrix());
             buffers.endBatch();
         } finally {
             RenderSystem.setProjectionMatrix(previousProjection, VertexSorting.ORTHOGRAPHIC_Z);
@@ -417,7 +447,7 @@ final class VehiclePreviewRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         PostChain entityEffect = minecraft.levelRenderer.entityEffect;
         if (entityEffect == null) return;
-        Matrix4f previousProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        Matrix4f previousProjection = this.outlineProjection.set(RenderSystem.getProjectionMatrix());
         try {
             outlineBuffers.endOutlineBatch();
             entityEffect.process(partialTick);

@@ -63,8 +63,10 @@ public final class ClientCarPackSynchronizer {
     private static final long MAX_CACHE_SIZE = 2L * 1024L * 1024L * 1024L;
     private static final long TRANSFER_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
     private static final long MOUNT_IDLE_NANOS = TimeUnit.MINUTES.toNanos(5);
+    private static final int MOUNT_EXPIRY_SCAN_INTERVAL = 20;
     private static volatile Session session;
     private static int scanTicker;
+    private static int expiryScanTicker;
 
     static {
         TIMEOUT_CHECKER.scheduleAtFixedRate(ClientCarPackSynchronizer::checkTimeout, 15, 15, TimeUnit.SECONDS);
@@ -113,11 +115,14 @@ public final class ClientCarPackSynchronizer {
         Session current = session;
         if (current == null || !current.ready.isDone()) return;
         LinkedHashSet<String> packIds = new LinkedHashSet<>();
+        long neededAt = System.nanoTime();
         for (ResourceLocation componentId : componentIds) {
             String packId = current.componentPacks.get(componentId);
             if (packId != null) {
-                packIds.add(packId);
-                current.lastNeededNanos.put(packId, System.nanoTime());
+                current.lastNeededNanos.put(packId, neededAt);
+                if (!current.mounted.containsKey(packId) && !current.requested.contains(packId)) {
+                    packIds.add(packId);
+                }
             }
         }
         if (!packIds.isEmpty()) {
@@ -227,12 +232,20 @@ public final class ClientCarPackSynchronizer {
         });
         minecraft.player.containerMenu.slots.forEach(slot -> collectItem(slot.getItem(), components));
         requestComponents(components);
-        CACHE_IO.execute(() -> expireUnusedMounts(session));
+        if (++expiryScanTicker >= MOUNT_EXPIRY_SCAN_INTERVAL) {
+            expiryScanTicker = 0;
+            Session current = session;
+            if (current != null) {
+                CACHE_IO.execute(() -> expireUnusedMounts(current));
+            }
+        }
     }
 
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         GENERATION.incrementAndGet();
+        scanTicker = 0;
+        expiryScanTicker = 0;
         Session previous = session;
         session = null;
         if (previous != null && !previous.ready.isDone()) {

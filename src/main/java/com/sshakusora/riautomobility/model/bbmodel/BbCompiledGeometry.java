@@ -70,9 +70,8 @@ final class BbCompiledGeometry {
                 flattenNode(child, group.origin(), pose, geometry, collector, nodeCount);
             }
         } else if (node instanceof BbModelData.ElementNode element) {
-            int detailLevel = detailLevel(element.geometry());
             for (Quad quad : geometry.getOrDefault(element, List.of())) {
-                collector.add(quad.texture(), transformQuad(quad, pose), detailLevel);
+                collector.add(quad.texture(), transformQuad(quad, pose), quad.detailLevel());
             }
         }
     }
@@ -178,6 +177,9 @@ final class BbCompiledGeometry {
         } else if (element.geometry() instanceof BbModelData.TextureMesh mesh) {
             compileTextureMesh(element, mesh, modelResource, spec, document, quads);
         }
+        int detailLevel = detailLevel(element.geometry());
+        quads.replaceAll(quad -> new Quad(
+                quad.texture(), quad.vertices(), quad.uvs(), quad.normal(), detailLevel));
         return List.copyOf(quads);
     }
 
@@ -356,7 +358,7 @@ final class BbCompiledGeometry {
         Vector3f[] convertedVertices = converted.vertices();
         Vector3f normal = new Vector3f(convertedVertices[1]).sub(convertedVertices[0])
                 .cross(new Vector3f(convertedVertices[2]).sub(convertedVertices[0])).normalize();
-        quads.add(new Quad(texture, convertedVertices, converted.uvs(), normal));
+        quads.add(new Quad(texture, convertedVertices, converted.uvs(), normal, 0));
     }
 
     private static Vector3f textureMeshPoint(BbModelData.ElementNode element,
@@ -400,7 +402,7 @@ final class BbCompiledGeometry {
     }
 
     record Quad(BbModelRepository.ResolvedTexture texture, Vector3f[] vertices,
-                Vector2f[] uvs, Vector3f normal) {
+                Vector2f[] uvs, Vector3f normal, int detailLevel) {
     }
 
     record StaticGeometry(List<Batch> batches, int nodeCount, int inputQuadCount, int outputQuadCount) {

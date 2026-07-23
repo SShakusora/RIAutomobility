@@ -72,12 +72,13 @@ public final class DynamicBbModel extends Model {
             Map<String, BbAnimationPlayer.Transform> animations = BbAnimationPlayer.sample(document, this.spec.bbAnimation(), context);
             Matrix4f rootPose = this.renderScratch.pose(0).set(poseStack.last().pose());
             Matrix3f rootNormal = this.renderScratch.normal(0).set(poseStack.last().normal());
+            int lod = lodLevel(rootPose, context);
             if (this.spec.rotationY() != 0.0F) {
                 rootPose.rotate(this.modelRotation);
                 rootNormal.rotate(this.modelRotation);
             }
             for (BbModelData.Node root : document.roots()) {
-                renderNode(root, animations, context, rootPose, rootNormal, 1, defaultConsumer,
+                renderNode(root, animations, context, rootPose, rootNormal, 1, lod, defaultConsumer,
                         packedLight, packedOverlay, red, green, blue, alpha);
             }
             RIAutomobileModels.clearMissingComponent(this.componentId);
@@ -89,6 +90,7 @@ public final class DynamicBbModel extends Model {
 
     private void renderNode(BbModelData.Node node, Map<String, BbAnimationPlayer.Transform> animations,
                             BbRenderContext context, Matrix4f parentPose, Matrix3f parentNormal, int depth,
+                            int lod,
                             VertexConsumer defaultConsumer,
                             int light, int overlay, float red, float green, float blue, float alpha) {
         if (!node.visible()) return;
@@ -129,11 +131,11 @@ public final class DynamicBbModel extends Model {
 
         if (node instanceof BbModelData.GroupNode group) {
             for (BbModelData.Node child : group.children()) {
-                renderNode(child, animations, context, pose, normal, depth + 1, defaultConsumer,
+                renderNode(child, animations, context, pose, normal, depth + 1, lod, defaultConsumer,
                         light, overlay, red, green, blue, alpha);
             }
         } else if (node instanceof BbModelData.ElementNode element) {
-            renderGeometry(element, context, pose, normal, defaultConsumer,
+            renderGeometry(element, context, pose, normal, lod, defaultConsumer,
                     light, overlay, red, green, blue, alpha);
         }
     }
@@ -151,11 +153,12 @@ public final class DynamicBbModel extends Model {
     }
 
     private void renderGeometry(BbModelData.ElementNode element, BbRenderContext context,
-                                Matrix4f pose, Matrix3f normal, VertexConsumer defaultConsumer,
+                                Matrix4f pose, Matrix3f normal, int lod, VertexConsumer defaultConsumer,
                                 int light, int overlay, float red, float green, float blue, float alpha) {
         BbModelRepository.ResolvedTexture lastTexture = null;
         VertexConsumer consumer = defaultConsumer;
         for (BbCompiledGeometry.Quad quad : this.compiledGeometry.getOrDefault(element, List.of())) {
+            if (quad.detailLevel() < lod) continue;
             if (!quad.texture().equals(lastTexture)) {
                 lastTexture = quad.texture();
                 consumer = consumer(context, defaultConsumer, lastTexture);
@@ -190,7 +193,7 @@ public final class DynamicBbModel extends Model {
         if (this.compiledDocument == document) return;
         Map<BbModelData.ElementNode, List<BbCompiledGeometry.Quad>> geometry =
                 BbCompiledGeometry.compile(this.modelResource, this.spec, document);
-        this.staticModel = document.animations().isEmpty();
+        this.staticModel = !BbAnimationPlayer.hasEffectiveAnimation(document, this.spec.bbAnimation());
         if (this.staticModel) {
             this.staticGeometry = BbCompiledGeometry.compileStatic(this.spec, document, geometry);
             this.compiledGeometry = Map.of();

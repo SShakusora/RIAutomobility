@@ -65,6 +65,13 @@ public final class BbInstancedRenderer {
     private BbInstancedRenderer() {
     }
 
+    /**
+     * Marks non-entity renderables that own an explicit instance flush, such as the editor preview.
+     * Item renderables must not implement this because their buffers are submitted immediately.
+     */
+    public interface ImmediateTarget {
+    }
+
     public static void registerShader(RegisterShadersEvent event) throws IOException {
         disposeGpuResources();
         shader = null;
@@ -80,7 +87,9 @@ public final class BbInstancedRenderer {
                               int light, int overlay,
                               float red, float green, float blue, float alpha) {
         if (shader == null || disabled || alpha < 0.999F || geometry.batches().isEmpty()
-                || context == null || !(context.automobile() instanceof Entity)
+                || context == null
+                || (!(context.automobile() instanceof Entity)
+                && !(context.automobile() instanceof ImmediateTarget))
                 || !(context.buffers() instanceof MultiBufferSource.BufferSource)
                 || !model.supportsInstancedRendering() || !RenderSystem.isOnRenderThread()) {
             return false;
@@ -121,6 +130,17 @@ public final class BbInstancedRenderer {
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         flush(event.getProjectionMatrix());
+    }
+
+    /**
+     * Flushes instances produced outside the level entity pass, notably the vehicle editor preview.
+     * The caller must already be on the render thread and provide the active projection matrix.
+     */
+    public static void flushNow(Matrix4f projectionMatrix) {
+        if (!RenderSystem.isOnRenderThread()) {
+            throw new IllegalStateException("BBModel instances must be flushed on the render thread");
+        }
+        flush(projectionMatrix);
     }
 
     public static void clearGpuResources() {
