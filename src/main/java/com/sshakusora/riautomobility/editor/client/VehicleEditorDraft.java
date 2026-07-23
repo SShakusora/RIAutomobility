@@ -35,6 +35,7 @@ public final class VehicleEditorDraft {
     private final EnumMap<Target, String> displayNames = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> authors = new EnumMap<>(Target.class);
     private final EnumMap<Target, Boolean> previewReady = new EnumMap<>(Target.class);
+    private final EnumMap<Target, Boolean> importedModelPreview = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> previewKeys = new EnumMap<>(Target.class);
     private final EnumMap<Target, String> componentPaths = new EnumMap<>(Target.class);
     private final EnumSet<Target> visibleParts = EnumSet.noneOf(Target.class);
@@ -110,6 +111,7 @@ public final class VehicleEditorDraft {
             displayNames.put(value, VehicleImportText.string("default_name." + value.path));
             authors.put(value, "");
             previewReady.put(value, false);
+            importedModelPreview.put(value, false);
             previewKeys.put(value, UUID.randomUUID().toString().replace("-", ""));
             componentPaths.put(value, generateComponentPath());
         }
@@ -140,6 +142,7 @@ public final class VehicleEditorDraft {
             partTag.putString("PreviewKey", previewKeys.get(part));
             partTag.putString("ComponentPath", componentPaths.get(part));
             partTag.putBoolean("Visible", visibleParts.contains(part));
+            partTag.putBoolean("ImportedModelPreview", usesImportedModelPreview(part));
             parts.put(part.name(), partTag);
         }
         tag.put("Parts", parts);
@@ -213,6 +216,8 @@ public final class VehicleEditorDraft {
                 componentPaths.put(part, componentPath);
             }
             previewReady.put(part, false);
+            importedModelPreview.put(part, partTag.contains("ImportedModelPreview", Tag.TAG_BYTE)
+                    ? partTag.getBoolean("ImportedModelPreview") : modelFiles.containsKey(part));
             if (partTag.getBoolean("Visible")) visibleParts.add(part);
         }
 
@@ -397,6 +402,7 @@ public final class VehicleEditorDraft {
         modelFiles.put(part, path);
         authors.put(part, "");
         previewReady.put(part, false);
+        importedModelPreview.put(part, true);
         componentPaths.put(part, generateComponentPath());
         overwrite = false;
         if (part == Target.FRAME) automaticFrameModelSize = true;
@@ -404,14 +410,19 @@ public final class VehicleEditorDraft {
     }
 
     void restoreModelFile(Target part, Path path) {
-        if (path == null) modelFiles.remove(part);
-        else modelFiles.put(part, path);
+        if (path == null) {
+            modelFiles.remove(part);
+            importedModelPreview.put(part, false);
+        } else {
+            modelFiles.put(part, path);
+        }
         previewReady.put(part, false);
     }
 
     private void setImportedModelFile(Target part, Path path) {
         modelFiles.put(part, path);
         previewReady.put(part, false);
+        importedModelPreview.put(part, true);
         if (part == Target.FRAME) automaticFrameModelSize = false;
         if (part == Target.WHEEL) automaticWheelModelSize = false;
     }
@@ -426,6 +437,15 @@ public final class VehicleEditorDraft {
 
     public void setPreviewReady(Target part, boolean ready) {
         previewReady.put(part, ready);
+    }
+
+    public boolean usesImportedModelPreview(Target part) {
+        return importedModelPreview.getOrDefault(part, false);
+    }
+
+    public void useImportedModelPreview(Target part, boolean imported) {
+        importedModelPreview.put(part, imported);
+        if (!imported) previewReady.put(part, false);
     }
 
     public String previewKey(Target part) {

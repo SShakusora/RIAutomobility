@@ -975,14 +975,7 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         try {
             previewSession.load(draft).whenComplete((unused, error) -> Minecraft.getInstance().execute(() -> {
                 if (error == null) {
-                    for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
-                        if (draft.modelFile(target) != null && Files.isRegularFile(draft.modelFile(target))) {
-                            draft.setPreviewReady(target, true);
-                            draft.showPart(target);
-                        }
-                    }
                     draft.target = restoredTarget;
-                    markEditorStateDirty();
                     status = VehicleImportText.string("status.preview_loaded");
                     if (Minecraft.getInstance().screen == this) resetWidgets();
                 } else {
@@ -1212,9 +1205,9 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         addRenderableWidget(next);
         if (selectionType.isAttachmentList()) {
             addRenderableWidget(texturedButton(VehicleImportText.component("button.select_all"),
-                    b -> selectAllAttachments(), leftPos + 8, navY, 54, 20));
+                    b -> selectAllAttachments(), leftPos + 66, navY, 54, 20));
             addRenderableWidget(texturedButton(VehicleImportText.component("button.clear"),
-                    b -> clearAttachmentSelection(), leftPos + 66, navY, 54, 20));
+                    b -> clearAttachmentSelection(), leftPos + 124, navY, 54, 20));
         }
     }
 
@@ -1251,17 +1244,17 @@ public final class VehicleImportScreen extends AbstractContainerScreen<VehicleIm
         switch (selectionType) {
             case FRAME -> {
                 draft.loadFrame(components.frame(i));
-                draft.setPreviewReady(VehicleEditorDraft.Target.FRAME, false);
+                draft.useImportedModelPreview(VehicleEditorDraft.Target.FRAME, false);
                 draft.showPart(VehicleEditorDraft.Target.FRAME);
             }
             case WHEEL -> {
                 draft.loadWheel(components.wheel(i));
-                draft.setPreviewReady(VehicleEditorDraft.Target.WHEEL, false);
+                draft.useImportedModelPreview(VehicleEditorDraft.Target.WHEEL, false);
                 draft.showPart(VehicleEditorDraft.Target.WHEEL);
             }
             case ENGINE -> {
                 draft.loadEngine(components.engine(i));
-                draft.setPreviewReady(VehicleEditorDraft.Target.ENGINE, false);
+                draft.useImportedModelPreview(VehicleEditorDraft.Target.ENGINE, false);
                 draft.showPart(VehicleEditorDraft.Target.ENGINE);
             }
             case FRONT_ATTACHMENTS, REAR_ATTACHMENTS -> {

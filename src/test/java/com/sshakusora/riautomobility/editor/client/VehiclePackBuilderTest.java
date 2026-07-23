@@ -137,6 +137,26 @@ class VehiclePackBuilderTest {
     }
 
     @Test
+    void editorDraftKeepsTheSelectedCatalogPreviewAfterReopening() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        VehicleEditorDraft original = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        original.target = VehicleEditorDraft.Target.WHEEL;
+        original.setModelFile(VehicleEditorDraft.Target.WHEEL, Path.of("imported.bbmodel"));
+        assertTrue(original.usesImportedModelPreview(VehicleEditorDraft.Target.WHEEL));
+
+        original.useImportedModelPreview(VehicleEditorDraft.Target.WHEEL, false);
+        VehicleEditorDraft restored = new VehicleEditorDraft(
+                AutomobileFrame.EMPTY, AutomobileWheel.EMPTY, AutomobileEngine.EMPTY);
+        restored.load(original.save());
+
+        assertEquals(Path.of("imported.bbmodel"), restored.modelFile(VehicleEditorDraft.Target.WHEEL));
+        assertFalse(restored.usesImportedModelPreview(VehicleEditorDraft.Target.WHEEL));
+        assertFalse(restored.previewReady(VehicleEditorDraft.Target.WHEEL));
+    }
+
+    @Test
     void exportFileNameUsesDisplayNameAndAddsCollisionSuffix() throws IOException {
         String fileStem = VehicleImportScreen.exportFileStem("测试车辆");
         assertEquals("测试车辆", fileStem);

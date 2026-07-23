@@ -22,10 +22,6 @@ final class ClientVehiclePreviewSession {
     CompletableFuture<Void> load(VehicleEditorDraft draft) throws IOException {
         long requestGeneration = ++this.generation;
         VehicleEditorDraft.Target importedTarget = draft.target;
-        Map<VehicleEditorDraft.Target, Boolean> previouslyReady = new EnumMap<>(VehicleEditorDraft.Target.class);
-        for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values()) {
-            previouslyReady.put(target, draft.previewReady(target));
-        }
         Path oldArchive = this.archive;
         unregisterModels();
         for (VehicleEditorDraft.Target target : VehicleEditorDraft.Target.values())
@@ -49,7 +45,7 @@ final class ClientVehiclePreviewSession {
         ClientCarPackResources.refreshDiscoveredPacks();
         if (requestGeneration == this.generation) {
             for (VehicleEditorDraft.Target target : this.registrations.keySet()) {
-                draft.setPreviewReady(target, target == importedTarget || previouslyReady.getOrDefault(target, false));
+                draft.setPreviewReady(target, draft.usesImportedModelPreview(target));
             }
             draft.showPart(importedTarget);
         }
