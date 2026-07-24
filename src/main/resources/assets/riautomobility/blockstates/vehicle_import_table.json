@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "riautomobility:block/vehicle_import_table" }
+    "facing=north": { "model": "riautomobility:block/vehicle_import_table" },
+    "facing=east": { "model": "riautomobility:block/vehicle_import_table", "y": 90 },
+    "facing=south": { "model": "riautomobility:block/vehicle_import_table", "y": 180 },
+    "facing=west": { "model": "riautomobility:block/vehicle_import_table", "y": 270 }
   }
 }
